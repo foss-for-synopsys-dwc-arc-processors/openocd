@@ -31,6 +31,7 @@ libtarget_la_SOURCES = \
 	$(ARM_MISC_SRC) \
 	$(AVR32_SRC) \
 	$(MIPS32_SRC) \
+	$(ARC32_SRC) \
 	avrt.c \
 	dsp563xx.c \
 	dsp563xx_once.c \
@@ -107,6 +108,10 @@ MIPS32_SRC = \
 	mips32_dmaacc.c \
 	mips_ejtag.c
 
+ARC32_SRC = \
+	arc32.c \
+	arc_jtag.c \
+	arc700.c
 
 noinst_HEADERS = \
 	algorithm.h \
@@ -162,7 +167,10 @@ noinst_HEADERS = \
 	avr32_ap7k.h \
 	avr32_jtag.h \
 	avr32_mem.h \
-	avr32_regs.h
+	avr32_regs.h \
+	arc32.h \
+	arc_jtag.h \
+	arc700.h
 
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA =
