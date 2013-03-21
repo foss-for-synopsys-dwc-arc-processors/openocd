@@ -29,7 +29,11 @@
 
 #include <jim-nvp.h>
 
+/*
+ * Prevent from compiler warning on typedef scoping to target_type
+ */
 struct target;
+struct reg;
 
 /**
  * This holds methods shared between all instances of a given target
@@ -60,7 +64,8 @@ struct target_type {
 	int (*step)(struct target *target, int current, uint32_t address,
 			int handle_breakpoints);
 
-	/* target reset control. assert reset can be invoked when OpenOCD and
+	/**
+	 * target reset control. assert reset can be invoked when OpenOCD and
 	 * the target is out of sync.
 	 *
 	 * A typical example is that the target was power cycled while OpenOCD
