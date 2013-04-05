@@ -134,6 +134,8 @@ INTEL_IA32_SRC = \
 ARC32_SRC = \
 	arc32.c \
 	arc_jtag.c \
+	arc_mntr.c \
+	arc_regs.c \
 	arc700.c
 
 noinst_HEADERS = \
@@ -205,9 +207,12 @@ noinst_HEADERS = \
 	nds32_aice.h \
 	lakemont.h \
 	x86_32_common.h \
+	arc.h \
 	arc32.h \
+	arc700.h \
 	arc_jtag.h \
-	arc700.h
+	arc_mntr.h \
+	arc_regs.h
 
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA =
