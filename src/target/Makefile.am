@@ -127,9 +127,14 @@ NDS32_SRC = \
 
 ARC32_SRC = \
 	arc32.c \
+	arc_core.c \
+	arc_dbg.c \
 	arc_jtag.c \
+	arc_mem.c \
 	arc_mntr.c \
+	arc_ocd.c \
 	arc_regs.c \
+	arc_trgt.c \
 	arc700.c
 
 
@@ -202,10 +207,15 @@ noinst_HEADERS = \
 	nds32_aice.h \
 	arc.h \
 	arc32.h \
-	arc700.h \
+	arc_core.h \
+	arc_dbg.h \
 	arc_jtag.h \
+	arc_mem.h \
 	arc_mntr.h \
-	arc_regs.h
+	arc_ocd.h \
+	arc_regs.h \
+	arc_trgt.h \
+	arc700.h
 
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA =
