@@ -109,6 +109,7 @@ MIPS32_SRC = \
 	mips_ejtag.c
 
 ARC32_SRC = \
+	arc.c \
 	arc32.c \
 	arc_core.c \
 	arc_dbg.c \
@@ -117,8 +118,7 @@ ARC32_SRC = \
 	arc_mntr.c \
 	arc_ocd.c \
 	arc_regs.c \
-	arc_trgt.c \
-	arc700.c
+	arc_trgt.c
 
 noinst_HEADERS = \
 	algorithm.h \
@@ -184,8 +184,7 @@ noinst_HEADERS = \
 	arc_mntr.h \
 	arc_ocd.h \
 	arc_regs.h \
-	arc_trgt.h \
-	arc700.h
+	arc_trgt.h
 
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA =
