@@ -50,6 +50,8 @@
 #define JTAG_ACK_OK_FAULT	0x2
 #define JTAG_ACK_WAIT		0x1
 
+static int jtag_ap_q_abort(struct adiv5_dap *dap, uint8_t *ack);
+
 /***************************************************************************
  *
  * DPACC and APACC scanchain access through JTAG-DP (or SWJ-DP)
@@ -75,10 +77,7 @@
  * @param ack points to where the three bit JTAG_ACK_* code will be stored
  */
 
-/* FIXME don't export ... this is a temporary workaround for the
- * mem_ap_read_buf_u32() mess, until it's no longer JTAG-specific.
- */
-int adi_jtag_dp_scan(struct adiv5_dap *dap,
+static int adi_jtag_dp_scan(struct adiv5_dap *dap,
 		uint8_t instr, uint8_t reg_addr, uint8_t RnW,
 		uint8_t *outvalue, uint8_t *invalue, uint8_t *ack)
 {
@@ -235,12 +234,16 @@ static int jtagdp_transaction_endcheck(struct adiv5_dap *dap)
 		while (dap->ack != JTAG_ACK_OK_FAULT) {
 			if (dap->ack == JTAG_ACK_WAIT) {
 				if ((timeval_ms()-then) > 1000) {
-					/* NOTE:  this would be a good spot
-					 * to use JTAG_DP_ABORT.
-					 */
 					LOG_WARNING("Timeout (1000ms) waiting "
 						"for ACK=OK/FAULT "
-						"in JTAG-DP transaction");
+						"in JTAG-DP transaction - aborting");
+
+					uint8_t ack;
+					int abort_ret = jtag_ap_q_abort(dap, &ack);
+
+					if (abort_ret != 0)
+						LOG_WARNING("Abort failed : return=%d ack=%d", abort_ret, ack);
+
 					return ERROR_JTAG_DEVICE_ERROR;
 				}
 			} else {
@@ -417,6 +420,40 @@ static int jtag_ap_q_write(struct adiv5_dap *dap, unsigned reg,
 	return adi_jtag_ap_write_check(dap, reg, out_value_buf);
 }
 
+static int jtag_ap_q_read_block(struct adiv5_dap *dap, unsigned reg,
+		uint32_t blocksize, uint8_t *buffer)
+{
+	uint32_t readcount;
+	int retval = ERROR_OK;
+
+	/* Scan out first read */
+	retval = adi_jtag_dp_scan(dap, JTAG_DP_APACC, reg,
+			DPAP_READ, 0, NULL, NULL);
+	if (retval != ERROR_OK)
+		return retval;
+
+	for (readcount = 0; readcount < blocksize - 1; readcount++) {
+		/* Scan out next read; scan in posted value for the
+		 * previous one.  Assumes read is acked "OK/FAULT",
+		 * and CTRL_STAT says that meant "OK".
+		 */
+		retval = adi_jtag_dp_scan(dap, JTAG_DP_APACC, reg,
+				DPAP_READ, 0, buffer + 4 * readcount,
+				&dap->ack);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+
+	/* Scan in last posted value; RDBUFF has no other effect,
+	 * assuming ack is OK/FAULT and CTRL_STAT says "OK".
+	 */
+	retval = adi_jtag_dp_scan(dap, JTAG_DP_DPACC, DP_RDBUFF,
+			DPAP_READ, 0, buffer + 4 * readcount,
+			&dap->ack);
+
+	return retval;
+}
+
 static int jtag_ap_q_abort(struct adiv5_dap *dap, uint8_t *ack)
 {
 	/* for JTAG, this is the only valid ABORT register operation */
@@ -433,13 +470,14 @@ static int jtag_dp_run(struct adiv5_dap *dap)
  * part of DAP setup
 */
 const struct dap_ops jtag_dp_ops = {
-	.queue_idcode_read =	jtag_idcode_q_read,
-	.queue_dp_read =	jtag_dp_q_read,
-	.queue_dp_write =	jtag_dp_q_write,
-	.queue_ap_read =	jtag_ap_q_read,
-	.queue_ap_write =	jtag_ap_q_write,
-	.queue_ap_abort =	jtag_ap_q_abort,
-	.run =			jtag_dp_run,
+	.queue_idcode_read   = jtag_idcode_q_read,
+	.queue_dp_read       = jtag_dp_q_read,
+	.queue_dp_write      = jtag_dp_q_write,
+	.queue_ap_read       = jtag_ap_q_read,
+	.queue_ap_write      = jtag_ap_q_write,
+	.queue_ap_read_block = jtag_ap_q_read_block,
+	.queue_ap_abort      = jtag_ap_q_abort,
+	.run                 = jtag_dp_run,
 };
 
 

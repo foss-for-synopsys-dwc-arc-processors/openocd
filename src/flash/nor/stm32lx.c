@@ -121,6 +121,8 @@ static int stm32lx_wait_until_bsy_clear(struct flash_bank *bank);
 
 struct stm32lx_flash_bank {
 	int probed;
+	bool has_dual_banks;
+	uint32_t user_bank_size;
 };
 
 /* flash bank stm32lx <base> <size> 0 0 <target#>
@@ -143,6 +145,8 @@ FLASH_BANK_COMMAND_HANDLER(stm32lx_flash_bank_command)
 	bank->driver_priv = stm32lx_info;
 
 	stm32lx_info->probed = 0;
+	stm32lx_info->has_dual_banks = false;
+	stm32lx_info->user_bank_size = bank->size;
 
 	return ERROR_OK;
 }
@@ -283,7 +287,7 @@ static int stm32lx_write_half_pages(struct flash_bank *bank, uint8_t *buffer,
 	}
 
 	armv7m_info.common_magic = ARMV7M_COMMON_MAGIC;
-	armv7m_info.core_mode = ARMV7M_MODE_ANY;
+	armv7m_info.core_mode = ARM_MODE_THREAD;
 	init_reg_param(&reg_params[0], "r0", 32, PARAM_OUT);
 	init_reg_param(&reg_params[1], "r1", 32, PARAM_OUT);
 	init_reg_param(&reg_params[2], "r2", 32, PARAM_OUT);
@@ -518,6 +522,9 @@ static int stm32lx_probe(struct flash_bank *bank)
 	uint16_t flash_size_in_kb;
 	uint16_t max_flash_size_in_kb;
 	uint32_t device_id;
+	uint32_t base_address = FLASH_BANK0_ADDRESS;
+	uint32_t second_bank_base;
+	uint32_t first_bank_size_in_kb;
 
 	stm32lx_info->probed = 0;
 
@@ -533,23 +540,68 @@ static int stm32lx_probe(struct flash_bank *bank)
 	case 0x416:
 		max_flash_size_in_kb = 128;
 		break;
+	case 0x427:
+		/* single bank, high density */
+		max_flash_size_in_kb = 256;
+		break;
 	case 0x436:
+		/* According to ST, the devices with id 0x436 have dual bank flash and comes with
+		 * a total flash size of 384k or 256kb. However, the first bank is always 192kb,
+		 * and second one holds the rest. The reason is that the 256kb version is actually
+		 * the same physical flash but only the first 256kb are verified.
+		 */
 		max_flash_size_in_kb = 384;
+		first_bank_size_in_kb = 192;
+		stm32lx_info->has_dual_banks = true;
 		break;
 	default:
 		LOG_WARNING("Cannot identify target as a STM32L family.");
 		return ERROR_FAIL;
 	}
 
-	/* get flash size from target. */
+	/* Get the flash size from target. */
 	retval = target_read_u16(target, F_SIZE, &flash_size_in_kb);
 
-	/* failed reading flash size or flash size invalid (early silicon),
+	/* Failed reading flash size or flash size invalid (early silicon),
 	 * default to max target family */
 	if (retval != ERROR_OK || flash_size_in_kb == 0xffff || flash_size_in_kb == 0) {
-		LOG_WARNING("STM32 flash size failed, probe inaccurate - assuming %dk flash",
+		LOG_WARNING("STM32L flash size failed, probe inaccurate - assuming %dk flash",
 			max_flash_size_in_kb);
 		flash_size_in_kb = max_flash_size_in_kb;
+	} else if (flash_size_in_kb > max_flash_size_in_kb) {
+		LOG_WARNING("STM32L probed flash size assumed incorrect since FLASH_SIZE=%dk > %dk, - assuming %dk flash",
+			flash_size_in_kb, max_flash_size_in_kb, max_flash_size_in_kb);
+		flash_size_in_kb = max_flash_size_in_kb;
+	}
+
+	if (stm32lx_info->has_dual_banks) {
+		/* Use the configured base address to determine if this is the first or second flash bank.
+		 * Verify that the base address is reasonably correct and determine the flash bank size
+		 */
+		second_bank_base = base_address + first_bank_size_in_kb * 1024;
+		if (bank->base == second_bank_base) {
+			/* This is the second bank  */
+			base_address = second_bank_base;
+			flash_size_in_kb = flash_size_in_kb - first_bank_size_in_kb;
+		} else if (bank->base == 0 || bank->base == base_address) {
+			/* This is the first bank */
+			flash_size_in_kb = first_bank_size_in_kb;
+		} else {
+			LOG_WARNING("STM32L flash bank base address config is incorrect. 0x%x but should rather be 0x%x or 0x%x",
+						bank->base, base_address, second_bank_base);
+			return ERROR_FAIL;
+		}
+		LOG_INFO("STM32L flash has dual banks. Bank (%d) size is %dkb, base address is 0x%x",
+				bank->bank_number, flash_size_in_kb, base_address);
+	} else {
+		LOG_INFO("STM32L flash size is %dkb, base address is 0x%x", flash_size_in_kb, base_address);
+	}
+
+	/* if the user sets the size manually then ignore the probed value
+	 * this allows us to work around devices that have a invalid flash size register value */
+	if (stm32lx_info->user_bank_size) {
+		flash_size_in_kb = stm32lx_info->user_bank_size / 1024;
+		LOG_INFO("ignoring flash probed value, using configured bank size: %dkbytes", flash_size_in_kb);
 	}
 
 	/* STM32L - we have 32 sectors, 16 pages per sector -> 512 pages
@@ -557,15 +609,14 @@ static int stm32lx_probe(struct flash_bank *bank)
 
 	/* calculate numbers of sectors (4kB per sector) */
 	int num_sectors = (flash_size_in_kb * 1024) / FLASH_SECTOR_SIZE;
-	LOG_INFO("flash size = %dkbytes", flash_size_in_kb);
 
 	if (bank->sectors) {
 		free(bank->sectors);
 		bank->sectors = NULL;
 	}
 
-	bank->base = FLASH_BANK0_ADDRESS;
 	bank->size = flash_size_in_kb * 1024;
+	bank->base = base_address;
 	bank->num_sectors = num_sectors;
 	bank->sectors = malloc(sizeof(struct flash_sector) * num_sectors);
 	if (bank->sectors == NULL) {

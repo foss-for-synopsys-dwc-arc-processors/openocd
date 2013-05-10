@@ -156,6 +156,7 @@ static char *ft2232_device_desc;
 static char *ft2232_serial;
 static uint8_t ft2232_latency = 2;
 static unsigned ft2232_max_tck = FTDI_2232C_MAX_TCK;
+static int ft2232_channel = INTERFACE_ANY;
 
 #define MAX_USB_IDS 8
 /* vid = pid = 0 marks the end of the list */
@@ -1060,7 +1061,8 @@ static void ft2232_add_scan(bool ir_scan, enum scan_type type, uint8_t *buffer, 
 			/* LOG_DEBUG("added TDI bits (i %i)", bits_left - 1); */
 		}
 		buffer_write(0x0);
-		buffer_write(last_bit);
+		if (type != SCAN_IN)
+			buffer_write(last_bit);
 	} else {
 		int tms_bits;
 		int tms_count;
@@ -1105,6 +1107,11 @@ static int ft2232_large_scan(struct scan_command *cmd,
 	uint32_t bytes_read;
 	int retval;
 	int thisrun_read = 0;
+
+	if (!receive_buffer) {
+		LOG_ERROR("failed to allocate memory");
+		exit(-1);
+	}
 
 	if (cmd->ir_scan) {
 		LOG_ERROR("BUG: large IR scans are not supported");
@@ -1270,6 +1277,8 @@ static int ft2232_large_scan(struct scan_command *cmd,
 			thisrun_read,
 			(int)bytes_read);
 	}
+
+	free(receive_buffer);
 
 	return ERROR_OK;
 }
@@ -2358,7 +2367,7 @@ static int ft2232_init(void)
 				more, &try_more);
 #elif BUILD_FT2232_LIBFTDI == 1
 		retval = ft2232_init_libftdi(ft2232_vid[i], ft2232_pid[i],
-				more, &try_more, layout->channel);
+				more, &try_more, ft2232_channel);
 #endif
 		if (retval >= 0)
 			break;
@@ -3132,9 +3141,8 @@ static void flossjtag_blink(void)
 static int ft2232_quit(void)
 {
 #if BUILD_FT2232_FTD2XX == 1
-	FT_STATUS status;
 
-	status = FT_Close(ftdih);
+	FT_Close(ftdih);
 #elif BUILD_FT2232_LIBFTDI == 1
 	ftdi_usb_close(&ftdic);
 
@@ -3203,6 +3211,7 @@ COMMAND_HANDLER(ft2232_handle_layout_command)
 	for (const struct ft2232_layout *l = ft2232_layouts; l->name; l++) {
 		if (strcmp(l->name, CMD_ARGV[0]) == 0) {
 			layout = l;
+			ft2232_channel = l->channel;
 			return ERROR_OK;
 		}
 	}
@@ -3247,6 +3256,18 @@ COMMAND_HANDLER(ft2232_handle_latency_command)
 		ft2232_latency = atoi(CMD_ARGV[0]);
 	else
 		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	return ERROR_OK;
+}
+
+COMMAND_HANDLER(ft2232_handle_channel_command)
+{
+	if (CMD_ARGC == 1) {
+		ft2232_channel = atoi(CMD_ARGV[0]);
+		if (ft2232_channel < 0 || ft2232_channel > 4)
+			LOG_ERROR("ft2232_channel must be in the 0 to 4 range");
+	} else
+		LOG_ERROR("expected exactly one argument to ft2232_channel <ch>");
 
 	return ERROR_OK;
 }
@@ -4256,6 +4277,13 @@ static const struct command_registration ft2232_command_handlers[] = {
 		.handler = &ft2232_handle_latency_command,
 		.mode = COMMAND_CONFIG,
 		.help = "set the FT2232 latency timer to a new value",
+		.usage = "value",
+	},
+	{
+		.name = "ft2232_channel",
+		.handler = &ft2232_handle_channel_command,
+		.mode = COMMAND_CONFIG,
+		.help = "set the FT2232 channel to a new value",
 		.usage = "value",
 	},
 	COMMAND_REGISTRATION_DONE

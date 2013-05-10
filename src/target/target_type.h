@@ -64,8 +64,7 @@ struct target_type {
 	int (*step)(struct target *target, int current, uint32_t address,
 			int handle_breakpoints);
 
-	/**
-	 * target reset control. assert reset can be invoked when OpenOCD and
+	/* target reset control. assert reset can be invoked when OpenOCD and
 	 * the target is out of sync.
 	 *
 	 * A typical example is that the target was power cycled while OpenOCD
@@ -93,7 +92,6 @@ struct target_type {
 	 * reset run; halt
      */
 	int (*deassert_reset)(struct target *target);
-	int (*soft_reset_halt_imp)(struct target *target);
 	int (*soft_reset_halt)(struct target *target);
 
 	/**
@@ -113,16 +111,13 @@ struct target_type {
 	* size: 1 = byte (8bit), 2 = half-word (16bit), 4 = word (32bit)
 	* count: number of items of <size>
 	*/
-	int (*read_memory_imp)(struct target *target, uint32_t address,
-			uint32_t size, uint32_t count, uint8_t *buffer);
+
 	/**
 	 * Target memory read callback.  Do @b not call this function
 	 * directly, use target_read_memory() instead.
 	 */
 	int (*read_memory)(struct target *target, uint32_t address,
 			uint32_t size, uint32_t count, uint8_t *buffer);
-	int (*write_memory_imp)(struct target *target, uint32_t address,
-			uint32_t size, uint32_t count, const uint8_t *buffer);
 	/**
 	 * Target memory write callback.  Do @b not call this function
 	 * directly, use target_write_memory() instead.

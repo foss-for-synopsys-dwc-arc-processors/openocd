@@ -108,6 +108,12 @@ struct gdb_service {
 	int32_t core[2];
 };
 
+/* target back off timer */
+struct backoff_timer {
+	int times;
+	int count;
+};
+
 /* target_type.h contains the full definition of struct target_type */
 struct target {
 	struct target_type *type;			/* target type definition (name, access functions) */
@@ -171,7 +177,7 @@ struct target {
 	struct rtos *rtos;					/* Instance of Real Time Operating System support */
 	bool rtos_auto_detect;				/* A flag that indicates that the RTOS has been specified as "auto"
 										 * and must be detected when symbols are offered */
-
+	struct backoff_timer backoff;
 	int smp;							/* add some target attributes for smp support */
 	struct target_list *head;
 	/* the gdb service is there in case of smp, we have only one gdb server
@@ -455,6 +461,8 @@ int target_run_flash_async_algorithm(struct target *target,
  */
 int target_read_memory(struct target *target,
 		uint32_t address, uint32_t size, uint32_t count, uint8_t *buffer);
+int target_read_phys_memory(struct target *target,
+		uint32_t address, uint32_t size, uint32_t count, uint8_t *buffer);
 /**
  * Write @a count items of @a size bytes to the memory of @a target at
  * the @a address given. @a address must be aligned to @a size
@@ -474,16 +482,8 @@ int target_read_memory(struct target *target,
  */
 int target_write_memory(struct target *target,
 		uint32_t address, uint32_t size, uint32_t count, const uint8_t *buffer);
-
-/**
- * Write @a count items of 4 bytes to the memory of @a target at
- * the @a address given.  Because it operates only on whole words,
- * this should be faster than target_write_memory().
- *
- * This routine is wrapper for target->type->bulk_write_memory.
- */
-int target_bulk_write_memory(struct target *target,
-		uint32_t address, uint32_t count, const uint8_t *buffer);
+int target_write_phys_memory(struct target *target,
+		uint32_t address, uint32_t size, uint32_t count, const uint8_t *buffer);
 
 /*
  * Write to target memory using the virtual address.

@@ -17,6 +17,9 @@
  *   Copyright (C) ST-Ericsson SA 2011                                     *
  *   michel.jaouen@stericsson.com : smp minimum support                    *
  *                                                                         *
+ *   Copyright (C) Broadcom 2012                                           *
+ *   ehunter@broadcom.com : Cortex R4 support                              *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -34,6 +37,7 @@
  *                                                                         *
  *   Cortex-A8(tm) TRM, ARM DDI 0344H                                      *
  *   Cortex-A9(tm) TRM, ARM DDI 0407F                                      *
+ *   Cortex-A4(tm) TRM, ARM DDI 0363E                                      *
  *                                                                         *
  ***************************************************************************/
 
@@ -67,15 +71,9 @@ static int cortex_a8_dap_write_coreregister_u32(struct target *target,
 static int cortex_a8_mmu(struct target *target, int *enabled);
 static int cortex_a8_virt2phys(struct target *target,
 	uint32_t virt, uint32_t *phys);
+static int cortex_a8_read_apb_ab_memory(struct target *target,
+	uint32_t address, uint32_t size, uint32_t count, uint8_t *buffer);
 
-/*
- * FIXME do topology discovery using the ROM; don't
- * assume this is an OMAP3.   Also, allow for multiple ARMv7-A
- * cores, with different AP numbering ... don't use a #define
- * for these numbers, use per-core armv7a state.
- */
-#define swjdp_memoryap 0
-#define swjdp_debugap 1
 
 /*  restore cp15_control_reg at resume */
 static int cortex_a8_restore_cp15_control_reg(struct target *target)
@@ -176,11 +174,11 @@ static int cortex_a8_init_debug_access(struct target *target)
 
 	/* Unlocking the debug registers for modification
 	 * The debugport might be uninitialised so try twice */
-	retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_LOCKACCESS, 0xC5ACCE55);
 	if (retval != ERROR_OK) {
 		/* try again */
-		retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_LOCKACCESS, 0xC5ACCE55);
 		if (retval == ERROR_OK)
 			LOG_USER(
@@ -190,7 +188,7 @@ static int cortex_a8_init_debug_access(struct target *target)
 		return retval;
 	/* Clear Sticky Power Down status Bit in PRSR to enable access to
 	   the registers in the Core Power Domain */
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_PRSR, &dummy);
 	if (retval != ERROR_OK)
 		return retval;
@@ -223,7 +221,7 @@ static int cortex_a8_exec_opcode(struct target *target,
 	/* Wait for InstrCompl bit to be set */
 	long long then = timeval_ms();
 	while ((dscr & DSCR_INSTR_COMP) == 0) {
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_DSCR, &dscr);
 		if (retval != ERROR_OK) {
 			LOG_ERROR("Could not read DSCR register, opcode = 0x%08" PRIx32, opcode);
@@ -235,14 +233,14 @@ static int cortex_a8_exec_opcode(struct target *target,
 		}
 	}
 
-	retval = mem_ap_sel_write_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_ITR, opcode);
 	if (retval != ERROR_OK)
 		return retval;
 
 	then = timeval_ms();
 	do {
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_DSCR, &dscr);
 		if (retval != ERROR_OK) {
 			LOG_ERROR("Could not read DSCR register");
@@ -281,7 +279,7 @@ static int cortex_a8_read_regs_through_mem(struct target *target, uint32_t addre
 	if (retval != ERROR_OK)
 		return retval;
 
-	retval = mem_ap_sel_read_buf_u32(swjdp, swjdp_memoryap,
+	retval = mem_ap_sel_read_buf_u32(swjdp, armv7a->memory_ap,
 			(uint8_t *)(&regfile[1]), 4*15, address);
 
 	return retval;
@@ -333,7 +331,7 @@ static int cortex_a8_dap_read_coreregister_u32(struct target *target,
 	/* Wait for DTRRXfull then read DTRRTX */
 	long long then = timeval_ms();
 	while ((dscr & DSCR_DTR_TX_FULL) == 0) {
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_DSCR, &dscr);
 		if (retval != ERROR_OK)
 			return retval;
@@ -343,7 +341,7 @@ static int cortex_a8_dap_read_coreregister_u32(struct target *target,
 		}
 	}
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DTRTX, value);
 	LOG_DEBUG("read DCC 0x%08" PRIx32, *value);
 
@@ -362,7 +360,7 @@ static int cortex_a8_dap_write_coreregister_u32(struct target *target,
 	LOG_DEBUG("register %i, value 0x%08" PRIx32, regnum, value);
 
 	/* Check that DCCRX is not full */
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, &dscr);
 	if (retval != ERROR_OK)
 		return retval;
@@ -380,7 +378,7 @@ static int cortex_a8_dap_write_coreregister_u32(struct target *target,
 
 	/* Write DTRRX ... sets DSCR.DTRRXfull but exec_opcode() won't care */
 	LOG_DEBUG("write DCC 0x%08" PRIx32, value);
-	retval = mem_ap_sel_write_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DTRRX, value);
 	if (retval != ERROR_OK)
 		return retval;
@@ -438,7 +436,7 @@ static int cortex_a8_dap_write_memap_register_u32(struct target *target,
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct adiv5_dap *swjdp = armv7a->arm.dap;
 
-	retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap, address, value);
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap, address, value);
 
 	return retval;
 }
@@ -463,7 +461,7 @@ static int cortex_a8_write_dcc(struct cortex_a8_common *a8, uint32_t data)
 {
 	LOG_DEBUG("write DCC 0x%08" PRIx32, data);
 	return mem_ap_sel_write_u32(a8->armv7a_common.arm.dap,
-			swjdp_debugap, a8->armv7a_common.debug_base + CPUDBG_DTRRX, data);
+		a8->armv7a_common.debug_ap, a8->armv7a_common.debug_base + CPUDBG_DTRRX, data);
 }
 
 static int cortex_a8_read_dcc(struct cortex_a8_common *a8, uint32_t *data,
@@ -479,7 +477,7 @@ static int cortex_a8_read_dcc(struct cortex_a8_common *a8, uint32_t *data,
 	/* Wait for DTRRXfull */
 	long long then = timeval_ms();
 	while ((dscr & DSCR_DTR_TX_FULL) == 0) {
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, a8->armv7a_common.debug_ap,
 				a8->armv7a_common.debug_base + CPUDBG_DSCR,
 				&dscr);
 		if (retval != ERROR_OK)
@@ -490,7 +488,7 @@ static int cortex_a8_read_dcc(struct cortex_a8_common *a8, uint32_t *data,
 		}
 	}
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, a8->armv7a_common.debug_ap,
 			a8->armv7a_common.debug_base + CPUDBG_DTRTX, data);
 	if (retval != ERROR_OK)
 		return retval;
@@ -512,7 +510,7 @@ static int cortex_a8_dpm_prepare(struct arm_dpm *dpm)
 	/* set up invariant:  INSTR_COMP is set after ever DPM operation */
 	long long then = timeval_ms();
 	for (;; ) {
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, a8->armv7a_common.debug_ap,
 				a8->armv7a_common.debug_base + CPUDBG_DSCR,
 				&dscr);
 		if (retval != ERROR_OK)
@@ -800,7 +798,7 @@ static int cortex_a8_poll(struct target *target)
 		target_call_event_callbacks(target, TARGET_EVENT_HALTED);
 		return retval;
 	}
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, &dscr);
 	if (retval != ERROR_OK)
 		return retval;
@@ -862,7 +860,7 @@ static int cortex_a8_halt(struct target *target)
 	 * Tell the core to be halted by writing DRCR with 0x1
 	 * and then wait for the core to be halted.
 	 */
-	retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DRCR, DRCR_HALT);
 	if (retval != ERROR_OK)
 		return retval;
@@ -870,19 +868,19 @@ static int cortex_a8_halt(struct target *target)
 	/*
 	 * enter halting debug mode
 	 */
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, &dscr);
 	if (retval != ERROR_OK)
 		return retval;
 
-	retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, dscr | DSCR_HALT_DBG_MODE);
 	if (retval != ERROR_OK)
 		return retval;
 
 	long long then = timeval_ms();
 	for (;; ) {
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_DSCR, &dscr);
 		if (retval != ERROR_OK)
 			return retval;
@@ -1008,7 +1006,7 @@ static int cortex_a8_internal_restart(struct target *target)
 	 * disable IRQs by default, with optional override...
 	 */
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, &dscr);
 	if (retval != ERROR_OK)
 		return retval;
@@ -1016,12 +1014,12 @@ static int cortex_a8_internal_restart(struct target *target)
 	if ((dscr & DSCR_INSTR_COMP) == 0)
 		LOG_ERROR("DSCR InstrCompl must be set before leaving debug!");
 
-	retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, dscr & ~DSCR_ITR_EN);
 	if (retval != ERROR_OK)
 		return retval;
 
-	retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DRCR, DRCR_RESTART |
 			DRCR_CLEAR_EXCEPTIONS);
 	if (retval != ERROR_OK)
@@ -1029,7 +1027,7 @@ static int cortex_a8_internal_restart(struct target *target)
 
 	long long then = timeval_ms();
 	for (;; ) {
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_DSCR, &dscr);
 		if (retval != ERROR_OK)
 			return retval;
@@ -1121,7 +1119,7 @@ static int cortex_a8_debug_entry(struct target *target)
 	LOG_DEBUG("dscr = 0x%08" PRIx32, cortex_a8->cpudbg_dscr);
 
 	/* REVISIT surely we should not re-read DSCR !! */
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, &dscr);
 	if (retval != ERROR_OK)
 		return retval;
@@ -1133,7 +1131,7 @@ static int cortex_a8_debug_entry(struct target *target)
 
 	/* Enable the ITR execution once we are in debug mode */
 	dscr |= DSCR_ITR_EN;
-	retval = mem_ap_sel_write_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DSCR, dscr);
 	if (retval != ERROR_OK)
 		return retval;
@@ -1145,7 +1143,7 @@ static int cortex_a8_debug_entry(struct target *target)
 	if (target->debug_reason == DBG_REASON_WATCHPOINT) {
 		uint32_t wfar;
 
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_WFAR,
 				&wfar);
 		if (retval != ERROR_OK)
@@ -1246,8 +1244,12 @@ static int cortex_a8_post_debug_entry(struct target *target)
 	if (armv7a->armv7a_mmu.armv7a_cache.ctype == -1)
 		armv7a_identify_cache(target);
 
-	armv7a->armv7a_mmu.mmu_enabled =
-		(cortex_a8->cp15_control_reg & 0x1U) ? 1 : 0;
+	if (armv7a->is_armv7r) {
+		armv7a->armv7a_mmu.mmu_enabled = 0;
+	} else {
+		armv7a->armv7a_mmu.mmu_enabled =
+			(cortex_a8->cp15_control_reg & 0x1U) ? 1 : 0;
+	}
 	armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled =
 		(cortex_a8->cp15_control_reg & 0x4U) ? 1 : 0;
 	armv7a->armv7a_mmu.armv7a_cache.i_cache_enabled =
@@ -1398,13 +1400,13 @@ static int cortex_a8_set_breakpoint(struct target *target,
 			buf_set_u32(code, 0, 32, ARMV5_T_BKPT(0x11));
 		else
 			buf_set_u32(code, 0, 32, ARMV5_BKPT(0x11));
-		retval = target->type->read_memory(target,
+		retval = target_read_memory(target,
 				breakpoint->address & 0xFFFFFFFE,
 				breakpoint->length, 1,
 				breakpoint->orig_instr);
 		if (retval != ERROR_OK)
 			return retval;
-		retval = target->type->write_memory(target,
+		retval = target_write_memory(target,
 				breakpoint->address & 0xFFFFFFFE,
 				breakpoint->length, 1, code);
 		if (retval != ERROR_OK)
@@ -1630,13 +1632,13 @@ static int cortex_a8_unset_breakpoint(struct target *target, struct breakpoint *
 	} else {
 		/* restore original instruction (kept in target endianness) */
 		if (breakpoint->length == 4) {
-			retval = target->type->write_memory(target,
+			retval = target_write_memory(target,
 					breakpoint->address & 0xFFFFFFFE,
 					4, 1, breakpoint->orig_instr);
 			if (retval != ERROR_OK)
 				return retval;
 		} else {
-			retval = target->type->write_memory(target,
+			retval = target_write_memory(target,
 					breakpoint->address & 0xFFFFFFFE,
 					2, 1, breakpoint->orig_instr);
 			if (retval != ERROR_OK)
@@ -1787,127 +1789,302 @@ static int cortex_a8_write_apb_ab_memory(struct target *target,
 	int retval = ERROR_COMMAND_SYNTAX_ERROR;
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct arm *arm = &armv7a->arm;
+	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	int total_bytes = count * size;
-	int start_byte, nbytes_to_write, i;
+	int total_u32;
+	int start_byte = address & 0x3;
+	int end_byte   = (address + total_bytes) & 0x3;
 	struct reg *reg;
-	union _data {
-		uint8_t uc_a[4];
-		uint32_t ui;
-	} data;
+	uint32_t dscr;
+	uint8_t *tmp_buff = NULL;
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	reg = arm_reg_current(arm, 0);
-	reg->dirty = 1;
-	reg = arm_reg_current(arm, 1);
-	reg->dirty = 1;
+	total_u32 = DIV_ROUND_UP((address & 3) + total_bytes, 4);
 
-	retval = cortex_a8_dap_write_coreregister_u32(target, address & 0xFFFFFFFC, 0);
+	/* Mark register R0 as dirty, as it will be used
+	 * for transferring the data.
+	 * It will be restored automatically when exiting
+	 * debug mode
+	 */
+	reg = arm_reg_current(arm, 0);
+	reg->dirty = true;
+
+	/*  clear any abort  */
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap, armv7a->debug_base + CPUDBG_DRCR, 1<<2);
 	if (retval != ERROR_OK)
 		return retval;
 
-	start_byte = address & 0x3;
+	/* This algorithm comes from either :
+	 * Cortex-A8 TRM Example 12-25
+	 * Cortex-R4 TRM Example 11-26
+	 * (slight differences)
+	 */
 
-	while (total_bytes > 0) {
+	/* The algorithm only copies 32 bit words, so the buffer
+	 * should be expanded to include the words at either end.
+	 * The first and last words will be read first to avoid
+	 * corruption if needed.
+	 */
+	tmp_buff = (uint8_t *) malloc(total_u32 << 2);
 
-		nbytes_to_write = 4 - start_byte;
-		if (total_bytes < nbytes_to_write)
-			nbytes_to_write = total_bytes;
 
-		if (nbytes_to_write != 4) {
-
-			/* execute instruction LDR r1, [r0] */
-			retval = cortex_a8_exec_opcode(target,  ARMV4_5_LDR(1, 0), NULL);
-			if (retval != ERROR_OK)
-				return retval;
-
-			retval = cortex_a8_dap_read_coreregister_u32(target, &data.ui, 1);
-			if (retval != ERROR_OK)
-				return retval;
-		}
-
-		for (i = 0; i < nbytes_to_write; ++i)
-			data.uc_a[i + start_byte] = *buffer++;
-
-		retval = cortex_a8_dap_write_coreregister_u32(target, data.ui, 1);
+	if ((start_byte != 0) && (total_u32 > 1)) {
+		/* First bytes not aligned - read the 32 bit word to avoid corrupting
+		 * the other bytes in the word.
+		 */
+		retval = cortex_a8_read_apb_ab_memory(target, (address & ~0x3), 4, 1, tmp_buff);
 		if (retval != ERROR_OK)
-			return retval;
-
-		/* execute instruction STRW r1, [r0], 1 (0xe4801004) */
-		retval = cortex_a8_exec_opcode(target, ARMV4_5_STRW_IP(1, 0), NULL);
-		if (retval != ERROR_OK)
-			return retval;
-
-		total_bytes -= nbytes_to_write;
-		start_byte = 0;
+			goto error_free_buff_w;
 	}
 
-	return retval;
-}
+	/* If end of write is not aligned, or the write is less than 4 bytes */
+	if ((end_byte != 0) ||
+		((total_u32 == 1) && (total_bytes != 4))) {
 
+		/* Read the last word to avoid corruption during 32 bit write */
+		int mem_offset = (total_u32-1) << 4;
+		retval = cortex_a8_read_apb_ab_memory(target, (address & ~0x3) + mem_offset, 4, 1, &tmp_buff[mem_offset]);
+		if (retval != ERROR_OK)
+			goto error_free_buff_w;
+	}
+
+	/* Copy the write buffer over the top of the temporary buffer */
+	memcpy(&tmp_buff[start_byte], buffer, total_bytes);
+
+	/* We now have a 32 bit aligned buffer that can be written */
+
+	/* Read DSCR */
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+			armv7a->debug_base + CPUDBG_DSCR, &dscr);
+	if (retval != ERROR_OK)
+		goto error_free_buff_w;
+
+	/* Set DTR mode to Fast (2) */
+	dscr = (dscr & ~DSCR_EXT_DCC_MASK) | DSCR_EXT_DCC_FAST_MODE;
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+			armv7a->debug_base + CPUDBG_DSCR, dscr);
+	if (retval != ERROR_OK)
+		goto error_free_buff_w;
+
+	/* Copy the destination address into R0 */
+	/*  - pend an instruction  MRC p14, 0, R0, c5, c0 */
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_ITR, ARMV4_5_MRC(14, 0, 0, 0, 5, 0));
+	if (retval != ERROR_OK)
+		goto error_unset_dtr_w;
+	/* Write address into DTRRX, which triggers previous instruction */
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DTRRX, address & (~0x3));
+	if (retval != ERROR_OK)
+		goto error_unset_dtr_w;
+
+	/* Write the data transfer instruction into the ITR
+	 * (STC p14, c5, [R0], 4)
+	 */
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_ITR, ARMV4_5_STC(0, 1, 0, 1, 14, 5, 0, 4));
+	if (retval != ERROR_OK)
+		goto error_unset_dtr_w;
+
+	/* Do the write */
+	retval = mem_ap_sel_write_buf_u32_noincr(swjdp, armv7a->debug_ap,
+					tmp_buff, (total_u32)<<2, armv7a->debug_base + CPUDBG_DTRRX);
+	if (retval != ERROR_OK)
+		goto error_unset_dtr_w;
+
+
+	/* Switch DTR mode back to non-blocking (0) */
+	dscr = (dscr & ~DSCR_EXT_DCC_MASK) | DSCR_EXT_DCC_NON_BLOCKING;
+	retval = mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DSCR, dscr);
+	if (retval != ERROR_OK)
+		goto error_unset_dtr_w;
+
+    /* Check for sticky abort flags in the DSCR */
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DSCR, &dscr);
+	if (retval != ERROR_OK)
+		goto error_free_buff_w;
+	if (dscr & (DSCR_STICKY_ABORT_PRECISE | DSCR_STICKY_ABORT_IMPRECISE)) {
+		/* Abort occurred - clear it and exit */
+		LOG_ERROR("abort occurred - dscr = 0x%08x", dscr);
+		mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+					armv7a->debug_base + CPUDBG_DRCR, 1<<2);
+		goto error_free_buff_w;
+	}
+
+	/* Done */
+	free(tmp_buff);
+	return ERROR_OK;
+
+error_unset_dtr_w:
+	/* Unset DTR mode */
+	mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DSCR, &dscr);
+	dscr = (dscr & ~DSCR_EXT_DCC_MASK) | DSCR_EXT_DCC_NON_BLOCKING;
+	mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DSCR, dscr);
+error_free_buff_w:
+	LOG_ERROR("error");
+	free(tmp_buff);
+	return ERROR_FAIL;
+}
 
 static int cortex_a8_read_apb_ab_memory(struct target *target,
 	uint32_t address, uint32_t size,
 	uint32_t count, uint8_t *buffer)
 {
-
 	/* read memory through APB-AP */
 
 	int retval = ERROR_COMMAND_SYNTAX_ERROR;
 	struct armv7a_common *armv7a = target_to_armv7a(target);
+	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	struct arm *arm = &armv7a->arm;
 	int total_bytes = count * size;
-	int start_byte, nbytes_to_read, i;
+	int total_u32;
+	int start_byte = address & 0x3;
 	struct reg *reg;
-	union _data {
-		uint8_t uc_a[4];
-		uint32_t ui;
-	} data;
-
+	uint32_t dscr;
+	char *tmp_buff = NULL;
+	uint32_t buff32[2];
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	reg = arm_reg_current(arm, 0);
-	reg->dirty = 1;
-	reg = arm_reg_current(arm, 1);
-	reg->dirty = 1;
+	total_u32 = DIV_ROUND_UP((address & 3) + total_bytes, 4);
 
-	retval = cortex_a8_dap_write_coreregister_u32(target, address & 0xFFFFFFFC, 0);
+	/* Mark register R0 as dirty, as it will be used
+	 * for transferring the data.
+	 * It will be restored automatically when exiting
+	 * debug mode
+	 */
+	reg = arm_reg_current(arm, 0);
+	reg->dirty = true;
+
+	/*  clear any abort  */
+	retval =
+		mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap, armv7a->debug_base + CPUDBG_DRCR, 1<<2);
 	if (retval != ERROR_OK)
 		return retval;
 
-	start_byte = address & 0x3;
+	/* Read DSCR */
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+			armv7a->debug_base + CPUDBG_DSCR, &dscr);
 
-	while (total_bytes > 0) {
+	/* This algorithm comes from either :
+	 * Cortex-A8 TRM Example 12-24
+	 * Cortex-R4 TRM Example 11-25
+	 * (slight differences)
+	 */
 
-		/* execute instruction LDRW r1, [r0], 4 (0xe4901004)  */
-		retval = cortex_a8_exec_opcode(target,  ARMV4_5_LDRW_IP(1, 0), NULL);
+	/* Set DTR access mode to stall mode b01  */
+	dscr = (dscr & ~DSCR_EXT_DCC_MASK) | DSCR_EXT_DCC_STALL_MODE;
+	retval +=  mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+			armv7a->debug_base + CPUDBG_DSCR, dscr);
+
+    /* Write R0 with value 'address' using write procedure for stall mode */
+	/*   - Write the address for read access into DTRRX */
+	retval += mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+			armv7a->debug_base + CPUDBG_DTRRX, address & ~0x3);
+	/*  - Copy value from DTRRX to R0 using instruction mrc p14, 0, r0, c5, c0 */
+	cortex_a8_exec_opcode(target, ARMV4_5_MRC(14, 0, 0, 0, 5, 0), &dscr);
+
+
+	/* Write the data transfer instruction (ldc p14, c5, [r0],4)
+	 * and the DTR mode setting to fast mode
+	 * in one combined write (since they are adjacent registers)
+	 */
+	buff32[0] = ARMV4_5_LDC(0, 1, 0, 1, 14, 5, 0, 4);
+	dscr = (dscr & ~DSCR_EXT_DCC_MASK) | DSCR_EXT_DCC_FAST_MODE;
+	buff32[1] = dscr;
+	/*  group the 2 access CPUDBG_ITR 0x84 and CPUDBG_DSCR 0x88 */
+	retval += mem_ap_sel_write_buf_u32(swjdp, armv7a->debug_ap, (uint8_t *)buff32, 8,
+			armv7a->debug_base + CPUDBG_ITR);
+	if (retval != ERROR_OK)
+		goto error_unset_dtr_r;
+
+
+	/* Due to offset word alignment, the  buffer may not have space
+	 * to read the full first and last int32 words,
+	 * hence, malloc space to read into, then copy and align into the buffer.
+	 */
+	tmp_buff = (char *) malloc(total_u32<<2);
+
+	/* The last word needs to be handled separately - read all other words in one go.
+	 */
+	if (total_u32 > 1) {
+		/* Read the data - Each read of the DTRTX register causes the instruction to be reissued
+		 * Abort flags are sticky, so can be read at end of transactions
+		 *
+		 * This data is read in aligned to 32 bit boundary, hence may need shifting later.
+		 */
+		retval = mem_ap_sel_read_buf_u32_noincr(swjdp, armv7a->debug_ap, (uint8_t *)tmp_buff, (total_u32-1)<<2,
+									armv7a->debug_base + CPUDBG_DTRTX);
 		if (retval != ERROR_OK)
-			return retval;
-
-		retval = cortex_a8_dap_read_coreregister_u32(target, &data.ui, 1);
-		if (retval != ERROR_OK)
-			return retval;
-
-		nbytes_to_read = 4 - start_byte;
-		if (total_bytes < nbytes_to_read)
-			nbytes_to_read = total_bytes;
-
-		for (i = 0; i < nbytes_to_read; ++i)
-			*buffer++ = data.uc_a[i + start_byte];
-
-		total_bytes -= nbytes_to_read;
-		start_byte = 0;
+			goto error_unset_dtr_r;
 	}
 
-	return retval;
-}
+	/* set DTR access mode back to non blocking b00  */
+	dscr = (dscr & ~DSCR_EXT_DCC_MASK) | DSCR_EXT_DCC_NON_BLOCKING;
+	retval =  mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+					armv7a->debug_base + CPUDBG_DSCR, dscr);
+	if (retval != ERROR_OK)
+		goto error_free_buff_r;
 
+	/* Wait for the final read instruction to finish */
+	do {
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+					armv7a->debug_base + CPUDBG_DSCR, &dscr);
+		if (retval != ERROR_OK)
+			goto error_free_buff_r;
+	} while ((dscr & DSCR_INSTR_COMP) == 0);
+
+
+	/* Check for sticky abort flags in the DSCR */
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DSCR, &dscr);
+	if (retval != ERROR_OK)
+		goto error_free_buff_r;
+	if (dscr & (DSCR_STICKY_ABORT_PRECISE | DSCR_STICKY_ABORT_IMPRECISE)) {
+		/* Abort occurred - clear it and exit */
+		LOG_ERROR("abort occurred - dscr = 0x%08x", dscr);
+		mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+					armv7a->debug_base + CPUDBG_DRCR, 1<<2);
+		goto error_free_buff_r;
+	}
+
+	/* Read the last word */
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DTRTX, (uint32_t *)&tmp_buff[(total_u32-1)<<2]);
+	if (retval != ERROR_OK)
+		goto error_free_buff_r;
+
+	/* Copy and align the data into the output buffer */
+	memcpy(buffer, &tmp_buff[start_byte], total_bytes);
+
+	free(tmp_buff);
+
+	/* Done */
+	return ERROR_OK;
+
+
+error_unset_dtr_r:
+	/* Unset DTR mode */
+	mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DSCR, &dscr);
+	dscr = (dscr & ~DSCR_EXT_DCC_MASK) | DSCR_EXT_DCC_NON_BLOCKING;
+	mem_ap_sel_write_atomic_u32(swjdp, armv7a->debug_ap,
+				armv7a->debug_base + CPUDBG_DSCR, dscr);
+error_free_buff_r:
+	LOG_ERROR("error");
+	free(tmp_buff);
+	return ERROR_FAIL;
+}
 
 
 /*
@@ -1930,31 +2107,33 @@ static int cortex_a8_read_phys_memory(struct target *target,
 
 	if (count && buffer) {
 
-		if (apsel == swjdp_memoryap) {
+		if (armv7a->memory_ap_available && (apsel == armv7a->memory_ap)) {
 
 			/* read memory through AHB-AP */
 
 			switch (size) {
 				case 4:
-					retval = mem_ap_sel_read_buf_u32(swjdp, swjdp_memoryap,
+					retval = mem_ap_sel_read_buf_u32(swjdp, armv7a->memory_ap,
 						buffer, 4 * count, address);
 					break;
 				case 2:
-					retval = mem_ap_sel_read_buf_u16(swjdp, swjdp_memoryap,
+					retval = mem_ap_sel_read_buf_u16(swjdp, armv7a->memory_ap,
 						buffer, 2 * count, address);
 					break;
 				case 1:
-					retval = mem_ap_sel_read_buf_u8(swjdp, swjdp_memoryap,
+					retval = mem_ap_sel_read_buf_u8(swjdp, armv7a->memory_ap,
 						buffer, count, address);
 					break;
 			}
 		} else {
 
-			/* read memory through APB-AP
-			 *  disable mmu */
-			retval = cortex_a8_mmu_modify(target, 0);
-			if (retval != ERROR_OK)
-				return retval;
+			/* read memory through APB-AP */
+			if (!armv7a->is_armv7r) {
+				/*  disable mmu */
+				retval = cortex_a8_mmu_modify(target, 0);
+				if (retval != ERROR_OK)
+					return retval;
+			}
 			retval = cortex_a8_read_apb_ab_memory(target, address, size, count, buffer);
 		}
 	}
@@ -1974,31 +2153,35 @@ static int cortex_a8_read_memory(struct target *target, uint32_t address,
 	/* cortex_a8 handles unaligned memory access */
 	LOG_DEBUG("Reading memory at address 0x%x; size %d; count %d", address,
 		size, count);
-	if (apsel == swjdp_memoryap) {
-		retval = cortex_a8_mmu(target, &enabled);
-		if (retval != ERROR_OK)
-			return retval;
-
-
-		if (enabled) {
-			virt = address;
-			retval = cortex_a8_virt2phys(target, virt, &phys);
+	if (armv7a->memory_ap_available && (apsel == armv7a->memory_ap)) {
+		if (!armv7a->is_armv7r) {
+			retval = cortex_a8_mmu(target, &enabled);
 			if (retval != ERROR_OK)
 				return retval;
 
-			LOG_DEBUG("Reading at virtual address. Translating v:0x%x to r:0x%x",
-				virt, phys);
-			address = phys;
+
+			if (enabled) {
+				virt = address;
+				retval = cortex_a8_virt2phys(target, virt, &phys);
+				if (retval != ERROR_OK)
+					return retval;
+
+				LOG_DEBUG("Reading at virtual address. Translating v:0x%x to r:0x%x",
+					virt, phys);
+				address = phys;
+			}
 		}
 		retval = cortex_a8_read_phys_memory(target, address, size, count, buffer);
 	} else {
-		retval = cortex_a8_check_address(target, address);
-		if (retval != ERROR_OK)
-			return retval;
-		/*  enable mmu */
-		retval = cortex_a8_mmu_modify(target, 1);
-		if (retval != ERROR_OK)
-			return retval;
+		if (!armv7a->is_armv7r) {
+			retval = cortex_a8_check_address(target, address);
+			if (retval != ERROR_OK)
+				return retval;
+			/*  enable mmu */
+			retval = cortex_a8_mmu_modify(target, 1);
+			if (retval != ERROR_OK)
+				return retval;
+		}
 		retval = cortex_a8_read_apb_ab_memory(target, address, size, count, buffer);
 	}
 	return retval;
@@ -2018,21 +2201,21 @@ static int cortex_a8_write_phys_memory(struct target *target,
 
 	if (count && buffer) {
 
-		if (apsel == swjdp_memoryap) {
+		if (armv7a->memory_ap_available && (apsel == armv7a->memory_ap)) {
 
 			/* write memory through AHB-AP */
 
 			switch (size) {
 				case 4:
-					retval = mem_ap_sel_write_buf_u32(swjdp, swjdp_memoryap,
+					retval = mem_ap_sel_write_buf_u32(swjdp, armv7a->memory_ap,
 						buffer, 4 * count, address);
 					break;
 				case 2:
-					retval = mem_ap_sel_write_buf_u16(swjdp, swjdp_memoryap,
+					retval = mem_ap_sel_write_buf_u16(swjdp, armv7a->memory_ap,
 						buffer, 2 * count, address);
 					break;
 				case 1:
-					retval = mem_ap_sel_write_buf_u8(swjdp, swjdp_memoryap,
+					retval = mem_ap_sel_write_buf_u8(swjdp, armv7a->memory_ap,
 						buffer, count, address);
 					break;
 			}
@@ -2040,9 +2223,11 @@ static int cortex_a8_write_phys_memory(struct target *target,
 		} else {
 
 			/* write memory through APB-AP */
-			retval = cortex_a8_mmu_modify(target, 0);
-			if (retval != ERROR_OK)
-				return retval;
+			if (!armv7a->is_armv7r) {
+				retval = cortex_a8_mmu_modify(target, 0);
+				if (retval != ERROR_OK)
+					return retval;
+			}
 			return cortex_a8_write_apb_ab_memory(target, address, size, count, buffer);
 		}
 	}
@@ -2115,46 +2300,44 @@ static int cortex_a8_write_memory(struct target *target, uint32_t address,
 	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	uint8_t apsel = swjdp->apsel;
 	/* cortex_a8 handles unaligned memory access */
-	LOG_DEBUG("Reading memory at address 0x%x; size %d; count %d", address,
+	LOG_DEBUG("Writing memory at address 0x%x; size %d; count %d", address,
 		size, count);
-	if (apsel == swjdp_memoryap) {
+	if (armv7a->memory_ap_available && (apsel == armv7a->memory_ap)) {
 
 		LOG_DEBUG("Writing memory to address 0x%x; size %d; count %d", address, size,
 			count);
-		retval = cortex_a8_mmu(target, &enabled);
-		if (retval != ERROR_OK)
-			return retval;
-
-		if (enabled) {
-			virt = address;
-			retval = cortex_a8_virt2phys(target, virt, &phys);
+		if (!armv7a->is_armv7r) {
+			retval = cortex_a8_mmu(target, &enabled);
 			if (retval != ERROR_OK)
 				return retval;
-			LOG_DEBUG("Writing to virtual address. Translating v:0x%x to r:0x%x",
-				virt,
-				phys);
-			address = phys;
+
+			if (enabled) {
+				virt = address;
+				retval = cortex_a8_virt2phys(target, virt, &phys);
+				if (retval != ERROR_OK)
+					return retval;
+				LOG_DEBUG("Writing to virtual address. Translating v:0x%x to r:0x%x",
+					virt,
+					phys);
+				address = phys;
+			}
 		}
 
 		retval = cortex_a8_write_phys_memory(target, address, size,
 				count, buffer);
 	} else {
-		retval = cortex_a8_check_address(target, address);
-		if (retval != ERROR_OK)
-			return retval;
-		/*  enable mmu  */
-		retval = cortex_a8_mmu_modify(target, 1);
-		if (retval != ERROR_OK)
-			return retval;
+		if (!armv7a->is_armv7r) {
+			retval = cortex_a8_check_address(target, address);
+			if (retval != ERROR_OK)
+				return retval;
+			/*  enable mmu  */
+			retval = cortex_a8_mmu_modify(target, 1);
+			if (retval != ERROR_OK)
+				return retval;
+		}
 		retval = cortex_a8_write_apb_ab_memory(target, address, size, count, buffer);
 	}
 	return retval;
-}
-
-static int cortex_a8_bulk_write_memory(struct target *target, uint32_t address,
-	uint32_t count, const uint8_t *buffer)
-{
-	return cortex_a8_write_memory(target, address, 4, count, buffer);
 }
 
 static int cortex_a8_handle_target_request(void *priv)
@@ -2172,16 +2355,16 @@ static int cortex_a8_handle_target_request(void *priv)
 	if (target->state == TARGET_RUNNING) {
 		uint32_t request;
 		uint32_t dscr;
-		retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+		retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 				armv7a->debug_base + CPUDBG_DSCR, &dscr);
 
 		/* check if we have data */
 		while ((dscr & DSCR_DTR_TX_FULL) && (retval == ERROR_OK)) {
-			retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+			retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 					armv7a->debug_base + CPUDBG_DTRTX, &request);
 			if (retval == ERROR_OK) {
 				target_request(target, request);
-				retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+				retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 						armv7a->debug_base + CPUDBG_DSCR, &dscr);
 			}
 		}
@@ -2210,6 +2393,23 @@ static int cortex_a8_examine_first(struct target *target)
 	if (retval != ERROR_OK)
 		return retval;
 
+	/* Search for the APB-AB - it is needed for access to debug registers */
+	retval = dap_find_ap(swjdp, AP_TYPE_APB_AP, &armv7a->debug_ap);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Could not find APB-AP for debug access");
+		return retval;
+	}
+	/* Search for the AHB-AB */
+	retval = dap_find_ap(swjdp, AP_TYPE_AHB_AP, &armv7a->memory_ap);
+	if (retval != ERROR_OK) {
+		/* AHB-AP not found - use APB-AP */
+		LOG_DEBUG("Could not find AHB-AP - using APB-AP for memory access");
+		armv7a->memory_ap_available = false;
+	} else {
+		armv7a->memory_ap_available = true;
+	}
+
+
 	if (!target->dbgbase_set) {
 		uint32_t dbgbase;
 		/* Get ROM Table base */
@@ -2225,33 +2425,33 @@ static int cortex_a8_examine_first(struct target *target)
 	} else
 		armv7a->debug_base = target->dbgbase;
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_CPUID, &cpuid);
 	if (retval != ERROR_OK)
 		return retval;
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_CPUID, &cpuid);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("Examine %s failed", "CPUID");
 		return retval;
 	}
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_CTYPR, &ctypr);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("Examine %s failed", "CTYPR");
 		return retval;
 	}
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_TTYPR, &ttypr);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("Examine %s failed", "TTYPR");
 		return retval;
 	}
 
-	retval = mem_ap_sel_read_atomic_u32(swjdp, swjdp_debugap,
+	retval = mem_ap_sel_read_atomic_u32(swjdp, armv7a->debug_ap,
 			armv7a->debug_base + CPUDBG_DIDR, &didr);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("Examine %s failed", "DIDR");
@@ -2371,9 +2571,19 @@ static int cortex_a8_target_create(struct target *target, Jim_Interp *interp)
 {
 	struct cortex_a8_common *cortex_a8 = calloc(1, sizeof(struct cortex_a8_common));
 
+	cortex_a8->armv7a_common.is_armv7r = false;
+
 	return cortex_a8_init_arch_info(target, cortex_a8, target->tap);
 }
 
+static int cortex_r4_target_create(struct target *target, Jim_Interp *interp)
+{
+	struct cortex_a8_common *cortex_a8 = calloc(1, sizeof(struct cortex_a8_common));
+
+	cortex_a8->armv7a_common.is_armv7r = true;
+
+	return cortex_a8_init_arch_info(target, cortex_a8, target->tap);
+}
 
 
 static int cortex_a8_mmu(struct target *target, int *enabled)
@@ -2394,14 +2604,14 @@ static int cortex_a8_virt2phys(struct target *target,
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	uint8_t apsel = swjdp->apsel;
-	if (apsel == swjdp_memoryap) {
+	if (armv7a->memory_ap_available && (apsel == armv7a->memory_ap)) {
 		uint32_t ret;
 		retval = armv7a_mmu_translate_va(target,
 				virt, &ret);
 		if (retval != ERROR_OK)
 			goto done;
 		*phys = ret;
-	} else {/*  use this method if swjdp_memoryap not selected
+	} else {/*  use this method if armv7a->memory_ap not selected
 		 *  mmu must be enable in order to get a correct translation */
 		retval = cortex_a8_mmu_modify(target, 1);
 		if (retval != ERROR_OK)
@@ -2536,9 +2746,9 @@ static const struct command_registration cortex_a8_command_handlers[] = {
 		.chain = armv7a_command_handlers,
 	},
 	{
-		.name = "cortex_a8",
+		.name = "cortex_a",
 		.mode = COMMAND_ANY,
-		.help = "Cortex-A8 command group",
+		.help = "Cortex-A command group",
 		.usage = "",
 		.chain = cortex_a8_exec_command_handlers,
 	},
@@ -2566,7 +2776,6 @@ struct target_type cortexa8_target = {
 
 	.read_memory = cortex_a8_read_memory,
 	.write_memory = cortex_a8_write_memory,
-	.bulk_write_memory = cortex_a8_bulk_write_memory,
 
 	.checksum_memory = arm_checksum_memory,
 	.blank_check_memory = arm_blank_check_memory,
@@ -2589,4 +2798,79 @@ struct target_type cortexa8_target = {
 	.write_phys_memory = cortex_a8_write_phys_memory,
 	.mmu = cortex_a8_mmu,
 	.virt2phys = cortex_a8_virt2phys,
+};
+
+static const struct command_registration cortex_r4_exec_command_handlers[] = {
+	{
+		.name = "cache_info",
+		.handler = cortex_a8_handle_cache_info_command,
+		.mode = COMMAND_EXEC,
+		.help = "display information about target caches",
+		.usage = "",
+	},
+	{
+		.name = "dbginit",
+		.handler = cortex_a8_handle_dbginit_command,
+		.mode = COMMAND_EXEC,
+		.help = "Initialize core debug",
+		.usage = "",
+	},
+
+	COMMAND_REGISTRATION_DONE
+};
+static const struct command_registration cortex_r4_command_handlers[] = {
+	{
+		.chain = arm_command_handlers,
+	},
+	{
+		.chain = armv7a_command_handlers,
+	},
+	{
+		.name = "cortex_r4",
+		.mode = COMMAND_ANY,
+		.help = "Cortex-R4 command group",
+		.usage = "",
+		.chain = cortex_r4_exec_command_handlers,
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
+struct target_type cortexr4_target = {
+	.name = "cortex_r4",
+
+	.poll = cortex_a8_poll,
+	.arch_state = armv7a_arch_state,
+
+	.target_request_data = NULL,
+
+	.halt = cortex_a8_halt,
+	.resume = cortex_a8_resume,
+	.step = cortex_a8_step,
+
+	.assert_reset = cortex_a8_assert_reset,
+	.deassert_reset = cortex_a8_deassert_reset,
+	.soft_reset_halt = NULL,
+
+	/* REVISIT allow exporting VFP3 registers ... */
+	.get_gdb_reg_list = arm_get_gdb_reg_list,
+
+	.read_memory = cortex_a8_read_memory,
+	.write_memory = cortex_a8_write_memory,
+
+	.checksum_memory = arm_checksum_memory,
+	.blank_check_memory = arm_blank_check_memory,
+
+	.run_algorithm = armv4_5_run_algorithm,
+
+	.add_breakpoint = cortex_a8_add_breakpoint,
+	.add_context_breakpoint = cortex_a8_add_context_breakpoint,
+	.add_hybrid_breakpoint = cortex_a8_add_hybrid_breakpoint,
+	.remove_breakpoint = cortex_a8_remove_breakpoint,
+	.add_watchpoint = NULL,
+	.remove_watchpoint = NULL,
+
+	.commands = cortex_r4_command_handlers,
+	.target_create = cortex_r4_target_create,
+	.init_target = cortex_a8_init_target,
+	.examine = cortex_a8_examine,
 };

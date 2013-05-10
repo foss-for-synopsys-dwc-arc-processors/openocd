@@ -137,8 +137,9 @@ void dap_ap_select(struct adiv5_dap *dap, uint8_t ap)
 int dap_setup_accessport(struct adiv5_dap *dap, uint32_t csw, uint32_t tar)
 {
 	int retval;
+	csw = csw | CSW_DBGSWENABLE | CSW_MASTER_DEBUG | CSW_HPROT |
+		dap->apcsw[dap->ap_current >> 24];
 
-	csw = csw | CSW_DBGSWENABLE | CSW_MASTER_DEBUG | CSW_HPROT;
 	if (csw != dap->ap_csw_value) {
 		/* LOG_DEBUG("DAP: Set CSW %x",csw); */
 		retval = dap_queue_ap_write(dap, AP_REG_CSW, csw);
@@ -262,16 +263,17 @@ int mem_ap_write_atomic_u32(struct adiv5_dap *dap, uint32_t address,
 
 /*****************************************************************************
 *                                                                            *
-* mem_ap_write_buf(struct adiv5_dap *dap, uint8_t *buffer, int count, uint32_t address) *
+* mem_ap_write_buf(struct adiv5_dap *dap, uint8_t *buffer, int count, uint32_t address, bool addr_incr) *
 *                                                                            *
 * Write a buffer in target order (little endian)                             *
 *                                                                            *
 *****************************************************************************/
-int mem_ap_write_buf_u32(struct adiv5_dap *dap, const uint8_t *buffer, int count, uint32_t address)
+int mem_ap_write_buf_u32(struct adiv5_dap *dap, const uint8_t *buffer, int count, uint32_t address, bool addr_incr)
 {
 	int wcount, blocksize, writecount, errorcount = 0, retval = ERROR_OK;
 	uint32_t adr = address;
 	const uint8_t *pBuffer = buffer;
+	uint32_t incr_flag = CSW_ADDRINC_OFF;
 
 	count >>= 2;
 	wcount = count;
@@ -302,7 +304,10 @@ int mem_ap_write_buf_u32(struct adiv5_dap *dap, const uint8_t *buffer, int count
 		if (blocksize == 0)
 			blocksize = 1;
 
-		retval = dap_setup_accessport(dap, CSW_32BIT | CSW_ADDRINC_SINGLE, address);
+		if (addr_incr)
+			incr_flag = CSW_ADDRINC_SINGLE;
+
+		retval = dap_setup_accessport(dap, CSW_32BIT | incr_flag, address);
 		if (retval != ERROR_OK)
 			return retval;
 
@@ -317,7 +322,8 @@ int mem_ap_write_buf_u32(struct adiv5_dap *dap, const uint8_t *buffer, int count
 		retval = dap_run(dap);
 		if (retval == ERROR_OK) {
 			wcount = wcount - blocksize;
-			address = address + 4 * blocksize;
+			if (addr_incr)
+				address = address + 4 * blocksize;
 			buffer = buffer + 4 * blocksize;
 		} else
 			errorcount++;
@@ -534,27 +540,22 @@ int mem_ap_write_buf_u8(struct adiv5_dap *dap, const uint8_t *buffer, int count,
 	return retval;
 }
 
-/* FIXME don't import ... this is a temporary workaround for the
- * mem_ap_read_buf_u32() mess, until it's no longer JTAG-specific.
- */
-extern int adi_jtag_dp_scan(struct adiv5_dap *dap,
-		uint8_t instr, uint8_t reg_addr, uint8_t RnW,
-		uint8_t *outvalue, uint8_t *invalue, uint8_t *ack);
-
 /**
  * Synchronously read a block of 32-bit words into a buffer
  * @param dap The DAP connected to the MEM-AP.
  * @param buffer where the words will be stored (in host byte order).
  * @param count How many words to read.
  * @param address Memory address from which to read words; all the
+ * @param addr_incr if true, increment the source address for each u32
  *	words must be readable by the currently selected MEM-AP.
  */
 int mem_ap_read_buf_u32(struct adiv5_dap *dap, uint8_t *buffer,
-		int count, uint32_t address)
+		int count, uint32_t address, bool addr_incr)
 {
 	int wcount, blocksize, readcount, errorcount = 0, retval = ERROR_OK;
 	uint32_t adr = address;
 	uint8_t *pBuffer = buffer;
+	uint32_t incr_flag = CSW_ADDRINC_OFF;
 
 	count >>= 2;
 	wcount = count;
@@ -573,43 +574,15 @@ int mem_ap_read_buf_u32(struct adiv5_dap *dap, uint8_t *buffer,
 		if (blocksize == 0)
 			blocksize = 1;
 
-		retval = dap_setup_accessport(dap, CSW_32BIT | CSW_ADDRINC_SINGLE,
+		if (addr_incr)
+			incr_flag = CSW_ADDRINC_SINGLE;
+
+		retval = dap_setup_accessport(dap, CSW_32BIT | incr_flag,
 				address);
 		if (retval != ERROR_OK)
 			return retval;
 
-		/* FIXME remove these three calls to adi_jtag_dp_scan(),
-		 * so this routine becomes transport-neutral.  Be careful
-		 * not to cause performance problems with JTAG; would it
-		 * suffice to loop over dap_queue_ap_read(), or would that
-		 * be slower when JTAG is the chosen transport?
-		 */
-
-		/* Scan out first read */
-		retval = adi_jtag_dp_scan(dap, JTAG_DP_APACC, AP_REG_DRW,
-				DPAP_READ, 0, NULL, NULL);
-		if (retval != ERROR_OK)
-			return retval;
-		for (readcount = 0; readcount < blocksize - 1; readcount++) {
-			/* Scan out next read; scan in posted value for the
-			 * previous one.  Assumes read is acked "OK/FAULT",
-			 * and CTRL_STAT says that meant "OK".
-			 */
-			retval = adi_jtag_dp_scan(dap, JTAG_DP_APACC, AP_REG_DRW,
-					DPAP_READ, 0, buffer + 4 * readcount,
-					&dap->ack);
-			if (retval != ERROR_OK)
-				return retval;
-		}
-
-		/* Scan in last posted value; RDBUFF has no other effect,
-		 * assuming ack is OK/FAULT and CTRL_STAT says "OK".
-		 */
-		retval = adi_jtag_dp_scan(dap, JTAG_DP_DPACC, DP_RDBUFF,
-				DPAP_READ, 0, buffer + 4 * readcount,
-				&dap->ack);
-		if (retval != ERROR_OK)
-			return retval;
+		retval = dap_queue_ap_read_block(dap, AP_REG_DRW, blocksize, buffer);
 
 		retval = dap_run(dap);
 		if (retval != ERROR_OK) {
@@ -622,7 +595,8 @@ int mem_ap_read_buf_u32(struct adiv5_dap *dap, uint8_t *buffer,
 			return retval;
 		}
 		wcount = wcount - blocksize;
-		address += 4 * blocksize;
+		if (addr_incr)
+			address += 4 * blocksize;
 		buffer += 4 * blocksize;
 	}
 
@@ -881,11 +855,18 @@ int mem_ap_sel_read_buf_u16(struct adiv5_dap *swjdp, uint8_t ap,
 	return mem_ap_read_buf_u16(swjdp, buffer, count, address);
 }
 
+int mem_ap_sel_read_buf_u32_noincr(struct adiv5_dap *swjdp, uint8_t ap,
+		uint8_t *buffer, int count, uint32_t address)
+{
+	dap_ap_select(swjdp, ap);
+	return mem_ap_read_buf_u32(swjdp, buffer, count, address, false);
+}
+
 int mem_ap_sel_read_buf_u32(struct adiv5_dap *swjdp, uint8_t ap,
 		uint8_t *buffer, int count, uint32_t address)
 {
 	dap_ap_select(swjdp, ap);
-	return mem_ap_read_buf_u32(swjdp, buffer, count, address);
+	return mem_ap_read_buf_u32(swjdp, buffer, count, address, true);
 }
 
 int mem_ap_sel_write_buf_u8(struct adiv5_dap *swjdp, uint8_t ap,
@@ -906,7 +887,14 @@ int mem_ap_sel_write_buf_u32(struct adiv5_dap *swjdp, uint8_t ap,
 		const uint8_t *buffer, int count, uint32_t address)
 {
 	dap_ap_select(swjdp, ap);
-	return mem_ap_write_buf_u32(swjdp, buffer, count, address);
+	return mem_ap_write_buf_u32(swjdp, buffer, count, address, true);
+}
+
+int mem_ap_sel_write_buf_u32_noincr(struct adiv5_dap *swjdp, uint8_t ap,
+		const uint8_t *buffer, int count, uint32_t address)
+{
+	dap_ap_select(swjdp, ap);
+	return mem_ap_write_buf_u32(swjdp, buffer, count, address, false);
 }
 
 #define MDM_REG_STAT		0x00
@@ -1194,6 +1182,60 @@ static bool is_dap_cid_ok(uint32_t cid3, uint32_t cid2, uint32_t cid1, uint32_t 
 {
 	return cid3 == 0xb1 && cid2 == 0x05
 			&& ((cid1 & 0x0f) == 0) && cid0 == 0x0d;
+}
+
+/*
+ * This function checks the ID for each access port to find the requested Access Port type
+ */
+int dap_find_ap(struct adiv5_dap *dap, enum ap_type type_to_find, uint8_t *ap_num_out)
+{
+	int ap;
+
+	/* Maximum AP number is 255 since the SELECT register is 8 bits */
+	for (ap = 0; ap <= 255; ap++) {
+
+		/* read the IDR register of the Access Port */
+		uint32_t id_val = 0;
+		dap_ap_select(dap, ap);
+
+		int retval = dap_queue_ap_read(dap, AP_REG_IDR, &id_val);
+		if (retval != ERROR_OK)
+			return retval;
+
+		retval = dap_run(dap);
+
+		/* IDR bits:
+		 * 31-28 : Revision
+		 * 27-24 : JEDEC bank (0x4 for ARM)
+		 * 23-17 : JEDEC code (0x3B for ARM)
+		 * 16    : Mem-AP
+		 * 15-8  : Reserved
+		 *  7-0  : AP Identity (1=AHB-AP 2=APB-AP 0x10=JTAG-AP)
+		 */
+
+		/* Reading register for a non-existant AP should not cause an error,
+		 * but just to be sure, try to continue searching if an error does happen.
+		 */
+		if ((retval == ERROR_OK) &&                  /* Register read success */
+			((id_val & 0x0FFF0000) == 0x04770000) && /* Jedec codes match */
+			((id_val & 0xFF) == type_to_find)) {     /* type matches*/
+
+			LOG_DEBUG("Found %s at AP index: %d (IDR=0x%08X)",
+						(type_to_find == AP_TYPE_AHB_AP)  ? "AHB-AP"  :
+						(type_to_find == AP_TYPE_APB_AP)  ? "APB-AP"  :
+						(type_to_find == AP_TYPE_JTAG_AP) ? "JTAG-AP" : "Unknown",
+						ap, id_val);
+
+			*ap_num_out = ap;
+			return ERROR_OK;
+		}
+	}
+
+	LOG_DEBUG("No %s found",
+				(type_to_find == AP_TYPE_AHB_AP)  ? "AHB-AP"  :
+				(type_to_find == AP_TYPE_APB_AP)  ? "APB-AP"  :
+				(type_to_find == AP_TYPE_JTAG_AP) ? "JTAG-AP" : "Unknown");
+	return ERROR_FAIL;
 }
 
 int dap_get_debugbase(struct adiv5_dap *dap, int ap,
@@ -1806,6 +1848,39 @@ COMMAND_HANDLER(dap_apsel_command)
 	return retval;
 }
 
+COMMAND_HANDLER(dap_apcsw_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct arm *arm = target_to_arm(target);
+	struct adiv5_dap *dap = arm->dap;
+
+	uint32_t apcsw = dap->apcsw[dap->apsel], sprot = 0;
+
+	switch (CMD_ARGC) {
+	case 0:
+		command_print(CMD_CTX, "apsel %" PRIi32 " selected, csw 0x%8.8" PRIx32,
+			(dap->apsel), apcsw);
+		break;
+	case 1:
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], sprot);
+		/* AP address is in bits 31:24 of DP_SELECT */
+		if (sprot > 1)
+			return ERROR_COMMAND_SYNTAX_ERROR;
+		if (sprot)
+			apcsw |= CSW_SPROT;
+		else
+			apcsw &= ~CSW_SPROT;
+		break;
+	default:
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+	dap->apcsw[dap->apsel] = apcsw;
+
+	return 0;
+}
+
+
+
 COMMAND_HANDLER(dap_apid_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1860,6 +1935,14 @@ static const struct command_registration dap_commands[] = {
 			"and display the result",
 		.usage = "[ap_num]",
 	},
+	{
+		.name = "apcsw",
+		.handler = dap_apcsw_command,
+		.mode = COMMAND_EXEC,
+		.help = "Set csw access bit ",
+		.usage = "[sprot]",
+	},
+
 	{
 		.name = "apid",
 		.handler = dap_apid_command,

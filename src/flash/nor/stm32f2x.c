@@ -158,6 +158,7 @@ struct stm32x_flash_bank {
 	struct stm32x_options option_bytes;
 	int probed;
 	bool has_large_mem;		/* stm32f42x/stm32f43x family */
+	uint32_t user_bank_size;
 };
 
 /* flash bank stm32x <base> <size> 0 0 <target#>
@@ -173,6 +174,7 @@ FLASH_BANK_COMMAND_HANDLER(stm32x_flash_bank_command)
 	bank->driver_priv = stm32x_info;
 
 	stm32x_info->probed = 0;
+	stm32x_info->user_bank_size = bank->size;
 
 	return ERROR_OK;
 }
@@ -558,7 +560,7 @@ static int stm32x_write_block(struct flash_bank *bank, uint8_t *buffer,
 	};
 
 	armv7m_info.common_magic = ARMV7M_COMMON_MAGIC;
-	armv7m_info.core_mode = ARMV7M_MODE_ANY;
+	armv7m_info.core_mode = ARM_MODE_THREAD;
 
 	init_reg_param(&reg_params[0], "r0", 32, PARAM_IN_OUT);		/* buffer start, status (out) */
 	init_reg_param(&reg_params[1], "r1", 32, PARAM_OUT);		/* buffer end */
@@ -789,6 +791,13 @@ static int stm32x_probe(struct flash_bank *bank)
 		LOG_WARNING("STM32 flash size failed, probe inaccurate - assuming %dk flash",
 			max_flash_size_in_kb);
 		flash_size_in_kb = max_flash_size_in_kb;
+	}
+
+	/* if the user sets the size manually then ignore the probed value
+	 * this allows us to work around devices that have a invalid flash size register value */
+	if (stm32x_info->user_bank_size) {
+		LOG_INFO("ignoring flash probed value, using configured bank size");
+		flash_size_in_kb = stm32x_info->user_bank_size / 1024;
 	}
 
 	LOG_INFO("flash size = %dkbytes", flash_size_in_kb);

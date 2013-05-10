@@ -44,11 +44,6 @@
 #define _DEBUG_INSTRUCTION_EXECUTION_
 #endif
 
-/** Maps from enum armv7m_mode (except ARMV7M_MODE_ANY) to name. */
-char *armv7m_mode_strings[] = {
-	"Thread", "Thread (User)", "Handler",
-};
-
 static char *armv7m_exception_strings[] = {
 	"", "Reset", "NMI", "HardFault",
 	"MemManage", "BusFault", "UsageFault", "RESERVED",
@@ -140,6 +135,7 @@ int armv7m_restore_context(struct target *target)
 {
 	int i;
 	struct armv7m_common *armv7m = target_to_armv7m(target);
+	struct reg_cache *cache = armv7m->arm.core_cache;
 
 	LOG_DEBUG(" ");
 
@@ -147,8 +143,10 @@ int armv7m_restore_context(struct target *target)
 		armv7m->pre_restore_context(target);
 
 	for (i = ARMV7M_NUM_REGS - 1; i >= 0; i--) {
-		if (armv7m->core_cache->reg_list[i].dirty)
-			armv7m->write_core_reg(target, i);
+		if (cache->reg_list[i].dirty) {
+			uint32_t value = buf_get_u32(cache->reg_list[i].value, 0, 32);
+			armv7m->arm.write_core_reg(target, &cache->reg_list[i], i, ARM_MODE_ANY, value);
+		}
 	}
 
 	return ERROR_OK;
@@ -178,21 +176,21 @@ char *armv7m_exception_string(int number)
 static int armv7m_get_core_reg(struct reg *reg)
 {
 	int retval;
-	struct armv7m_core_reg *armv7m_reg = reg->arch_info;
+	struct arm_reg *armv7m_reg = reg->arch_info;
 	struct target *target = armv7m_reg->target;
-	struct armv7m_common *armv7m = target_to_armv7m(target);
+	struct arm *arm = target_to_arm(target);
 
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
 
-	retval = armv7m->read_core_reg(target, armv7m_reg->num);
+	retval = arm->read_core_reg(target, reg, armv7m_reg->num, arm->core_mode);
 
 	return retval;
 }
 
 static int armv7m_set_core_reg(struct reg *reg, uint8_t *buf)
 {
-	struct armv7m_core_reg *armv7m_reg = reg->arch_info;
+	struct arm_reg *armv7m_reg = reg->arch_info;
 	struct target *target = armv7m_reg->target;
 	uint32_t value = buf_get_u32(buf, 0, 32);
 
@@ -206,52 +204,51 @@ static int armv7m_set_core_reg(struct reg *reg, uint8_t *buf)
 	return ERROR_OK;
 }
 
-static int armv7m_read_core_reg(struct target *target, unsigned num)
+static int armv7m_read_core_reg(struct target *target, struct reg *r,
+	int num, enum arm_mode mode)
 {
 	uint32_t reg_value;
 	int retval;
-	struct armv7m_core_reg *armv7m_core_reg;
+	struct arm_reg *armv7m_core_reg;
 	struct armv7m_common *armv7m = target_to_armv7m(target);
 
-	if (num >= ARMV7M_NUM_REGS)
-		return ERROR_COMMAND_SYNTAX_ERROR;
+	assert(num < (int)armv7m->arm.core_cache->num_regs);
 
-	armv7m_core_reg = armv7m->core_cache->reg_list[num].arch_info;
+	armv7m_core_reg = armv7m->arm.core_cache->reg_list[num].arch_info;
 	retval = armv7m->load_core_reg_u32(target,
-			armv7m_core_reg->type,
-			armv7m_core_reg->num,
-			&reg_value);
-	buf_set_u32(armv7m->core_cache->reg_list[num].value, 0, 32, reg_value);
-	armv7m->core_cache->reg_list[num].valid = 1;
-	armv7m->core_cache->reg_list[num].dirty = 0;
+			armv7m_core_reg->num, &reg_value);
+
+	buf_set_u32(armv7m->arm.core_cache->reg_list[num].value, 0, 32, reg_value);
+	armv7m->arm.core_cache->reg_list[num].valid = 1;
+	armv7m->arm.core_cache->reg_list[num].dirty = 0;
 
 	return retval;
 }
 
-static int armv7m_write_core_reg(struct target *target, unsigned num)
+static int armv7m_write_core_reg(struct target *target, struct reg *r,
+	int num, enum arm_mode mode, uint32_t value)
 {
 	int retval;
 	uint32_t reg_value;
-	struct armv7m_core_reg *armv7m_core_reg;
+	struct arm_reg *armv7m_core_reg;
 	struct armv7m_common *armv7m = target_to_armv7m(target);
 
-	if (num >= ARMV7M_NUM_REGS)
-		return ERROR_COMMAND_SYNTAX_ERROR;
+	assert(num < (int)armv7m->arm.core_cache->num_regs);
 
-	reg_value = buf_get_u32(armv7m->core_cache->reg_list[num].value, 0, 32);
-	armv7m_core_reg = armv7m->core_cache->reg_list[num].arch_info;
+	reg_value = buf_get_u32(armv7m->arm.core_cache->reg_list[num].value, 0, 32);
+	armv7m_core_reg = armv7m->arm.core_cache->reg_list[num].arch_info;
 	retval = armv7m->store_core_reg_u32(target,
-			armv7m_core_reg->type,
 			armv7m_core_reg->num,
 			reg_value);
 	if (retval != ERROR_OK) {
 		LOG_ERROR("JTAG failure");
-		armv7m->core_cache->reg_list[num].dirty = armv7m->core_cache->reg_list[num].valid;
+		armv7m->arm.core_cache->reg_list[num].dirty = armv7m->arm.core_cache->reg_list[num].valid;
 		return ERROR_JTAG_DEVICE_ERROR;
 	}
+
 	LOG_DEBUG("write core reg %i value 0x%" PRIx32 "", num, reg_value);
-	armv7m->core_cache->reg_list[num].valid = 1;
-	armv7m->core_cache->reg_list[num].dirty = 0;
+	armv7m->arm.core_cache->reg_list[num].valid = 1;
+	armv7m->arm.core_cache->reg_list[num].dirty = 0;
 
 	return ERROR_OK;
 }
@@ -278,7 +275,7 @@ int armv7m_get_gdb_reg_list(struct target *target, struct reg **reg_list[], int 
 	 *  - CPSR
 	 */
 	for (i = 0; i < 16; i++)
-		(*reg_list)[i] = &armv7m->core_cache->reg_list[i];
+		(*reg_list)[i] = &armv7m->arm.core_cache->reg_list[i];
 
 	for (i = 16; i < 24; i++)
 		(*reg_list)[i] = &arm_gdb_dummy_fp_reg;
@@ -292,7 +289,7 @@ int armv7m_get_gdb_reg_list(struct target *target, struct reg **reg_list[], int 
 	 * if it does not support this arch */
 	*((char *)armv7m->arm.pc->value) |= 1;
 #else
-	(*reg_list)[25] = &armv7m->core_cache->reg_list[ARMV7M_xPSR];
+	(*reg_list)[25] = &armv7m->arm.core_cache->reg_list[ARMV7M_xPSR];
 #endif
 
 	return ERROR_OK;
@@ -332,7 +329,7 @@ int armv7m_start_algorithm(struct target *target,
 {
 	struct armv7m_common *armv7m = target_to_armv7m(target);
 	struct armv7m_algorithm *armv7m_algorithm_info = arch_info;
-	enum armv7m_mode core_mode = armv7m->core_mode;
+	enum arm_mode core_mode = armv7m->arm.core_mode;
 	int retval = ERROR_OK;
 
 	/* NOTE: armv7m_run_algorithm requires that each algorithm uses a software breakpoint
@@ -351,10 +348,9 @@ int armv7m_start_algorithm(struct target *target,
 	/* refresh core register cache
 	 * Not needed if core register cache is always consistent with target process state */
 	for (unsigned i = 0; i < ARMV7M_NUM_REGS; i++) {
-		if (!armv7m->core_cache->reg_list[i].valid)
-			armv7m->read_core_reg(target, i);
+
 		armv7m_algorithm_info->context[i] = buf_get_u32(
-				armv7m->core_cache->reg_list[i].value,
+				armv7m->arm.core_cache->reg_list[i].value,
 				0,
 				32);
 	}
@@ -370,7 +366,7 @@ int armv7m_start_algorithm(struct target *target,
 
 	for (int i = 0; i < num_reg_params; i++) {
 		struct reg *reg =
-			register_get_by_name(armv7m->core_cache, reg_params[i].reg_name, 0);
+			register_get_by_name(armv7m->arm.core_cache, reg_params[i].reg_name, 0);
 /*		uint32_t regvalue; */
 
 		if (!reg) {
@@ -388,13 +384,23 @@ int armv7m_start_algorithm(struct target *target,
 		armv7m_set_core_reg(reg, reg_params[i].value);
 	}
 
-	if (armv7m_algorithm_info->core_mode != ARMV7M_MODE_ANY) {
+	if (armv7m_algorithm_info->core_mode != ARM_MODE_ANY &&
+			armv7m_algorithm_info->core_mode != core_mode) {
+
+		/* we cannot set ARM_MODE_HANDLER, so use ARM_MODE_THREAD instead */
+		if (armv7m_algorithm_info->core_mode == ARM_MODE_HANDLER) {
+			armv7m_algorithm_info->core_mode = ARM_MODE_THREAD;
+			LOG_INFO("ARM_MODE_HANDLER not currently supported, using ARM_MODE_THREAD instead");
+		}
+
 		LOG_DEBUG("setting core_mode: 0x%2.2x", armv7m_algorithm_info->core_mode);
-		buf_set_u32(armv7m->core_cache->reg_list[ARMV7M_CONTROL].value,
+		buf_set_u32(armv7m->arm.core_cache->reg_list[ARMV7M_CONTROL].value,
 			0, 1, armv7m_algorithm_info->core_mode);
-		armv7m->core_cache->reg_list[ARMV7M_CONTROL].dirty = 1;
-		armv7m->core_cache->reg_list[ARMV7M_CONTROL].valid = 1;
+		armv7m->arm.core_cache->reg_list[ARMV7M_CONTROL].dirty = 1;
+		armv7m->arm.core_cache->reg_list[ARMV7M_CONTROL].valid = 1;
 	}
+
+	/* save previous core mode */
 	armv7m_algorithm_info->core_mode = core_mode;
 
 	retval = target_resume(target, 0, entry_point, 1, 1);
@@ -434,7 +440,7 @@ int armv7m_wait_algorithm(struct target *target,
 		return ERROR_TARGET_TIMEOUT;
 	}
 
-	armv7m->load_core_reg_u32(target, ARMV7M_REGISTER_CORE_GP, 15, &pc);
+	armv7m->load_core_reg_u32(target, 15, &pc);
 	if (exit_point && (pc != exit_point)) {
 		LOG_DEBUG("failed algorithm halted at 0x%" PRIx32 ", expected 0x%" PRIx32,
 			pc,
@@ -456,7 +462,7 @@ int armv7m_wait_algorithm(struct target *target,
 	/* Copy core register values to reg_params[] */
 	for (int i = 0; i < num_reg_params; i++) {
 		if (reg_params[i].direction != PARAM_OUT) {
-			struct reg *reg = register_get_by_name(armv7m->core_cache,
+			struct reg *reg = register_get_by_name(armv7m->arm.core_cache,
 					reg_params[i].reg_name,
 					0);
 
@@ -478,19 +484,28 @@ int armv7m_wait_algorithm(struct target *target,
 
 	for (int i = ARMV7M_NUM_REGS - 1; i >= 0; i--) {
 		uint32_t regvalue;
-		regvalue = buf_get_u32(armv7m->core_cache->reg_list[i].value, 0, 32);
+		regvalue = buf_get_u32(armv7m->arm.core_cache->reg_list[i].value, 0, 32);
 		if (regvalue != armv7m_algorithm_info->context[i]) {
 			LOG_DEBUG("restoring register %s with value 0x%8.8" PRIx32,
-				armv7m->core_cache->reg_list[i].name,
+					armv7m->arm.core_cache->reg_list[i].name,
 				armv7m_algorithm_info->context[i]);
-			buf_set_u32(armv7m->core_cache->reg_list[i].value,
+			buf_set_u32(armv7m->arm.core_cache->reg_list[i].value,
 				0, 32, armv7m_algorithm_info->context[i]);
-			armv7m->core_cache->reg_list[i].valid = 1;
-			armv7m->core_cache->reg_list[i].dirty = 1;
+			armv7m->arm.core_cache->reg_list[i].valid = 1;
+			armv7m->arm.core_cache->reg_list[i].dirty = 1;
 		}
 	}
 
-	armv7m->core_mode = armv7m_algorithm_info->core_mode;
+	/* restore previous core mode */
+	if (armv7m_algorithm_info->core_mode != armv7m->arm.core_mode) {
+		LOG_DEBUG("restoring core_mode: 0x%2.2x", armv7m_algorithm_info->core_mode);
+		buf_set_u32(armv7m->arm.core_cache->reg_list[ARMV7M_CONTROL].value,
+			0, 1, armv7m_algorithm_info->core_mode);
+		armv7m->arm.core_cache->reg_list[ARMV7M_CONTROL].dirty = 1;
+		armv7m->arm.core_cache->reg_list[ARMV7M_CONTROL].valid = 1;
+	}
+
+	armv7m->arm.core_mode = armv7m_algorithm_info->core_mode;
 
 	return retval;
 }
@@ -502,13 +517,13 @@ int armv7m_arch_state(struct target *target)
 	struct arm *arm = &armv7m->arm;
 	uint32_t ctrl, sp;
 
-	ctrl = buf_get_u32(armv7m->core_cache->reg_list[ARMV7M_CONTROL].value, 0, 32);
-	sp = buf_get_u32(armv7m->core_cache->reg_list[ARMV7M_R13].value, 0, 32);
+	ctrl = buf_get_u32(arm->core_cache->reg_list[ARMV7M_CONTROL].value, 0, 32);
+	sp = buf_get_u32(arm->core_cache->reg_list[ARMV7M_R13].value, 0, 32);
 
 	LOG_USER("target halted due to %s, current mode: %s %s\n"
 		"xPSR: %#8.8" PRIx32 " pc: %#8.8" PRIx32 " %csp: %#8.8" PRIx32 "%s",
 		debug_reason_name(target),
-		armv7m_mode_strings[armv7m->core_mode],
+		arm_mode_name(arm->core_mode),
 		armv7m_exception_string(armv7m->exception_number),
 		buf_get_u32(arm->cpsr->value, 0, 32),
 		buf_get_u32(arm->pc->value, 0, 32),
@@ -518,6 +533,7 @@ int armv7m_arch_state(struct target *target)
 
 	return ERROR_OK;
 }
+
 static const struct reg_arch_type armv7m_reg_type = {
 	.get = armv7m_get_core_reg,
 	.set = armv7m_set_core_reg,
@@ -532,7 +548,7 @@ struct reg_cache *armv7m_build_reg_cache(struct target *target)
 	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
 	struct reg *reg_list = calloc(num_regs, sizeof(struct reg));
-	struct armv7m_core_reg *arch_info = calloc(num_regs, sizeof(struct armv7m_core_reg));
+	struct arm_reg *arch_info = calloc(num_regs, sizeof(struct arm_reg));
 	int i;
 
 #ifdef ARMV7_GDB_HACKS
@@ -545,12 +561,12 @@ struct reg_cache *armv7m_build_reg_cache(struct target *target)
 	cache->reg_list = reg_list;
 	cache->num_regs = num_regs;
 	(*cache_p) = cache;
-	armv7m->core_cache = cache;
 
 	for (i = 0; i < num_regs; i++) {
 		arch_info[i].num = armv7m_regs[i].id;
 		arch_info[i].target = target;
-		arch_info[i].armv7m_common = armv7m;
+		arch_info[i].arm = arm;
+
 		reg_list[i].name = armv7m_regs[i].name;
 		reg_list[i].size = armv7m_regs[i].bits;
 		reg_list[i].value = calloc(1, 4);
@@ -584,11 +600,8 @@ int armv7m_init_arch_info(struct target *target, struct armv7m_common *armv7m)
 	arm->arch_info = armv7m;
 	arm->setup_semihosting = armv7m_setup_semihosting;
 
-	/* FIXME remove v7m-specific r/w core_reg functions;
-	 * use the generic ARM core support..
-	 */
-	armv7m->read_core_reg = armv7m_read_core_reg;
-	armv7m->write_core_reg = armv7m_write_core_reg;
+	arm->read_core_reg = armv7m_read_core_reg;
+	arm->write_core_reg = armv7m_write_core_reg;
 
 	return arm_init_arch_info(target, arm);
 }
@@ -648,7 +661,7 @@ int armv7m_checksum_memory(struct target *target,
 		goto cleanup;
 
 	armv7m_info.common_magic = ARMV7M_COMMON_MAGIC;
-	armv7m_info.core_mode = ARMV7M_MODE_ANY;
+	armv7m_info.core_mode = ARM_MODE_THREAD;
 
 	init_reg_param(&reg_params[0], "r0", 32, PARAM_IN_OUT);
 	init_reg_param(&reg_params[1], "r1", 32, PARAM_OUT);
@@ -708,7 +721,7 @@ int armv7m_blank_check_memory(struct target *target,
 		return retval;
 
 	armv7m_info.common_magic = ARMV7M_COMMON_MAGIC;
-	armv7m_info.core_mode = ARMV7M_MODE_ANY;
+	armv7m_info.core_mode = ARM_MODE_THREAD;
 
 	init_reg_param(&reg_params[0], "r0", 32, PARAM_OUT);
 	buf_set_u32(reg_params[0].value, 0, 32, address);

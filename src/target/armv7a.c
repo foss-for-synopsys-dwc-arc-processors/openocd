@@ -549,7 +549,7 @@ static int armv7a_read_mpidr(struct target *target)
 		armv7a->multi_processor_system = (mpidr >> 30) & 1;
 		armv7a->cluster_id = (mpidr >> 8) & 0xf;
 		armv7a->cpu_id = mpidr & 0x3;
-		LOG_INFO("%s cluster %x core %x %s", target->cmd_name,
+		LOG_INFO("%s cluster %x core %x %s", target_name(target),
 			armv7a->cluster_id,
 			armv7a->cpu_id,
 			armv7a->multi_processor_system == 0 ? "multi core" : "mono core");
@@ -573,7 +573,8 @@ int armv7a_identify_cache(struct target *target)
 	uint32_t cache_selected, clidr;
 	uint32_t cache_i_reg, cache_d_reg;
 	struct armv7a_cache_common *cache = &(armv7a->armv7a_mmu.armv7a_cache);
-	armv7a_read_ttbcr(target);
+	if (!armv7a->is_armv7r)
+		armv7a_read_ttbcr(target);
 	retval = dpm->prepare(dpm);
 
 	if (retval != ERROR_OK)
@@ -747,10 +748,16 @@ int armv7a_arch_state(struct target *target)
 
 	arm_arch_state(target);
 
-	LOG_USER("MMU: %s, D-Cache: %s, I-Cache: %s",
-		state[armv7a->armv7a_mmu.mmu_enabled],
-		state[armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled],
-		state[armv7a->armv7a_mmu.armv7a_cache.i_cache_enabled]);
+	if (armv7a->is_armv7r) {
+		LOG_USER("D-Cache: %s, I-Cache: %s",
+			state[armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled],
+			state[armv7a->armv7a_mmu.armv7a_cache.i_cache_enabled]);
+	} else {
+		LOG_USER("MMU: %s, D-Cache: %s, I-Cache: %s",
+			state[armv7a->armv7a_mmu.mmu_enabled],
+			state[armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled],
+			state[armv7a->armv7a_mmu.armv7a_cache.i_cache_enabled]);
+	}
 
 	if (arm->core_mode == ARM_MODE_ABT)
 		armv7a_show_fault_registers(target);

@@ -300,6 +300,9 @@ int mips32_init_arch_info(struct target *target, struct mips32_common *mips32, s
 	mips32->read_core_reg = mips32_read_core_reg;
 	mips32->write_core_reg = mips32_write_core_reg;
 
+	mips32->ejtag_info.scan_delay = 2000000;	/* Initial default value */
+	mips32->ejtag_info.mode = 0;			/* Initial default value */
+
 	return ERROR_OK;
 }
 
@@ -758,12 +761,9 @@ COMMAND_HANDLER(mips32_handle_cp0_command)
 						cp0_reg);
 				return ERROR_OK;
 			}
-			retval = jtag_execute_queue();
-			if (retval != ERROR_OK)
-				return retval;
-
 			command_print(CMD_CTX, "cp0 reg %" PRIi32 ", select %" PRIi32 ": %8.8" PRIx32,
 					cp0_reg, cp0_sel, value);
+
 		} else if (CMD_ARGC == 3) {
 			uint32_t value;
 			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[2], value);
@@ -782,6 +782,29 @@ COMMAND_HANDLER(mips32_handle_cp0_command)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(mips32_handle_scan_delay_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips32_common *mips32 = target_to_mips32(target);
+	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
+
+	if (CMD_ARGC == 1)
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], ejtag_info->scan_delay);
+	else if (CMD_ARGC > 1)
+			return ERROR_COMMAND_SYNTAX_ERROR;
+
+	command_print(CMD_CTX, "scan delay: %d nsec", ejtag_info->scan_delay);
+	if (ejtag_info->scan_delay >= 2000000) {
+		ejtag_info->mode = 0;
+		command_print(CMD_CTX, "running in legacy mode");
+	} else {
+		ejtag_info->mode = 1;
+		command_print(CMD_CTX, "running in fast queued mode");
+	}
+
+	return ERROR_OK;
+}
+
 static const struct command_registration mips32_exec_command_handlers[] = {
 	{
 		.name = "cp0",
@@ -789,6 +812,13 @@ static const struct command_registration mips32_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.usage = "regnum select [value]",
 		.help = "display/modify cp0 register",
+	},
+		{
+		.name = "scan_delay",
+		.handler = mips32_handle_scan_delay_command,
+		.mode = COMMAND_ANY,
+		.help = "display/set scan delay in nano seconds",
+		.usage = "[value]",
 	},
 	COMMAND_REGISTRATION_DONE
 };

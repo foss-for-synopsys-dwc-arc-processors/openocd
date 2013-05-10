@@ -80,6 +80,7 @@ extern struct target_type dragonite_target;
 extern struct target_type xscale_target;
 extern struct target_type cortexm3_target;
 extern struct target_type cortexa8_target;
+extern struct target_type cortexr4_target;
 extern struct target_type arm11_target;
 extern struct target_type mips_m4k_target;
 extern struct target_type avr_target;
@@ -104,6 +105,7 @@ static struct target_type *target_types[] = {
 	&xscale_target,
 	&cortexm3_target,
 	&cortexa8_target,
+	&cortexr4_target,
 	&arm11_target,
 	&mips_m4k_target,
 	&avr_target,
@@ -381,9 +383,9 @@ struct target *get_target(const char *id)
 
 	/* try as tcltarget name */
 	for (target = all_targets; target; target = target->next) {
-		if (target->cmd_name == NULL)
+		if (target_name(target) == NULL)
 			continue;
-		if (strcmp(id, target->cmd_name) == 0)
+		if (strcmp(id, target_name(target)) == 0)
 			return target;
 	}
 
@@ -397,7 +399,7 @@ struct target *get_target(const char *id)
 	for (target = all_targets; target; target = target->next) {
 		if (target->target_number == (int)num) {
 			LOG_WARNING("use '%s' as target identifier, not '%u'",
-					target->cmd_name, num);
+					target_name(target), num);
 			return target;
 		}
 	}
@@ -659,38 +661,18 @@ const char *target_type_name(struct target *target)
 	return target->type->name;
 }
 
-static int target_write_memory_imp(struct target *target, uint32_t address,
-		uint32_t size, uint32_t count, const uint8_t *buffer)
+static int target_soft_reset_halt(struct target *target)
 {
 	if (!target_was_examined(target)) {
 		LOG_ERROR("Target not examined yet");
 		return ERROR_FAIL;
 	}
-	return target->type->write_memory_imp(target, address, size, count, buffer);
-}
-
-static int target_read_memory_imp(struct target *target, uint32_t address,
-		uint32_t size, uint32_t count, uint8_t *buffer)
-{
-	if (!target_was_examined(target)) {
-		LOG_ERROR("Target not examined yet");
-		return ERROR_FAIL;
-	}
-	return target->type->read_memory_imp(target, address, size, count, buffer);
-}
-
-static int target_soft_reset_halt_imp(struct target *target)
-{
-	if (!target_was_examined(target)) {
-		LOG_ERROR("Target not examined yet");
-		return ERROR_FAIL;
-	}
-	if (!target->type->soft_reset_halt_imp) {
+	if (!target->type->soft_reset_halt) {
 		LOG_ERROR("Target %s does not support soft_reset_halt",
 				target_name(target));
 		return ERROR_FAIL;
 	}
-	return target->type->soft_reset_halt_imp(target);
+	return target->type->soft_reset_halt(target);
 }
 
 /**
@@ -953,38 +935,54 @@ int target_run_flash_async_algorithm(struct target *target,
 int target_read_memory(struct target *target,
 		uint32_t address, uint32_t size, uint32_t count, uint8_t *buffer)
 {
+	if (!target_was_examined(target)) {
+		LOG_ERROR("Target not examined yet");
+		return ERROR_FAIL;
+	}
 	return target->type->read_memory(target, address, size, count, buffer);
 }
 
-static int target_read_phys_memory(struct target *target,
+int target_read_phys_memory(struct target *target,
 		uint32_t address, uint32_t size, uint32_t count, uint8_t *buffer)
 {
+	if (!target_was_examined(target)) {
+		LOG_ERROR("Target not examined yet");
+		return ERROR_FAIL;
+	}
 	return target->type->read_phys_memory(target, address, size, count, buffer);
 }
 
 int target_write_memory(struct target *target,
 		uint32_t address, uint32_t size, uint32_t count, const uint8_t *buffer)
 {
+	if (!target_was_examined(target)) {
+		LOG_ERROR("Target not examined yet");
+		return ERROR_FAIL;
+	}
 	return target->type->write_memory(target, address, size, count, buffer);
 }
 
-static int target_write_phys_memory(struct target *target,
+int target_write_phys_memory(struct target *target,
 		uint32_t address, uint32_t size, uint32_t count, const uint8_t *buffer)
 {
+	if (!target_was_examined(target)) {
+		LOG_ERROR("Target not examined yet");
+		return ERROR_FAIL;
+	}
 	return target->type->write_phys_memory(target, address, size, count, buffer);
 }
 
-int target_bulk_write_memory(struct target *target,
+static int target_bulk_write_memory_default(struct target *target,
 		uint32_t address, uint32_t count, const uint8_t *buffer)
 {
-	return target->type->bulk_write_memory(target, address, count, buffer);
+	return target_write_memory(target, address, 4, count, buffer);
 }
 
 int target_add_breakpoint(struct target *target,
 		struct breakpoint *breakpoint)
 {
 	if ((target->state != TARGET_HALTED) && (breakpoint->type != BKPT_HARD)) {
-		LOG_WARNING("target %s is not halted", target->cmd_name);
+		LOG_WARNING("target %s is not halted", target_name(target));
 		return ERROR_TARGET_NOT_HALTED;
 	}
 	return target->type->add_breakpoint(target, breakpoint);
@@ -994,7 +992,7 @@ int target_add_context_breakpoint(struct target *target,
 		struct breakpoint *breakpoint)
 {
 	if (target->state != TARGET_HALTED) {
-		LOG_WARNING("target %s is not halted", target->cmd_name);
+		LOG_WARNING("target %s is not halted", target_name(target));
 		return ERROR_TARGET_NOT_HALTED;
 	}
 	return target->type->add_context_breakpoint(target, breakpoint);
@@ -1004,7 +1002,7 @@ int target_add_hybrid_breakpoint(struct target *target,
 		struct breakpoint *breakpoint)
 {
 	if (target->state != TARGET_HALTED) {
-		LOG_WARNING("target %s is not halted", target->cmd_name);
+		LOG_WARNING("target %s is not halted", target_name(target));
 		return ERROR_TARGET_NOT_HALTED;
 	}
 	return target->type->add_hybrid_breakpoint(target, breakpoint);
@@ -1020,7 +1018,7 @@ int target_add_watchpoint(struct target *target,
 		struct watchpoint *watchpoint)
 {
 	if (target->state != TARGET_HALTED) {
-		LOG_WARNING("target %s is not halted", target->cmd_name);
+		LOG_WARNING("target %s is not halted", target_name(target));
 		return ERROR_TARGET_NOT_HALTED;
 	}
 	return target->type->add_watchpoint(target, watchpoint);
@@ -1087,23 +1085,6 @@ static int target_init_one(struct command_context *cmd_ctx,
 		return retval;
 	}
 
-	/**
-	 * @todo get rid of those *memory_imp() methods, now that all
-	 * callers are using target_*_memory() accessors ... and make
-	 * sure the "physical" paths handle the same issues.
-	 */
-	/* a non-invasive way(in terms of patches) to add some code that
-	 * runs before the type->write/read_memory implementation
-	 */
-	type->write_memory_imp = target->type->write_memory;
-	type->write_memory = target_write_memory_imp;
-
-	type->read_memory_imp = target->type->read_memory;
-	type->read_memory = target_read_memory_imp;
-
-	type->soft_reset_halt_imp = target->type->soft_reset_halt;
-	type->soft_reset_halt = target_soft_reset_halt_imp;
-
 	/* Sanity-check MMU support ... stub in what we must, to help
 	 * implement it in stages, but warn if we need to do so.
 	 */
@@ -1141,6 +1122,9 @@ static int target_init_one(struct command_context *cmd_ctx,
 
 	if (target->type->write_buffer == NULL)
 		target->type->write_buffer = target_write_buffer_default;
+
+	if (target->type->bulk_write_memory == NULL)
+		target->type->bulk_write_memory = target_bulk_write_memory_default;
 
 	return ERROR_OK;
 }
@@ -1678,11 +1662,11 @@ int target_arch_state(struct target *target)
 {
 	int retval;
 	if (target == NULL) {
-		LOG_USER("No target has been configured !!");
+		LOG_USER("No target has been configured");
 		return ERROR_OK;
 	}
 
-	LOG_DEBUG("target state: %s", target_state_name(target));
+	LOG_USER("target state: %s", target_state_name(target));
 
 	if (target->state != TARGET_HALTED)
 		return ERROR_OK;
@@ -2166,9 +2150,6 @@ static int sense_handler(void)
 	return ERROR_OK;
 }
 
-static int backoff_times;
-static int backoff_count;
-
 /* process target state changes */
 static int handle_target(void *priv)
 {
@@ -2224,13 +2205,6 @@ static int handle_target(void *priv)
 		recursive = 0;
 	}
 
-	if (backoff_times > backoff_count) {
-		/* do not poll this time as we failed previously */
-		backoff_count++;
-		return ERROR_OK;
-	}
-	backoff_count = 0;
-
 	/* Poll targets for state changes unless that's globally disabled.
 	 * Skip targets that are currently disabled.
 	 */
@@ -2240,18 +2214,26 @@ static int handle_target(void *priv)
 		if (!target->tap->enabled)
 			continue;
 
+		if (target->backoff.times > target->backoff.count) {
+			/* do not poll this time as we failed previously */
+			target->backoff.count++;
+			continue;
+		}
+		target->backoff.count = 0;
+
 		/* only poll target if we've got power and srst isn't asserted */
 		if (!powerDropout && !srstAsserted) {
 			/* polling may fail silently until the target has been examined */
 			retval = target_poll(target);
 			if (retval != ERROR_OK) {
 				/* 100ms polling interval. Increase interval between polling up to 5000ms */
-				if (backoff_times * polling_interval < 5000) {
-					backoff_times *= 2;
-					backoff_times++;
+				if (target->backoff.times * polling_interval < 5000) {
+					target->backoff.times *= 2;
+					target->backoff.times++;
 				}
-				LOG_USER("Polling target failed, GDB will be halted. Polling again in %dms",
-						backoff_times * polling_interval);
+				LOG_USER("Polling target %s failed, GDB will be halted. Polling again in %dms",
+						target_name(target),
+						target->backoff.times * polling_interval);
 
 				/* Tell GDB to halt the debugger. This allows the user to
 				 * run monitor commands to handle the situation.
@@ -2260,9 +2242,9 @@ static int handle_target(void *priv)
 				return retval;
 			}
 			/* Since we succeeded, we reset backoff count */
-			if (backoff_times > 0)
-				LOG_USER("Polling succeeded again");
-			backoff_times = 0;
+			if (target->backoff.times > 0)
+				LOG_USER("Polling target %s succeeded again", target_name(target));
+			target->backoff.times = 0;
 		}
 	}
 
@@ -2502,7 +2484,7 @@ COMMAND_HANDLER(handle_soft_reset_halt_command)
 
 	LOG_USER("requesting target halt and executing a soft reset");
 
-	target->type->soft_reset_halt(target);
+	target_soft_reset_halt(target);
 
 	return ERROR_OK;
 }
@@ -5075,7 +5057,7 @@ static int jim_target_current(Jim_Interp *interp, int argc, Jim_Obj *const *argv
 	struct command_context *cmd_ctx = current_command_context(interp);
 	assert(cmd_ctx != NULL);
 
-	Jim_SetResultString(interp, get_current_target(cmd_ctx)->cmd_name, -1);
+	Jim_SetResultString(interp, target_name(get_current_target(cmd_ctx)), -1);
 	return JIM_OK;
 }
 

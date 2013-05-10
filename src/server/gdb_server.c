@@ -93,7 +93,6 @@ static enum breakpoint_type gdb_breakpoint_override_type;
 static int gdb_error(struct connection *connection, int retval);
 static const char *gdb_port;
 static const char *gdb_port_next;
-static const char DIGITS[16] = "0123456789abcdef";
 
 static void gdb_log_callback(void *priv, const char *file, unsigned line,
 		const char *function, const char *string);
@@ -379,18 +378,14 @@ static int gdb_put_packet_inner(struct connection *connection,
 		if ((size_t)len + 4 <= sizeof(local_buffer)) {
 			/* performance gain on smaller packets by only a single call to gdb_write() */
 			memcpy(local_buffer + 1, buffer, len++);
-			local_buffer[len++] = '#';
-			local_buffer[len++] = DIGITS[(my_checksum >> 4) & 0xf];
-			local_buffer[len++] = DIGITS[my_checksum & 0xf];
+			len += snprintf(local_buffer + len, sizeof(local_buffer) - len, "#%02x", my_checksum);
 			retval = gdb_write(connection, local_buffer, len);
 			if (retval != ERROR_OK)
 				return retval;
 		} else {
 			/* larger packets are transmitted directly from caller supplied buffer
 			 * by several calls to gdb_write() to avoid dynamic allocation */
-			local_buffer[1] = '#';
-			local_buffer[2] = DIGITS[(my_checksum >> 4) & 0xf];
-			local_buffer[3] = DIGITS[my_checksum & 0xf];
+			snprintf(local_buffer + 1, sizeof(local_buffer) - 1, "#%02x", my_checksum);
 			retval = gdb_write(connection, local_buffer, 1);
 			if (retval != ERROR_OK)
 				return retval;
@@ -662,20 +657,17 @@ static int gdb_get_packet(struct connection *connection, char *buffer, int *len)
 static int gdb_output_con(struct connection *connection, const char *line)
 {
 	char *hex_buffer;
-	int i, bin_size;
+	int bin_size;
 
 	bin_size = strlen(line);
 
-	hex_buffer = malloc(bin_size*2 + 2);
+	hex_buffer = malloc(bin_size * 2 + 2);
 	if (hex_buffer == NULL)
 		return ERROR_GDB_BUFFER_TOO_SMALL;
 
 	hex_buffer[0] = 'O';
-	for (i = 0; i < bin_size; i++)
-		snprintf(hex_buffer + 1 + i*2, 3, "%2.2x", line[i]);
-	hex_buffer[bin_size*2 + 1] = 0;
-
-	int retval = gdb_put_packet(connection, hex_buffer, bin_size*2 + 1);
+	int pkt_len = hexify(hex_buffer + 1, line, bin_size, bin_size * 2 + 1);
+	int retval = gdb_put_packet(connection, hex_buffer, pkt_len + 1);
 
 	free(hex_buffer);
 	return retval;
@@ -903,7 +895,7 @@ static int gdb_last_signal_packet(struct connection *connection,
 	return ERROR_OK;
 }
 
-static int gdb_reg_pos(struct target *target, int pos, int len)
+static inline int gdb_reg_pos(struct target *target, int pos, int len)
 {
 	if (target->endianness == TARGET_LITTLE_ENDIAN)
 		return pos;
@@ -932,20 +924,8 @@ static void gdb_str_to_target(struct target *target,
 
 	for (i = 0; i < buf_len; i++) {
 		int j = gdb_reg_pos(target, i, buf_len);
-		tstr[i*2]   = DIGITS[(buf[j]>>4) & 0xf];
-		tstr[i*2 + 1] = DIGITS[buf[j]&0xf];
+		tstr += sprintf(tstr, "%02x", buf[j]);
 	}
-}
-
-static int hextoint(int c)
-{
-	if (c >= '0' && c <= '9')
-		return c - '0';
-	c = toupper(c);
-	if (c >= 'A' && c <= 'F')
-		return c - 'A' + 10;
-	LOG_ERROR("BUG: invalid register value %08x", c);
-	return 0;
 }
 
 /* copy over in register buffer */
@@ -959,8 +939,11 @@ static void gdb_target_to_reg(struct target *target,
 
 	int i;
 	for (i = 0; i < str_len; i += 2) {
-		uint8_t t = hextoint(tstr[i]) << 4;
-		t |= hextoint(tstr[i + 1]);
+		unsigned t;
+		if (sscanf(tstr + i, "%02x", &t) != 1) {
+			LOG_ERROR("BUG: unable to convert register value");
+			exit(-1);
+		}
 
 		int j = gdb_reg_pos(target, i/2, str_len/2);
 		bin[j] = t;
@@ -995,7 +978,7 @@ static int gdb_get_registers_packet(struct connection *connection,
 
 	assert(reg_packet_size > 0);
 
-	reg_packet = malloc(reg_packet_size);
+	reg_packet = malloc(reg_packet_size + 1); /* plus one for string termination null */
 	reg_packet_p = reg_packet;
 
 	for (i = 0; i < reg_list_size; i++) {
@@ -1102,7 +1085,7 @@ static int gdb_get_register_packet(struct connection *connection,
 	if (!reg_list[reg_num]->valid)
 		reg_list[reg_num]->type->get(reg_list[reg_num]);
 
-	reg_packet = malloc(DIV_ROUND_UP(reg_list[reg_num]->size, 8) * 2);
+	reg_packet = malloc(DIV_ROUND_UP(reg_list[reg_num]->size, 8) * 2 + 1); /* plus one for string termination null */
 
 	gdb_str_to_target(target, reg_packet, reg_list[reg_num]);
 
@@ -1231,14 +1214,9 @@ static int gdb_read_memory_packet(struct connection *connection,
 	if (retval == ERROR_OK) {
 		hex_buffer = malloc(len * 2 + 1);
 
-		uint32_t i;
-		for (i = 0; i < len; i++) {
-			uint8_t t = buffer[i];
-			hex_buffer[2 * i] = DIGITS[(t >> 4) & 0xf];
-			hex_buffer[2 * i + 1] = DIGITS[t & 0xf];
-		}
+		int pkt_len = hexify(hex_buffer, (char *)buffer, len, len * 2 + 1);
 
-		gdb_put_packet(connection, hex_buffer, len * 2);
+		gdb_put_packet(connection, hex_buffer, pkt_len);
 
 		free(hex_buffer);
 	} else
@@ -1258,8 +1236,6 @@ static int gdb_write_memory_packet(struct connection *connection,
 	uint32_t len = 0;
 
 	uint8_t *buffer;
-
-	uint32_t i;
 	int retval;
 
 	/* skip command character */
@@ -1283,11 +1259,8 @@ static int gdb_write_memory_packet(struct connection *connection,
 
 	LOG_DEBUG("addr: 0x%8.8" PRIx32 ", len: 0x%8.8" PRIx32 "", addr, len);
 
-	for (i = 0; i < len; i++) {
-		uint32_t tmp;
-		sscanf(separator + 2*i, "%2" SCNx32, &tmp);
-		buffer[i] = tmp;
-	}
+	if (unhexify((char *)buffer, separator, len) != (int)len)
+		LOG_ERROR("unable to decode memory packet");
 
 	retval = target_write_buffer(target, addr, len, buffer);
 
@@ -1708,14 +1681,9 @@ static int gdb_query_packet(struct connection *connection,
 	if (strncmp(packet, "qRcmd,", 6) == 0) {
 		if (packet_size > 6) {
 			char *cmd;
-			int i;
-			cmd = malloc((packet_size - 6)/2 + 1);
-			for (i = 0; i < (packet_size - 6)/2; i++) {
-				uint32_t tmp;
-				sscanf(packet + 6 + 2*i, "%2" SCNx32, &tmp);
-				cmd[i] = tmp;
-			}
-			cmd[(packet_size - 6)/2] = 0x0;
+			cmd = malloc((packet_size - 6) / 2 + 1);
+			int len = unhexify(cmd, packet + 6, (packet_size - 6) / 2);
+			cmd[len] = 0;
 
 			/* We want to print all debug output to GDB connection */
 			log_add_callback(gdb_log_callback, connection);

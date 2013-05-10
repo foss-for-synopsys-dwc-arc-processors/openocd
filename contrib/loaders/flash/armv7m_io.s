@@ -1,9 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2004, 2005 by Dominic Rath                              *
- *   Dominic.Rath@gmx.de                                                   *
- *                                                                         *
- *   Copyright (C) 2007,2008 Øyvind Harboe                                 *
- *   oyvind.harboe@zylin.com                                               *
+ *   Copyright (C) 2013 by Henrik Nilsson                                  *
+ *   henrik.nilsson@bytequest.se                                           *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,25 +18,43 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef CONFIGURATION_H
-#define CONFIGURATION_H
+	.text
+	.syntax unified
+	.arch armv7-m
+	.thumb
+	.thumb_func
 
-#include <helper/command.h>
+	.align 4
 
-int parse_cmdline_args(struct command_context *cmd_ctx,
-		int argc, char *argv[]);
+/* Inputs:
+ *  r0	buffer address
+ *  r1	NAND data address (byte wide)
+ *  r2	buffer length
+ */
+read:
+	ldrb	r3, [r1]
+	strb	r3, [r0], #1
+	subs	r2, r2, #1
+	bne		read
 
-int parse_config_file(struct command_context *cmd_ctx);
-void add_config_command(const char *cfg);
+done_read:
+	bkpt #0
 
-void add_script_search_dir(const char *dir);
+	.align 4
 
-int configuration_output_handler(struct command_context *cmd_ctx,
-		const char *line);
+/* Inputs:
+ *  r0	NAND data address (byte wide)
+ *  r1	buffer address
+ *  r2	buffer length
+ */
+write:
+	ldrb	r3, [r1], #1
+	strb	r3, [r0]
+	subs	r2, r2, #1
+	bne		write
 
-FILE *open_file_from_path(const char *file, const char *mode);
+done_write:
+	bkpt #0
 
-char *find_file(const char *name);
-char *get_home_dir(const char *append_path);
+	.end
 
-#endif	/* CONFIGURATION_H */

@@ -116,6 +116,7 @@
 /* 30:24 - implementation-defined! */
 #define CSW_HPROT			(1 << 25)		/* ? */
 #define CSW_MASTER_DEBUG	(1 << 29)		/* ? */
+#define CSW_SPROT (1 << 30)
 #define CSW_DBGSWENABLE		(1 << 31)
 
 /**
@@ -141,6 +142,7 @@ struct adiv5_dap {
 	/* Control config */
 	uint32_t dp_ctrl_stat;
 
+	uint32_t apcsw[256];
 	uint32_t apsel;
 
 	/**
@@ -216,12 +218,24 @@ struct dap_ops {
 	/** AP register write. */
 	int (*queue_ap_write)(struct adiv5_dap *dap, unsigned reg,
 			uint32_t data);
+	/** AP read block. */
+	int (*queue_ap_read_block)(struct adiv5_dap *dap, unsigned reg,
+			uint32_t blocksize, uint8_t *buffer);
 
 	/** AP operation abort. */
 	int (*queue_ap_abort)(struct adiv5_dap *dap, uint8_t *ack);
 
 	/** Executes all queued DAP operations. */
 	int (*run)(struct adiv5_dap *dap);
+};
+
+/*
+ * Access Port types
+ */
+enum ap_type {
+	AP_TYPE_AHB_AP  = 0x01,  /* AHB Memory-AP */
+	AP_TYPE_APB_AP  = 0x02,  /* APB Memory-AP */
+	AP_TYPE_JTAG_AP = 0x10   /* JTAG-AP - JTAG master for controlling other JTAG devices */
 };
 
 /**
@@ -313,6 +327,24 @@ static inline int dap_queue_ap_write(struct adiv5_dap *dap,
 }
 
 /**
+ * Queue an AP block read.
+ *
+ * @param dap The DAP used for reading.
+ * @param reg The number of the AP register being read.
+ * @param blocksize The number of the AP register being read.
+ * @param buffer Pointer saying where to store the data
+ * (in host endianness).
+ *
+ * @return ERROR_OK for success, else a fault code.
+ */
+static inline int dap_queue_ap_read_block(struct adiv5_dap *dap,
+		unsigned reg, unsigned blocksize, uint8_t *buffer)
+{
+	assert(dap->ops != NULL);
+	return dap->ops->queue_ap_read_block(dap, reg, blocksize, buffer);
+}
+
+/**
  * Queue an AP abort operation.  The current AP transaction is aborted,
  * including any update of the transaction counter.  The AP is left in
  * an unknown state (so it must be re-initialized).  For use only after
@@ -374,14 +406,14 @@ int mem_ap_read_buf_u8(struct adiv5_dap *swjdp,
 int mem_ap_read_buf_u16(struct adiv5_dap *swjdp,
 		uint8_t *buffer, int count, uint32_t address);
 int mem_ap_read_buf_u32(struct adiv5_dap *swjdp,
-		uint8_t *buffer, int count, uint32_t address);
+		uint8_t *buffer, int count, uint32_t address, bool addr_incr);
 
 int mem_ap_write_buf_u8(struct adiv5_dap *swjdp,
 		const uint8_t *buffer, int count, uint32_t address);
 int mem_ap_write_buf_u16(struct adiv5_dap *swjdp,
 		const uint8_t *buffer, int count, uint32_t address);
 int mem_ap_write_buf_u32(struct adiv5_dap *swjdp,
-		const uint8_t *buffer, int count, uint32_t address);
+		const uint8_t *buffer, int count, uint32_t address, bool addr_incr);
 
 /* Queued MEM-AP memory mapped single word transfers with selection of ap */
 int mem_ap_sel_read_u32(struct adiv5_dap *swjdp, uint8_t ap,
@@ -394,6 +426,12 @@ int mem_ap_sel_read_atomic_u32(struct adiv5_dap *swjdp, uint8_t ap,
 		uint32_t address, uint32_t *value);
 int mem_ap_sel_write_atomic_u32(struct adiv5_dap *swjdp, uint8_t ap,
 		uint32_t address, uint32_t value);
+
+/* Non incrementing buffer functions for accessing fifos */
+int mem_ap_sel_read_buf_u32_noincr(struct adiv5_dap *swjdp, uint8_t ap,
+		uint8_t *buffer, int count, uint32_t address);
+int mem_ap_sel_write_buf_u32_noincr(struct adiv5_dap *swjdp, uint8_t ap,
+		const uint8_t *buffer, int count, uint32_t address);
 
 /* MEM-AP memory mapped bus block transfers with selection of ap */
 int mem_ap_sel_read_buf_u8(struct adiv5_dap *swjdp, uint8_t ap,
@@ -416,6 +454,11 @@ int ahbap_debugport_init(struct adiv5_dap *swjdp);
 /* Probe the AP for ROM Table location */
 int dap_get_debugbase(struct adiv5_dap *dap, int ap,
 			uint32_t *dbgbase, uint32_t *apid);
+
+/* Probe Access Ports to find a particular type */
+int dap_find_ap(struct adiv5_dap *dap,
+			enum ap_type type_to_find,
+			uint8_t *ap_num_out);
 
 /* Lookup CoreSight component */
 int dap_lookup_cs_component(struct adiv5_dap *dap, int ap,

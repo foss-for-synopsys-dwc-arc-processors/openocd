@@ -140,9 +140,9 @@ static int linux_read_memory(struct target *target,
 		return ERROR_FAIL;
 	}
 #ifdef PHYS
-	target->type->read_phys_memory(target, pa, size, count, buffer);
+	target_read_phys_memory(target, pa, size, count, buffer);
 #endif
-	target->type->read_memory(target, address, size, count, buffer);
+	target_read_memory(target, address, size, count, buffer);
 	return ERROR_OK;
 }
 
@@ -233,6 +233,8 @@ static int linux_os_thread_reg_list(struct rtos *rtos,
 
 		for (i = 0; i < reg_list_size; i++)
 			reg_packet_size += reg_list[i]->size;
+
+		assert(reg_packet_size > 0);
 
 		*hex_reg_list = malloc(DIV_ROUND_UP(reg_packet_size, 8) * 2);
 
@@ -1217,7 +1219,7 @@ int linux_thread_extra_info(struct target *target,
 			char *tmp_str = (char *)calloc(1, str_size + 50);
 			char *tmp_str_ptr = tmp_str;
 
-			/*  discriminate cuurent task */
+			/*  discriminate current task */
 			if (temp->status == 3)
 				tmp_str_ptr += sprintf(tmp_str_ptr, "%s",
 						pid_current);
@@ -1229,10 +1231,9 @@ int linux_thread_extra_info(struct target *target,
 			tmp_str_ptr += sprintf(tmp_str_ptr, "%s", " | ");
 			sprintf(tmp_str_ptr, "%s", name);
 			sprintf(tmp_str_ptr, "%s", temp->name);
-			char *hex_str =
-				(char *)calloc(1, strlen(tmp_str) * 2 + 1);
-			str_to_hex(hex_str, tmp_str);
-			gdb_put_packet(connection, hex_str, strlen(hex_str));
+			char *hex_str = (char *)calloc(1, strlen(tmp_str) * 2 + 1);
+			int pkt_len = hexify(hex_str, tmp_str, 0, strlen(tmp_str) * 2 + 1);
+			gdb_put_packet(connection, hex_str, pkt_len);
 			free(hex_str);
 			free(tmp_str);
 			return ERROR_OK;

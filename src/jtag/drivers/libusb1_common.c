@@ -51,8 +51,6 @@ int jtag_libusb_open(const uint16_t vids[], const uint16_t pids[],
 	if (libusb_init(&jtag_libusb_context) < 0)
 		return -ENODEV;
 
-	libusb_set_debug(jtag_libusb_context, 3);
-
 	cnt = libusb_get_device_list(jtag_libusb_context, &devs);
 
 	for (idx = 0; idx < cnt; idx++) {
@@ -77,6 +75,21 @@ void jtag_libusb_close(jtag_libusb_device_handle *dev)
 	libusb_close(dev);
 
 	libusb_exit(jtag_libusb_context);
+}
+
+int jtag_libusb_control_transfer(jtag_libusb_device_handle *dev, uint8_t requestType,
+		uint8_t request, uint16_t wValue, uint16_t wIndex, char *bytes,
+		uint16_t size, unsigned int timeout)
+{
+	int transferred = 0;
+
+	transferred = libusb_control_transfer(dev, requestType, request, wValue, wIndex,
+				(unsigned char *)bytes, size, timeout);
+
+	if (transferred < 0)
+		transferred = 0;
+
+	return transferred;
 }
 
 int jtag_libusb_bulk_write(jtag_libusb_device_handle *dev, int ep, char *bytes,

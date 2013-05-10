@@ -99,10 +99,12 @@ struct armv7a_common {
 	uint32_t debug_base;
 	uint8_t debug_ap;
 	uint8_t memory_ap;
+	bool memory_ap_available;
 	/* mdir */
 	uint8_t multi_processor_system;
 	uint8_t cluster_id;
 	uint8_t cpu_id;
+	bool is_armv7r;
 
 	/* cache specific to V7 Memory Management Unit compatible with v4_5*/
 	struct armv7a_mmu_common armv7a_mmu;

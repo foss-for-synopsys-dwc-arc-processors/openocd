@@ -47,7 +47,6 @@ static inline struct hl_interface_s *target_to_adapter(struct target *target)
 }
 
 static int adapter_load_core_reg_u32(struct target *target,
-		enum armv7m_regtype type,
 		uint32_t num, uint32_t *value)
 {
 	int retval;
@@ -144,7 +143,6 @@ static int adapter_load_core_reg_u32(struct target *target,
 }
 
 static int adapter_store_core_reg_u32(struct target *target,
-		enum armv7m_regtype type,
 		uint32_t num, uint32_t value)
 {
 	int retval;
@@ -178,7 +176,7 @@ static int adapter_store_core_reg_u32(struct target *target,
 			struct reg *r;
 
 			LOG_ERROR("JTAG failure");
-			r = armv7m->core_cache->reg_list + num;
+			r = armv7m->arm.core_cache->reg_list + num;
 			r->dirty = r->valid;
 			return ERROR_JTAG_DEVICE_ERROR;
 		}
@@ -313,11 +311,13 @@ static int adapter_target_create(struct target *target,
 static int adapter_load_context(struct target *target)
 {
 	struct armv7m_common *armv7m = target_to_armv7m(target);
-	int num_regs = armv7m->core_cache->num_regs;
+	int num_regs = armv7m->arm.core_cache->num_regs;
 
 	for (int i = 0; i < num_regs; i++) {
-		if (!armv7m->core_cache->reg_list[i].valid)
-			armv7m->read_core_reg(target, i);
+
+		struct reg *r = &armv7m->arm.core_cache->reg_list[i];
+		if (!r->valid)
+			armv7m->arm.read_core_reg(target, r, i, ARM_MODE_ANY);
 	}
 
 	return ERROR_OK;
@@ -341,23 +341,21 @@ static int adapter_debug_entry(struct target *target)
 	/* make sure we clear the vector catch bit */
 	adapter->layout->api->write_debug_reg(adapter->fd, DCB_DEMCR, TRCENA);
 
-	r = armv7m->core_cache->reg_list + ARMV7M_xPSR;
+	r = arm->core_cache->reg_list + ARMV7M_xPSR;
 	xPSR = buf_get_u32(r->value, 0, 32);
 
 	/* Are we in an exception handler */
 	if (xPSR & 0x1FF) {
-		armv7m->core_mode = ARMV7M_MODE_HANDLER;
 		armv7m->exception_number = (xPSR & 0x1FF);
 
 		arm->core_mode = ARM_MODE_HANDLER;
 		arm->map = armv7m_msp_reg_map;
 	} else {
-		unsigned control = buf_get_u32(armv7m->core_cache
+		unsigned control = buf_get_u32(arm->core_cache
 				->reg_list[ARMV7M_CONTROL].value, 0, 2);
 
 		/* is this thread privileged? */
-		armv7m->core_mode = control & 1;
-		arm->core_mode = armv7m->core_mode
+		arm->core_mode = control & 1
 				? ARM_MODE_USER_THREAD
 				: ARM_MODE_THREAD;
 
@@ -371,7 +369,7 @@ static int adapter_debug_entry(struct target *target)
 	}
 
 	LOG_DEBUG("entered debug state in core mode: %s at PC 0x%08" PRIx32 ", target->state: %s",
-		armv7m_mode_strings[armv7m->core_mode],
+		arm_mode_name(arm->core_mode),
 		*(uint32_t *)(arm->pc->value),
 		target_state_name(target));
 
@@ -383,6 +381,7 @@ static int adapter_poll(struct target *target)
 	enum target_state state;
 	struct hl_interface_s *adapter = target_to_adapter(target);
 	struct armv7m_common *armv7m = target_to_armv7m(target);
+	enum target_state prev_target_state = target->state;
 
 	state = adapter->layout->api->state(adapter->fd);
 
@@ -401,10 +400,15 @@ static int adapter_poll(struct target *target)
 		if (retval != ERROR_OK)
 			return retval;
 
-		if (arm_semihosting(target, &retval) != 0)
-			return retval;
+		if (prev_target_state == TARGET_DEBUG_RUNNING) {
+			target_call_event_callbacks(target, TARGET_EVENT_DEBUG_HALTED);
+		} else {
+			if (arm_semihosting(target, &retval) != 0)
+				return retval;
 
-		target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+			target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+		}
+
 		LOG_DEBUG("halted: PC: 0x%08x", buf_get_u32(armv7m->arm.pc->value, 0, 32));
 	}
 
@@ -462,7 +466,7 @@ static int adapter_assert_reset(struct target *target)
 		return res;
 
 	/* registers are now invalid */
-	register_cache_invalidate(armv7m->core_cache);
+	register_cache_invalidate(armv7m->arm.core_cache);
 
 	if (target->reset_halt) {
 		target->state = TARGET_RESET;
@@ -579,7 +583,7 @@ static int adapter_resume(struct target *target, int current,
 	armv7m_restore_context(target);
 
 	/* registers are now invalid */
-	register_cache_invalidate(armv7m->core_cache);
+	register_cache_invalidate(armv7m->arm.core_cache);
 
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints) {
@@ -605,10 +609,15 @@ static int adapter_resume(struct target *target, int current,
 	if (res != ERROR_OK)
 		return res;
 
-	target->state = TARGET_RUNNING;
 	target->debug_reason = DBG_REASON_NOTHALTED;
 
-	target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
+	if (!debug_execution) {
+		target->state = TARGET_RUNNING;
+		target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
+	} else {
+		target->state = TARGET_DEBUG_RUNNING;
+		target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED);
+	}
 
 	return ERROR_OK;
 }
@@ -659,7 +668,7 @@ static int adapter_step(struct target *target, int current,
 		return res;
 
 	/* registers are now invalid */
-	register_cache_invalidate(armv7m->core_cache);
+	register_cache_invalidate(armv7m->arm.core_cache);
 
 	if (breakpoint)
 		cortex_m3_set_breakpoint(target, breakpoint);
@@ -768,13 +777,6 @@ static int adapter_write_memory(struct target *target, uint32_t address,
 	return ERROR_OK;
 }
 
-static int adapter_bulk_write_memory(struct target *target,
-		uint32_t address, uint32_t count,
-		const uint8_t *buffer)
-{
-	return adapter_write_memory(target, address, 4, count, buffer);
-}
-
 static const struct command_registration adapter_command_handlers[] = {
 	{
 		.chain = arm_command_handlers,
@@ -806,7 +808,6 @@ struct target_type hla_target = {
 
 	.read_memory = adapter_read_memory,
 	.write_memory = adapter_write_memory,
-	.bulk_write_memory = adapter_bulk_write_memory,
 	.checksum_memory = armv7m_checksum_memory,
 	.blank_check_memory = armv7m_blank_check_memory,
 

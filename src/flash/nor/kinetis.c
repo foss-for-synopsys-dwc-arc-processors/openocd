@@ -95,6 +95,24 @@ const struct {
 	{ 4<<10, 4<<10, 4 }
 };
 
+/* Addressess */
+#define FLEXRAM		0x14000000
+#define FTFx_FSTAT	0x40020000
+#define FTFx_FCNFG	0x40020001
+#define FTFx_FCCOB3	0x40020004
+#define FTFx_FPROT3	0x40020010
+#define SIM_SDID	0x40048024
+#define SIM_FCFG1	0x4004804c
+#define SIM_FCFG2	0x40048050
+
+/* Commands */
+#define FTFx_CMD_BLOCKSTAT 0x00
+#define FTFx_CMD_SECTSTAT 0x01
+#define FTFx_CMD_LWORDPROG 0x06
+#define FTFx_CMD_SECTERASE 0x09
+#define FTFx_CMD_SECTWRITE 0x0b
+#define FTFx_CMD_SETFLEXRAM 0x81
+
 struct kinetis_flash_bank {
 	unsigned granularity;
 	unsigned bank_ordinal;
@@ -160,8 +178,8 @@ static int kinetis_protect_check(struct flash_bank *bank)
 		uint32_t fprot, psec;
 		int i, b;
 
-		/* read protection register FTFx_FPROT */
-		result = target_read_memory(bank->target, 0x40020010, 1, 4, buffer);
+		/* read protection register */
+		result = target_read_memory(bank->target, FTFx_FPROT3, 1, 4, buffer);
 
 		if (result != ERROR_OK)
 			return result;
@@ -195,54 +213,55 @@ static int kinetis_protect_check(struct flash_bank *bank)
 	return ERROR_OK;
 }
 
-static int kinetis_ftfx_command(struct flash_bank *bank, uint32_t w0,
-				uint32_t w1, uint32_t w2, uint8_t *ftfx_fstat)
+static int kinetis_ftfx_command(struct flash_bank *bank, uint8_t fcmd, uint32_t faddr,
+				uint8_t fccob4, uint8_t fccob5, uint8_t fccob6, uint8_t fccob7,
+				uint8_t fccob8, uint8_t fccob9, uint8_t fccoba, uint8_t fccobb,
+				uint8_t *ftfx_fstat)
 {
-	uint8_t buffer[12];
+	uint8_t command[12] = {faddr & 0xff, (faddr >> 8) & 0xff, (faddr >> 16) & 0xff, fcmd,
+			       fccob7, fccob6, fccob5, fccob4,
+			       fccobb, fccoba, fccob9, fccob8};
 	int result, i;
+	uint8_t buffer;
 
 	/* wait for done */
 	for (i = 0; i < 50; i++) {
 		result =
-			target_read_memory(bank->target, 0x40020000, 1, 1, buffer);
+			target_read_memory(bank->target, FTFx_FSTAT, 1, 1, &buffer);
 
 		if (result != ERROR_OK)
 			return result;
 
-		if (buffer[0] & 0x80)
+		if (buffer & 0x80)
 			break;
 
-		buffer[0] = 0x00;
+		buffer = 0x00;
 	}
 
-	if (buffer[0] != 0x80) {
+	if (buffer != 0x80) {
 		/* reset error flags */
-		buffer[0] = 0x30;
+		buffer = 0x30;
 		result =
-			target_write_memory(bank->target, 0x40020000, 1, 1, buffer);
+			target_write_memory(bank->target, FTFx_FSTAT, 1, 1, &buffer);
 		if (result != ERROR_OK)
 			return result;
 	}
 
-	target_buffer_set_u32(bank->target, buffer, w0);
-	target_buffer_set_u32(bank->target, buffer + 4, w1);
-	target_buffer_set_u32(bank->target, buffer + 8, w2);
-
-	result = target_write_memory(bank->target, 0x40020004, 4, 3, buffer);
+	result = target_write_memory(bank->target, FTFx_FCCOB3, 4, 3, command);
 
 	if (result != ERROR_OK)
 		return result;
 
 	/* start command */
-	buffer[0] = 0x80;
-	result = target_write_memory(bank->target, 0x40020000, 1, 1, buffer);
+	buffer = 0x80;
+	result = target_write_memory(bank->target, FTFx_FSTAT, 1, 1, &buffer);
 	if (result != ERROR_OK)
 		return result;
 
 	/* wait for done */
 	for (i = 0; i < 50; i++) {
 		result =
-			target_read_memory(bank->target, 0x40020000, 1, 1, ftfx_fstat);
+			target_read_memory(bank->target, FTFx_FSTAT, 1, 1, ftfx_fstat);
 
 		if (result != ERROR_OK)
 			return result;
@@ -253,9 +272,10 @@ static int kinetis_ftfx_command(struct flash_bank *bank, uint32_t w0,
 
 	if ((*ftfx_fstat & 0xf0) != 0x80) {
 		LOG_ERROR
-			("ftfx command failed FSTAT: %02X W0: %08X W1: %08X W2: %08X",
-			 *ftfx_fstat, w0, w1, w2);
-
+			("ftfx command failed FSTAT: %02X FCCOB: %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X",
+			 *ftfx_fstat, command[3], command[2], command[1], command[0],
+				      command[7], command[6], command[5], command[4],
+				      command[11], command[10], command[9], command[8]);
 		return ERROR_FLASH_OPERATION_FAILED;
 	}
 
@@ -265,7 +285,6 @@ static int kinetis_ftfx_command(struct flash_bank *bank, uint32_t w0,
 static int kinetis_erase(struct flash_bank *bank, int first, int last)
 {
 	int result, i;
-	uint32_t w0 = 0, w1 = 0, w2 = 0;
 
 	if (bank->target->state != TARGET_HALTED) {
 		LOG_ERROR("Target not halted");
@@ -283,9 +302,8 @@ static int kinetis_erase(struct flash_bank *bank, int first, int last)
 	for (i = first; i <= last; i++) {
 		uint8_t ftfx_fstat;
 		/* set command and sector address */
-		w0 = (0x09 << 24) | (bank->base + bank->sectors[i].offset);
-
-		result = kinetis_ftfx_command(bank, w0, w1, w2, &ftfx_fstat);
+		result = kinetis_ftfx_command(bank, FTFx_CMD_SECTERASE, bank->base + bank->sectors[i].offset,
+					      0, 0, 0, 0,  0, 0, 0, 0,  &ftfx_fstat);
 
 		if (result != ERROR_OK) {
 			LOG_WARNING("erase sector %d failed", i);
@@ -308,7 +326,7 @@ static int kinetis_write(struct flash_bank *bank, uint8_t *buffer,
 {
 	unsigned int i, result, fallback = 0;
 	uint8_t buf[8];
-	uint32_t wc, w0 = 0, w1 = 0, w2 = 0;
+	uint32_t wc;
 	struct kinetis_flash_bank *kinfo = bank->driver_priv;
 
 	if (bank->target->state != TARGET_HALTED) {
@@ -322,15 +340,13 @@ static int kinetis_write(struct flash_bank *bank, uint8_t *buffer,
 		LOG_DEBUG("flash write into FlexNVM @%08X", offset);
 
 		/* make flex ram available */
-		w0 = (0x81 << 24) | 0x00ff0000;
-
-		result = kinetis_ftfx_command(bank, w0, w1, w2, &ftfx_fstat);
+		result = kinetis_ftfx_command(bank, FTFx_CMD_SETFLEXRAM, 0x00ff0000, 0, 0, 0, 0,  0, 0, 0, 0,  &ftfx_fstat);
 
 		if (result != ERROR_OK)
 			return ERROR_FLASH_OPERATION_FAILED;
 
 		/* check if ram ready */
-		result = target_read_memory(bank->target, 0x40020001, 1, 1, buf);
+		result = target_read_memory(bank->target, FTFx_FCNFG, 1, 1, buf);
 
 		if (result != ERROR_OK)
 			return result;
@@ -349,23 +365,27 @@ static int kinetis_write(struct flash_bank *bank, uint8_t *buffer,
 
 	/* program section command */
 	if (fallback == 0) {
-		unsigned prog_section_bytes = kinfo->sector_size >> 8;
-		for (i = 0; i < count; i += kinfo->sector_size) {
-			/*
-			 * The largest possible Kinetis "section" is
-			 * 16 bytes.  A full Kinetis sector is always
-			 * 256 "section"s.
-			 */
+		/*
+		 * Kinetis uses different terms for the granularity of
+		 * sector writes, e.g. "phrase" or "128 bits".  We use
+		 * the generic term "chunk". The largest possible
+		 * Kinetis "chunk" is 16 bytes (128 bits).
+		 */
+		unsigned prog_section_chunk_bytes = kinfo->sector_size >> 8;
+		/* assume the NVM sector size is half the FlexRAM size */
+		unsigned prog_size_bytes = MIN(kinfo->sector_size,
+					       kinetis_flash_params[kinfo->granularity].nvm_sector_size_bytes);
+		for (i = 0; i < count; i += prog_size_bytes) {
 			uint8_t residual_buffer[16];
 			uint8_t ftfx_fstat;
-			uint32_t section_count = 256;
+			uint32_t section_count = prog_size_bytes / prog_section_chunk_bytes;
 			uint32_t residual_wc = 0;
 
 			/*
 			 * Assume the word count covers an entire
 			 * sector.
 			 */
-			wc = kinfo->sector_size / 4;
+			wc = prog_size_bytes / 4;
 
 			/*
 			 * If bytes to be programmed are less than the
@@ -374,29 +394,29 @@ static int kinetis_write(struct flash_bank *bank, uint8_t *buffer,
 			 * residual buffer so that a full "section"
 			 * may always be programmed.
 			 */
-			if ((count - i) < kinfo->sector_size) {
+			if ((count - i) < prog_size_bytes) {
 				/* number of bytes to program beyond full section */
-				unsigned residual_bc = (count-i) % prog_section_bytes;
+				unsigned residual_bc = (count-i) % prog_section_chunk_bytes;
 
 				/* number of complete words to copy directly from buffer */
 				wc = (count - i) / 4;
 
 				/* number of total sections to write, including residual */
-				section_count = DIV_ROUND_UP((count-i), prog_section_bytes);
+				section_count = DIV_ROUND_UP((count-i), prog_section_chunk_bytes);
 
 				/* any residual bytes delivers a whole residual section */
-				residual_wc = (residual_bc ? prog_section_bytes : 0)/4;
+				residual_wc = (residual_bc ? prog_section_chunk_bytes : 0)/4;
 
 				/* clear residual buffer then populate residual bytes */
-				(void) memset(residual_buffer, 0xff, prog_section_bytes);
+				(void) memset(residual_buffer, 0xff, prog_section_chunk_bytes);
 				(void) memcpy(residual_buffer, &buffer[i+4*wc], residual_bc);
 			}
 
 			LOG_DEBUG("write section @ %08X with length %d bytes",
-				  offset + i, (count - i));
+				  offset + i, wc*4);
 
 			/* write data to flexram as whole-words */
-			result = target_write_memory(bank->target, 0x14000000, 4, wc,
+			result = target_write_memory(bank->target, FLEXRAM, 4, wc,
 						     buffer + i);
 
 			if (result != ERROR_OK) {
@@ -407,7 +427,7 @@ static int kinetis_write(struct flash_bank *bank, uint8_t *buffer,
 			/* write the residual words to the flexram */
 			if (residual_wc) {
 				result = target_write_memory(bank->target,
-							     0x14000000+4*wc,
+							     FLEXRAM+4*wc,
 							     4, residual_wc,
 							     residual_buffer);
 
@@ -418,10 +438,9 @@ static int kinetis_write(struct flash_bank *bank, uint8_t *buffer,
 			}
 
 			/* execute section-write command */
-			w0 = (0x0b << 24) | (bank->base + offset + i);
-			w1 = section_count << 16;
-
-			result = kinetis_ftfx_command(bank, w0, w1, w2, &ftfx_fstat);
+			result = kinetis_ftfx_command(bank, FTFx_CMD_SECTWRITE, bank->base + offset + i,
+						      section_count>>8, section_count, 0, 0,
+						      0, 0, 0, 0,  &ftfx_fstat);
 
 			if (result != ERROR_OK)
 				return ERROR_FLASH_OPERATION_FAILED;
@@ -434,16 +453,11 @@ static int kinetis_write(struct flash_bank *bank, uint8_t *buffer,
 
 			LOG_DEBUG("write longword @ %08X", offset + i);
 
-			w0 = (0x06 << 24) | (bank->base + offset + i);
-			if (count - i < 4) {
-				uint32_t padding = 0xffffffff;
-				memcpy(&padding, buffer + i, count - i);
-				w1 = buf_get_u32(&padding, 0, 32);
-			} else {
-				w1 = buf_get_u32(buffer + i, 0, 32);
-			}
-
-			result = kinetis_ftfx_command(bank, w0, w1, w2, &ftfx_fstat);
+			uint8_t padding[4] = {0xff, 0xff, 0xff, 0xff};
+			memcpy(padding, buffer + i, MIN(4, count-i));
+			result = kinetis_ftfx_command(bank, FTFx_CMD_LWORDPROG, bank->base + offset + i,
+						      padding[3], padding[2], padding[1], padding[0],
+						      0, 0, 0, 0,  &ftfx_fstat);
 
 			if (result != ERROR_OK)
 				return ERROR_FLASH_OPERATION_FAILED;
@@ -467,16 +481,18 @@ static int kinetis_read_part_info(struct flash_bank *bank)
 		first_nvm_bank = 0, reassign = 0;
 	struct kinetis_flash_bank *kinfo = bank->driver_priv;
 
-	result = target_read_memory(bank->target, 0x40048024, 1, 4, buf);
+	result = target_read_memory(bank->target, SIM_SDID, 1, 4, buf);
 	if (result != ERROR_OK)
 		return result;
 	kinfo->sim_sdid = target_buffer_get_u32(bank->target, buf);
 	granularity = (kinfo->sim_sdid >> 7) & 0x03;
-	result = target_read_memory(bank->target, 0x4004804c, 1, 4, buf);
+
+	result = target_read_memory(bank->target, SIM_FCFG1, 1, 4, buf);
 	if (result != ERROR_OK)
 		return result;
 	kinfo->sim_fcfg1 = target_buffer_get_u32(bank->target, buf);
-	result = target_read_memory(bank->target, 0x40048050, 1, 4, buf);
+
+	result = target_read_memory(bank->target, SIM_FCFG2, 1, 4, buf);
 	if (result != ERROR_OK)
 		return result;
 	kinfo->sim_fcfg2 = target_buffer_get_u32(bank->target, buf);
@@ -625,7 +641,7 @@ static int kinetis_read_part_info(struct flash_bank *bank)
 				} else if (bank->size != ee_size) {
 					LOG_WARNING("FlexRAM size mismatch");
 					reassign = 1;
-				} else if (bank->base != 0x14000000) {
+				} else if (bank->base != FLEXRAM) {
 					LOG_WARNING("FlexRAM address mismatch");
 					reassign = 1;
 				} else if (kinfo->sector_size !=
@@ -744,14 +760,10 @@ static int kinetis_blank_check(struct flash_bank *bank)
 
 	if (kinfo->flash_class == FC_PFLASH) {
 		int result;
-		uint32_t w0 = 0, w1 = 0, w2 = 0;
 		uint8_t ftfx_fstat;
 
 		/* check if whole bank is blank */
-		w0 = (0x00 << 24) | bank->base;
-		w1 = 0; /* "normal margin" */
-
-		result = kinetis_ftfx_command(bank, w0, w1, w2, &ftfx_fstat);
+		result = kinetis_ftfx_command(bank, FTFx_CMD_BLOCKSTAT, bank->base, 0, 0, 0, 0,  0, 0, 0, 0, &ftfx_fstat);
 
 		if (result != ERROR_OK)
 			return result;
@@ -760,10 +772,9 @@ static int kinetis_blank_check(struct flash_bank *bank)
 			/* the whole bank is not erased, check sector-by-sector */
 			int i;
 			for (i = 0; i < bank->num_sectors; i++) {
-				w0 = (0x01 << 24) | (bank->base + bank->sectors[i].offset);
-				w1 = (0x100 << 16) | 0; /* normal margin */
-
-				result = kinetis_ftfx_command(bank, w0, w1, w2, &ftfx_fstat);
+				/* normal margin */
+				result = kinetis_ftfx_command(bank, FTFx_CMD_SECTSTAT, bank->base + bank->sectors[i].offset,
+						1, 0, 0, 0,  0, 0, 0, 0, &ftfx_fstat);
 
 				if (result == ERROR_OK) {
 					bank->sectors[i].is_erased = !(ftfx_fstat & 0x01);

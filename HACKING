@@ -1,10 +1,10 @@
 // This file is part of the Doxygen Developer Manual
 /** @page patchguide Patch Guidelines
 
-@b NB! If you're behind a corporate wall with http only access to the
+\attention If you're behind a corporate wall with http only access to the
 world, you can still use these instructions!
 
-@b NB2! You can't send patches to the mailing list anymore at all. Nowadays
+\attention You can't send patches to the mailing list anymore at all. Nowadays
 you are expected to send patches to the OpenOCD Gerrit GIT server for a
 review.
 
@@ -47,8 +47,14 @@ Add yourself to the GPL copyright for non-trivial changes.
      add a username of your choice.
      Your username will be required in step 3 and substituted wherever
      the string 'USERNAME' is found.
-  -# Add an SSH public key following the directions on github:
-     https://help.github.com/articles/generating-ssh-keys
+  -# Create an SSH public key following the directions on github:
+     https://help.github.com/articles/generating-ssh-keys . You can skip step 3
+     (adding key to Github account) and 4 (testing) - these are useful only if
+     you actually use Github or want to test whether the new key works fine.
+  -# Add this new SSH key to your Gerrit account:
+     go to 'Settings' > 'SSH Public Keys', paste the contents of
+     ~/.ssh/id_rsa.pub into the text field (if it's not visible click on
+     'Add Key ...' button) and confirm by clicking 'Add' button.
 -# Clone the git repository, rather than just download the source:
  @code
  git clone git://git.code.sf.net/p/openocd/code openocd
@@ -67,8 +73,13 @@ git config remote.review.push HEAD:refs/publish/master
 @endcode
   Or with http only:
 @code
-git remote add review http://openocd.zylin.com/p/openocd.git
+git remote add review http://USERNAME@openocd.zylin.com/p/openocd.git
 git config remote.review.push HEAD:refs/publish/master
+@endcode
+  The http password is configured from your gerrit settings - http://openocd.zylin.com/#/settings/http-password.
+  \note If you want to simplify http access you can also add your http password to the url as follows:
+@code
+git remote add review http://USERNAME:PASSWORD@openocd.zylin.com/p/openocd.git
 @endcode
   -# You will need to install this hook, we will look into a better solution:
 @code
@@ -80,7 +91,7 @@ wget http://openocd.zylin.com/tools/hooks/commit-msg
 mv commit-msg .git/hooks
 chmod +x .git/hooks/commit-msg
 @endcode
-@b NOTE A script exists to simplify the two items above. execute:
+  \note A script exists to simplify the two items above. execute:
 @code
 tools/initial.sh <username>
 @endcode
@@ -101,7 +112,7 @@ while(!done) {
   run tools/checkpatch.sh to verify your patch style is ok.
 }
 @endcode
-   @b TIP! use "git add ." before commit to add new files.
+   \note use "git add ." before commit to add new files.
 
    Comment template, notice the short first line w/topic. The topic field
    should identify the main part or subsystem the patch touches. Check
@@ -151,6 +162,13 @@ master branch will be much reduced.
 
 If a contributor pushes a patch, it is considered good form if another
 contributor actually approves and submits that patch.
+
+It should be noted that a negative review in Gerrit ("-1" or "-2") may (but does
+not have to) be disregarded if all conditions listed below are met:
+
+- the concerns raised in the review have been addressed (or explained),
+- reviewer does not re-examine the change in a month,
+- reviewer does not answer e-mails for another month.
 
 @section browsing Browsing Patches
 All OpenOCD patches can be reviewed <a href="http://openocd.zylin.com/">here</a>.

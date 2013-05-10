@@ -99,6 +99,29 @@ static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impco
 	return ERROR_OK;
 }
 
+void mips_ejtag_add_scan_96(struct mips_ejtag *ejtag_info, uint32_t ctrl, uint32_t data, uint8_t *in_scan_buf)
+{
+	assert(ejtag_info->tap != NULL);
+	struct jtag_tap *tap = ejtag_info->tap;
+
+	struct scan_field field;
+	uint8_t out_scan[12];
+
+	/* processor access "all" register 96 bit */
+	field.num_bits = 96;
+
+	field.out_value = out_scan;
+	buf_set_u32(out_scan, 0, 32, ctrl);
+	buf_set_u32(out_scan + 4, 0, 32, data);
+	buf_set_u32(out_scan + 8, 0, 32, 0);
+
+	field.in_value = in_scan_buf;
+
+	jtag_add_dr_scan(tap, 1, &field, TAP_IDLE);
+
+	keep_alive();
+}
+
 int mips_ejtag_drscan_32(struct mips_ejtag *ejtag_info, uint32_t *data)
 {
 	struct jtag_tap *tap;
@@ -193,29 +216,25 @@ void mips_ejtag_drscan_8_out(struct mips_ejtag *ejtag_info, uint8_t data)
 /* Set (to enable) or clear (to disable stepping) the SSt bit (bit 8) in Cp0 Debug reg (reg 23, sel 0) */
 int mips_ejtag_config_step(struct mips_ejtag *ejtag_info, int enable_step)
 {
-	int code_len = enable_step ? 6 : 7;
+	struct pracc_queue_info ctx = {.max_code = 7};
+	pracc_queue_init(&ctx);
+	if (ctx.retval != ERROR_OK)
+		goto exit;
 
-	uint32_t *code = malloc(code_len * sizeof(uint32_t));
-	if (code == NULL) {
-		LOG_ERROR("Out of memory");
-		return ERROR_FAIL;
-	}
-	uint32_t *code_p = code;
-
-	*code_p++ = MIPS32_MTC0(1, 31, 0);			/* move $1 to COP0 DeSave */
-	*code_p++ = MIPS32_MFC0(1, 23, 0),			/* move COP0 Debug to $1 */
-	*code_p++ = MIPS32_ORI(1, 1, 0x0100);			/* set SSt bit in debug reg */
+	pracc_add(&ctx, 0, MIPS32_MFC0(8, 23, 0));			/* move COP0 Debug to $8 */
+	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, 0x0100));			/* set SSt bit in debug reg */
 	if (!enable_step)
-		*code_p++ = MIPS32_XORI(1, 1, 0x0100);		/* clear SSt bit in debug reg */
+		pracc_add(&ctx, 0, MIPS32_XORI(8, 8, 0x0100));		/* clear SSt bit in debug reg */
 
-	*code_p++ = MIPS32_MTC0(1, 23, 0);			/* move $1 to COP0 Debug */
-	*code_p++ = MIPS32_B(NEG16((code_len - 1)));		/* jump to start */
-	*code_p = MIPS32_MFC0(1, 31, 0);			/* move COP0 DeSave to $1 */
+	pracc_add(&ctx, 0, MIPS32_MTC0(8, 23, 0));			/* move $8 to COP0 Debug */
+	pracc_add(&ctx, 0, MIPS32_LUI(8, UPPER16(ejtag_info->reg8)));		/* restore upper 16 bits  of $8 */
+	pracc_add(&ctx, 0, MIPS32_B(NEG16((ctx.code_count + 1))));			/* jump to start */
+	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(ejtag_info->reg8)));	/* restore lower 16 bits of $8 */
 
-	int retval = mips32_pracc_exec(ejtag_info, code_len, code, 0, NULL, 0, NULL, 1);
-
-	free(code);
-	return retval;
+	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
+exit:
+	pracc_queue_free(&ctx);
+	return ctx.retval;
 }
 
 int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
@@ -241,11 +260,15 @@ int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 
 int mips_ejtag_exit_debug(struct mips_ejtag *ejtag_info)
 {
-	uint32_t inst;
-	inst = MIPS32_DRET;
+	uint32_t instr = MIPS32_DRET;
+	struct pracc_queue_info ctx = {.max_code = 1, .pracc_list = &instr, .code_count = 1, .store_count = 0};
 
 	/* execute our dret instruction */
-	return mips32_pracc_exec(ejtag_info, 1, &inst, 0, NULL, 0, NULL, 0);
+	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
+
+	/* pic32mx workaround, false pending at low core clock */
+	jtag_add_sleep(1000);
+	return ctx.retval;
 }
 
 int mips_ejtag_init(struct mips_ejtag *ejtag_info)
