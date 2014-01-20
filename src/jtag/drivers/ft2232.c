@@ -195,6 +195,7 @@ static int lisa_l_init(void);
 static int flossjtag_init(void);
 static int xds100v2_init(void);
 static int digilent_hs1_init(void);
+static int digilent_hs2_init(void);
 
 /* reset procedures for supported layouts */
 static void ftx23_reset(int trst, int srst);
@@ -214,6 +215,7 @@ static void ktlink_reset(int trst, int srst);
 static void redbee_reset(int trst, int srst);
 static void xds100v2_reset(int trst, int srst);
 static void digilent_hs1_reset(int trst, int srst);
+static void digilent_hs2_reset(int trst, int srst);
 
 /* blink procedures for layouts that support a blinking led */
 static void olimex_jtag_blink(void);
@@ -344,6 +346,10 @@ static const struct ft2232_layout  ft2232_layouts[] = {
 		.init = digilent_hs1_init,
 		.reset = digilent_hs1_reset,
 		.channel = INTERFACE_A,
+	},
+	{ .name = "digilent-hs2",
+		.init = digilent_hs2_init,
+		.reset = digilent_hs2_reset,
 	},
 	{ .name = NULL, /* END OF TABLE */ },
 };
@@ -4244,6 +4250,30 @@ static int digilent_hs1_init(void)
 }
 
 static void digilent_hs1_reset(int trst, int srst)
+{
+	/* Dummy function, no reset signals supported. */
+}
+
+/********************************************************************
+ * Support for Digilent HS-2
+ * http://www.digilentinc.com/Products/Detail.cfm?Prod=JTAG-HS2
+ *******************************************************************/
+static int digilent_hs2_init(void)
+{
+	/* the adapter only supports the base JTAG signals, no nTRST
+	   nor nSRST */
+	low_output	= 0xe8;
+	low_direction	= 0xeb;
+
+	/* initialize low byte for jtag */
+	if (ft2232_set_data_bits_low_byte(low_output, low_direction) != ERROR_OK) {
+		LOG_ERROR("couldn't initialize FT2232 with 'digilent_hs2' layout");
+		return ERROR_JTAG_INIT_FAILED;
+	}
+	return ERROR_OK;
+}
+
+static void digilent_hs2_reset(int trst, int srst)
 {
 	/* Dummy function, no reset signals supported. */
 }
