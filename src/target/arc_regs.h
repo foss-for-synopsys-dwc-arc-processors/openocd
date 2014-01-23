@@ -39,11 +39,11 @@
  * OpenOCD register cache registers
  *   check the arc32-read/write_registers functions
  */
-#define PC_REG						64	/* program counter */
+#define PC_REG						65	/* program counter */
 
 /* GNU GDB register set (expected to receive) */
-#define ARC32_NUM_AUX_REGS			37	/* expected by GDB */
-#define ARC32_NUM_GDB_REGS			87
+#define ARC32_NUM_AUX_REGS			47	/* expected by GDB */
+#define ARC32_NUM_GDB_REGS			97
 
 
 /* --------------------------------------------------------------------------
@@ -80,6 +80,7 @@
 
 #define AUX_STATUS32_L1_REG		0xB
 #define AUX_STATUS32_L2_REG		0xC
+#define AUX_USER_SP_REG         0xD
 
 #define AUX_IC_IVIC_REG			0X10
 #define IC_IVIC_INVALIDATE		0XFFFFFFFF
@@ -121,6 +122,15 @@
 #define AUX_IRQ_PULSE_CAN_REG	0x415
 #define AUX_IRQ_PENDING_REG		0x416
 #define AUX_XFLAGS_REG			0x44F
+
+#define AUX_BCR_VER_REG			0x60
+#define AUX_BTA_LINK_BUILD_REG	0x63
+#define AUX_VECBASE_AC_BUILD_REG	0x68
+#define AUX_RF_BUILD_REG		0x6E
+#define AUX_ISA_CONFIG_REG		0xC1
+#define AUX_DCCM_BUILD_REG		0x74
+
+#define AUX_ICCM_BUILD_REG		0x78
 
 /* OpenOCD ARC core & aux registers hook structure */
 struct arc32_core_reg {

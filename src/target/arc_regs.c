@@ -33,18 +33,20 @@ static char *arc_gdb_reg_names_list[] = {
 	"r0",   "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
 	"r8",   "r9", "r10", "r11", "r12", "r13", "r14", "r15",
 	"r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
-	"r24", "r25",  "gp",  "fp",  "sp", "ilink1", "ilink2", "blink",
+	"r24", "r25",  "gp",  "fp",  "sp", "ilink", "r30", "blink",
 	"r32", "r33", "r34", "r35", "r36", "r37", "r38", "r39",
 	"r40", "r41", "r42", "r43", "r44", "r45", "r46", "r47",
 	"r48", "r49", "r50", "r51", "r52", "r53", "r54", "r55",
 	"r56", "r57", "r58", "r59", "lp_count", "reserved", "limm", "pcl",
 	/* aux regs */
-	"pc",           "lp_start",     "lp_end",       "status32",
-	"status32_l1",  "status32_l2",  "aux_irq_lv12", "aux_irq_lev",
+	"identity", "pc",  "lp_start",  "lp_end",       "status32", "int_vector_base", "aux_user_sp",
+	"status32_p0",  "status32_l2",  "aux_irq_lv12", "aux_irq_lev",
 	"aux_irq_hint", "eret",         "erbta",        "erstatus",
 	"ecr",          "efa",          "icause1",      "icause2",
 	"aux_ienable",  "aux_itrigger", "bta",          "bta_l1",
-	"bta_l2",  "aux_irq_pulse_cancel",  "aux_irq_pending"
+	"bta_l2",  "aux_irq_pulse_cancel",  "aux_irq_pending", "bcr_ver",
+	"bta_link_build", "vecbase_ac_build", "rf_build", "isa_config",
+	"dccm_build", "iccm_build",
 };
 
 static struct arc32_core_reg
@@ -72,16 +74,22 @@ static struct arc32_core_reg
 	{72, NULL, NULL}, {73, NULL, NULL}, {74, NULL, NULL}, {75, NULL, NULL},
 	{76, NULL, NULL}, {77, NULL, NULL}, {78, NULL, NULL}, {79, NULL, NULL},
 	{80, NULL, NULL}, {81, NULL, NULL}, {82, NULL, NULL}, {83, NULL, NULL},
-	{84, NULL, NULL}, {85, NULL, NULL}, {86, NULL, NULL}
+	{84, NULL, NULL}, {85, NULL, NULL}, {86, NULL, NULL}, {87, NULL, NULL},
+	{88, NULL, NULL}, {89, NULL, NULL}, {90, NULL, NULL}, {91, NULL, NULL},
+	{92, NULL, NULL}, {93, NULL, NULL}, {94, NULL, NULL}, {95, NULL, NULL},
+	{96, NULL, NULL},
 };
 
 /* arc_regs_(read|write)_registers use this array as a list of AUX registers to
  * perform action on. */
 static uint32_t aux_regs_addresses[] = { 
+	AUX_IDENTITY_REG,
 	AUX_PC_REG,
 	AUX_LP_START_REG,
 	AUX_LP_END_REG,
 	AUX_STATUS32_REG,
+	AUX_INT_VECTOR_BASE_REG,
+	AUX_USER_SP_REG,
 	AUX_STATUS32_L1_REG,
 	AUX_STATUS32_L2_REG,
 	AUX_IRQ_LV12_REG,
@@ -101,6 +109,13 @@ static uint32_t aux_regs_addresses[] = {
 	AUX_BTA_L2_REG,
 	AUX_IRQ_PULSE_CAN_REG,
 	AUX_IRQ_PENDING_REG,
+	AUX_BCR_VER_REG,
+	AUX_BTA_LINK_BUILD_REG,
+	AUX_VECBASE_AC_BUILD_REG,
+	AUX_RF_BUILD_REG,
+	AUX_ISA_CONFIG_REG,
+	AUX_DCCM_BUILD_REG,
+	AUX_ICCM_BUILD_REG,
 };
 static unsigned int aux_regs_addresses_count = (sizeof(aux_regs_addresses) / sizeof(uint32_t));
 
@@ -145,6 +160,15 @@ static const struct reg_arch_type arc32_reg_type = {
 
 /* ----- Exported functions ------------------------------------------------ */
 
+static const char * const general_group_name = "general";
+static const char * const float_group_name = "float";
+static const char * const feature_core_basecase_name = "org.gnu.gdb.arc.core-basecase";
+static const char * const feature_core_extension_name = "org.gnu.gdb.arc.core-extension";
+static const char * const feature_core_pointers_name = "org.gnu.gdb.arc.core-pointers";
+static const char * const feature_core_link_name = "org.gnu.gdb.arc.core-linkregs.v2";
+static const char * const feature_core_other_name = "org.gnu.gdb.arc.core-other";
+static const char * const feature_aux_baseline_name = "org.gnu.gdb.arc.aux-baseline.v2";
+
 struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 {
 	int num_regs = ARC32_NUM_GDB_REGS;
@@ -166,6 +190,20 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 	(*cache_p) = cache;
 	arc32->core_cache = cache;
 
+	// XML feature
+	struct reg_feature *core_basecase = calloc(sizeof(struct reg_feature), 1);
+	core_basecase->name = feature_core_basecase_name;
+	struct reg_feature *core_extension = calloc(sizeof(struct reg_feature), 1);
+	core_extension->name = feature_core_extension_name;
+	struct reg_feature *core_pointers = calloc(sizeof(struct reg_feature), 1);
+	core_pointers->name = feature_core_pointers_name;
+	struct reg_feature *core_link = calloc(sizeof(struct reg_feature), 1);
+	core_link->name = feature_core_link_name;
+	struct reg_feature *core_other = calloc(sizeof(struct reg_feature), 1);
+	core_other->name = feature_core_other_name;
+	struct reg_feature *aux_baseline = calloc(sizeof(struct reg_feature), 1);
+	aux_baseline->name = feature_aux_baseline_name;
+
 	for (i = 0; i < num_regs; i++) {
 		arch_info[i] = arc_gdb_reg_list_arch_info[i];
 		arch_info[i].target = target;
@@ -177,6 +215,29 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 		reg_list[i].valid = 0;
 		reg_list[i].type = &arc32_reg_type;
 		reg_list[i].arch_info = &arch_info[i];
+		// XML
+		reg_list[i].number = i;
+		reg_list[i].exist = 1;
+		if (i < 96)
+			reg_list[i].group = general_group_name;
+		else
+			reg_list[i].group = float_group_name;
+
+		if (i < 26) {
+			reg_list[i].feature = core_basecase;
+		} else if (i < 29) {
+			reg_list[i].feature = core_pointers;
+		} else if (i < 32) {
+			reg_list[i].feature = core_link;
+		} else if (i < 60) {
+			reg_list[i].feature = core_extension;
+		} else if (i == 60 || i == 62 || i == 63) {
+			reg_list[i].feature = core_other;
+		} else {
+			reg_list[i].feature = aux_baseline;
+		}
+		LOG_INFO("r n=%i name=%s group=%s feature=%s", i, reg_list[i].name, reg_list[i].group, reg_list[i].feature->name);
+		// end XML
 	}
 
 	return cache;
