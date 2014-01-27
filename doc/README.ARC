@@ -11,15 +11,14 @@
 	3. How to build OpenOCD for Windows (cross compile)
 	4. A typical debug session using arc-elf32-gdb with openocd
 	5. Advanced debug commands
-	6. How to program a bit-file into FPGA by usage of a Digilent HS2 probe
+	6. How to program a bit-file into FPGA by usage of a Digilent HS probe
 	7. ARC OpenOCD configuration options
 	8. ARC-GDB development commands
 	9. Find your way in the source code
 
  NOTES:
 
-	1. Only ARC EM Starter Kit and Digilent HS1 probe are supported.
-	2. Digilent HS2 probe currently is not supported.
+	1. Only ARC EM Starter Kit and Digilent HS1 and HS2 probes are supported.
 	3. There is NO Flash support in ARC OpenOCD implemented.
 
 
@@ -27,8 +26,8 @@
   1. Driver installation instructions
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-If you use Digilent HS1 cable, then download and install 'Adept' from Digilent
-as it has to go with the used Digilent HS1 JTAG probe.
+If you use Digilent HS cable, then download and install 'Adept' from Digilent
+as it has to go with the used Digilent HS JTAG probe.
 
   http://www.digilentinc.com/Products/Detail.cfm?Prod=ADEPT2
 
@@ -223,9 +222,9 @@ Alternative, do a Cygwin build on a Windows host,
 
 On the HOST (Linux PC which connects directly to the target):
 
-  Connect Digilent HS1 JTAG-USB probe or EM Starter Kit to the Host. EM Starter
-  Kit has built-in debug probe, it doesn't requires a separate Digilent HS1
-  probe. HS1 is required only for other debug targets like ML-509 board, etc.
+  Connect Digilent HS JTAG-USB probe or EM Starter Kit to the Host. EM Starter
+  Kit has built-in debug probe, it doesn't requires a separate Digilent HS
+  probe. HS is required only for other debug targets like ML-509 board, etc.
 
   $> lsusb
     Check that FTDI 2232H device is there
@@ -365,11 +364,11 @@ host connected to debug target):
 
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  6. How to program a bit-file into FPGA by usage of a Digilent HS2 probe
+  6. How to program a bit-file into FPGA by usage of a Digilent HS probe
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Below is an example given of how to program a Xilinx ML509 FPGA developers
-board. NOTE: make sure the Digilent HS2 dongle is connected to the right
+board. NOTE: make sure the Digilent HS dongle is connected to the right
 JTAG connector on the board (programming the FPGA and not the memory).
 So, it should be connected to PC4 JTAG and not to J51 BDM.
 Further more, Device 4: XC5VLX110T is the FPGA to program, device 4 in the
