@@ -28,6 +28,87 @@
 
 /* ----- Supporting functions ---------------------------------------------- */
 
+/* Describe all possible registers. */
+static const struct arc32_reg_desc arc32_regs_descriptions[TOTAL_NUM_REGS] = {
+	/* regnum, name, address */
+	{ R0, "r0", 0 },
+	{ R1, "r1", 1 },
+	{ R2, "r2", 2 },
+	{ R3, "r3", 3 },
+	{ R4, "r4", 4 },
+	{ R5, "r5", 5 },
+	{ R6, "r6", 6 },
+	{ R7, "r7", 7 },
+	{ R8, "r8", 8 },
+	{ R9, "r9", 9 },
+	{ R10, "r10", 10 },
+	{ R11, "r11", 11 },
+	{ R12, "r12", 12 },
+	{ R13, "r13", 13 },
+	{ R14, "r14", 14 },
+	{ R15, "r15", 15 },
+	{ R16, "r16", 16 },
+	{ R17, "r17", 17 },
+	{ R18, "r18", 18 },
+	{ R19, "r19", 19 },
+	{ R20, "r20", 20 },
+	{ R21, "r21", 21 },
+	{ R22, "r22", 22 },
+	{ R23, "r23", 23 },
+	{ R24, "r24", 24 },
+	{ R25, "r25", 25 },
+	{ R26, "r26", 26 },
+	{ R27, "r27", 27 },
+	{ R28, "r28", 28 },
+	{ R29, "r29", 29 },
+	{ R30, "r30", 30 },
+	{ R31, "r31", 31 },
+	{ R32, "r32", 32 },
+	{ R33, "r33", 33 },
+	{ R34, "r34", 34 },
+	{ R35, "r35", 35 },
+	{ R36, "r36", 36 },
+	{ R37, "r37", 37 },
+	{ R38, "r38", 38 },
+	{ R39, "r39", 39 },
+	{ R40, "r40", 40 },
+	{ R41, "r41", 41 },
+	{ R42, "r42", 42 },
+	{ R43, "r43", 43 },
+	{ R44, "r44", 44 },
+	{ R45, "r45", 45 },
+	{ R46, "r46", 46 },
+	{ R47, "r47", 47 },
+	{ R48, "r48", 48 },
+	{ R49, "r49", 49 },
+	{ R50, "r50", 50 },
+	{ R51, "r51", 51 },
+	{ R52, "r52", 52 },
+	{ R53, "r53", 53 },
+	{ R54, "r54", 54 },
+	{ R55, "r55", 55 },
+	{ R56, "r56", 56 },
+	{ R57, "r57", 57 },
+	{ R58, "r58", 58 },
+	{ R59, "r59", 59 },
+	{ R60, "LP_COUNT", 60 },
+	{ R61, "r61", 61 },
+	{ R62, "LIMM", 62 },
+	{ R63, "PCL", 63 },
+	/* AUX */
+	{ PC, "PC", 0x6 },
+	{ STATUS32, "STATUS32", 0xA },
+	{ LP_START, "LP_START", 0x2 },
+	{ LP_END,   "LP_END",   0x3 },
+};
+
+static uint32_t aux_regs_addresses[LP_END - PC + 1] = {
+	PC,
+	STATUS32,
+	LP_START,
+	LP_END,
+};
+#if 0
 static char *arc_gdb_reg_names_list[] = {
 	/* core regs */
 	"r0",   "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -118,19 +199,20 @@ static uint32_t aux_regs_addresses[] = {
 	AUX_ICCM_BUILD_REG,
 };
 static unsigned int aux_regs_addresses_count = (sizeof(aux_regs_addresses) / sizeof(uint32_t));
+#endif
 
 static int arc_regs_get_core_reg(struct reg *reg)
 {
 	int retval = ERROR_OK;
-
-	struct arc32_core_reg *arc32_reg = reg->arch_info;
+LOG_DEBUG("Entering get core reg...");
+	struct arc32_reg_arch_info *arc32_reg = reg->arch_info;
 	struct target *target = arc32_reg->target;
 	struct arc32_common *arc32_target = target_to_arc32(target);
 
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
 
-	retval = arc32_target->read_core_reg(target, arc32_reg->num);
+	retval = arc32_target->read_core_reg(target, arc32_reg->desc->regnum);
 
 	return retval;
 }
@@ -139,7 +221,8 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 {
 	int retval = ERROR_OK;
 
-	struct arc32_core_reg *arc32_reg = reg->arch_info;
+LOG_DEBUG("Entering set core reg...");
+	struct arc32_reg_arch_info *arc32_reg = reg->arch_info;
 	struct target *target = arc32_reg->target;
 	uint32_t value = buf_get_u32(buf, 0, 32);
 
@@ -171,44 +254,64 @@ static const char * const feature_aux_baseline_name = "org.gnu.gdb.arc.aux-basel
 
 struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 {
+#if 0
 	int num_regs = ARC32_NUM_GDB_REGS;
 	int i;
+#else
+	uint32_t i;
+#endif
 
 	/* get pointers to arch-specific information */
 	struct arc32_common *arc32 = target_to_arc32(target);
 	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
-	struct reg *reg_list = calloc(num_regs, sizeof(struct reg));
+	struct reg *reg_list = calloc(TOTAL_NUM_REGS, sizeof(struct reg));
+#if 0
 	struct arc32_core_reg *arch_info = 
 		malloc(sizeof(struct arc32_core_reg) * num_regs);
+#else
+	struct arc32_reg_arch_info *arch_info = calloc(TOTAL_NUM_REGS, sizeof(struct arc32_reg_arch_info));
+#endif
 
 	/* Build the process context cache */
 	cache->name = "arc32 registers";
 	cache->next = NULL;
 	cache->reg_list = reg_list;
+#if 0
 	cache->num_regs = num_regs;
+#else
+	cache->num_regs = TOTAL_NUM_REGS;
+#endif
 	(*cache_p) = cache;
 	arc32->core_cache = cache;
 
 	// XML feature
-	struct reg_feature *core_basecase = calloc(sizeof(struct reg_feature), 1);
+	struct reg_feature *core_basecase = calloc(1, sizeof(struct reg_feature));
 	core_basecase->name = feature_core_basecase_name;
-	struct reg_feature *core_extension = calloc(sizeof(struct reg_feature), 1);
+	struct reg_feature *core_extension = calloc(1, sizeof(struct reg_feature));
 	core_extension->name = feature_core_extension_name;
-	struct reg_feature *core_pointers = calloc(sizeof(struct reg_feature), 1);
+	struct reg_feature *core_pointers = calloc(1, sizeof(struct reg_feature));
 	core_pointers->name = feature_core_pointers_name;
-	struct reg_feature *core_link = calloc(sizeof(struct reg_feature), 1);
+	struct reg_feature *core_link = calloc(1, sizeof(struct reg_feature));
 	core_link->name = feature_core_link_name;
-	struct reg_feature *core_other = calloc(sizeof(struct reg_feature), 1);
+	struct reg_feature *core_other = calloc(1, sizeof(struct reg_feature));
 	core_other->name = feature_core_other_name;
-	struct reg_feature *aux_baseline = calloc(sizeof(struct reg_feature), 1);
+	struct reg_feature *aux_baseline = calloc(1, sizeof(struct reg_feature));
 	aux_baseline->name = feature_aux_baseline_name;
 
-	for (i = 0; i < num_regs; i++) {
+	for (i = 0; i < TOTAL_NUM_REGS; i++) {
+#if 0
 		arch_info[i] = arc_gdb_reg_list_arch_info[i];
+#else
+		arch_info[i].desc = arc32_regs_descriptions + i;
+#endif
 		arch_info[i].target = target;
 		arch_info[i].arc32_common = arc32;
+#if 0
 		reg_list[i].name = arc_gdb_reg_names_list[i];
+#else
+		reg_list[i].name = arc32_regs_descriptions[i].name;
+#endif
 		reg_list[i].size = 32;
 		reg_list[i].value = calloc(1, 4);
 		reg_list[i].dirty = 0;
@@ -216,13 +319,20 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 		reg_list[i].type = &arc32_reg_type;
 		reg_list[i].arch_info = &arch_info[i];
 		// XML
+#if 0
 		reg_list[i].number = i;
 		reg_list[i].exist = 1;
 		if (i < 96)
 			reg_list[i].group = general_group_name;
 		else
 			reg_list[i].group = float_group_name;
+#else
+		reg_list[i].number = arc32_regs_descriptions[i].regnum;
+		reg_list[i].exist = 1;
+		reg_list[i].group = general_group_name;
+#endif
 
+#if 0
 		if (i < 26) {
 			reg_list[i].feature = core_basecase;
 		} else if (i < 29) {
@@ -236,7 +346,25 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 		} else {
 			reg_list[i].feature = aux_baseline;
 		}
-		LOG_INFO("r n=%i name=%s group=%s feature=%s", i, reg_list[i].name, reg_list[i].group, reg_list[i].feature->name);
+#else
+		if (i < GP)
+			reg_list[i].feature = core_basecase;
+		else if (GP <= i && i < ILINK)
+			reg_list[i].feature = core_pointers;
+		else if (ILINK <= i && i < R32)
+			reg_list[i].feature = core_link;
+		else if (R32 <= i && i < R60)
+			reg_list[i].feature = core_extension;
+		else if (R60 <= i && i <= R63)
+			reg_list[i].feature = core_other;
+		else if (PC <= i && i <= LP_END)
+			reg_list[i].feature = aux_baseline;
+		else {
+			LOG_WARNING("Unknown register with number %" PRIu32, i);
+			reg_list[i].feature = NULL;
+		}
+#endif
+		LOG_INFO("reg n=%3i name=%3s group=%s feature=%s", i, reg_list[i].name, reg_list[i].group, reg_list[i].feature->name);
 		// end XML
 	}
 
@@ -247,11 +375,15 @@ int arc_regs_read_core_reg(struct target *target, int num)
 {
 	int retval = ERROR_OK;
 	uint32_t reg_value;
-
+LOG_DEBUG("Entering read core reg");
 	/* get pointers to arch-specific information */
 	struct arc32_common *arc32 = target_to_arc32(target);
 
+#if 0
 	if ((num < 0) || (num >= ARC32_NUM_GDB_REGS))
+#else
+	if ((num < 0) || (num >= TOTAL_NUM_REGS))
+#endif
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	reg_value = arc32->core_regs[num];
@@ -267,11 +399,12 @@ int arc_regs_write_core_reg(struct target *target, int num)
 {
 	int retval = ERROR_OK;
 	uint32_t reg_value;
+LOG_DEBUG("Entering write core reg");
 
 	/* get pointers to arch-specific information */
 	struct arc32_common *arc32 = target_to_arc32(target);
 
-	if ((num < 0) || (num >= ARC32_NUM_GDB_REGS))
+	if ((num < 0) || (num >= TOTAL_NUM_REGS))
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	reg_value = buf_get_u32(arc32->core_cache->reg_list[num].value, 0, 32);
@@ -301,15 +434,20 @@ int arc_regs_read_registers(struct target *target, uint32_t *regs)
 	 *       regmap[60] = (&(pt_buf.scratch.r60)
 	 */
 	if (arc32->processor_type == ARCEM_NUM) {
-		arc_jtag_read_core_reg(&arc32->jtag_info, 0, ARC32_NUM_CORE_REGS, regs);
+		arc_jtag_read_core_reg(&arc32->jtag_info, 0, CORE_NUM_REGS, regs);
 	} else {
+#if 0
 		/* Note that NUM_CORE_REGS is a number of registers but LAST_EXTENSION_REG
 		 * is a _register number_ so it have to be incremented. */
 		arc_jtag_read_core_reg(&arc32->jtag_info, 0, ARC32_LAST_EXTENSION_REG + 1, regs);
 		arc_jtag_read_core_reg(&arc32->jtag_info, LP_COUNT_REG, 1, regs + LP_COUNT_REG);
 		arc_jtag_read_core_reg(&arc32->jtag_info, LIDI_REG, 1, regs + LIDI_REG);
+#else
+		LOG_ERROR("we shouldn't be here");
+		assert(false);
+#endif
 	}
-	arc_jtag_read_core_reg(&arc32->jtag_info, PCL_REG, 1, regs + PCL_REG);
+	arc_jtag_read_core_reg(&arc32->jtag_info, arc32_regs_descriptions[PCL].addr, 1, regs + PCL);
 
 	/*
 	 * we have here a hole of 2 regs, they are 0 on the other end (GDB)
@@ -318,7 +456,7 @@ int arc_regs_read_registers(struct target *target, uint32_t *regs)
 
 	/* read auxiliary registers */
 	keep_alive();
-	arc_jtag_read_aux_reg(&arc32->jtag_info, aux_regs_addresses, aux_regs_addresses_count, regs + 64);
+	arc_jtag_read_aux_reg(&arc32->jtag_info, aux_regs_addresses, ARRAY_SIZE(aux_regs_addresses), regs + FIRST_AUX_REG);
 
 	keep_alive();
 	return retval;
@@ -346,17 +484,22 @@ int arc_regs_write_registers(struct target *target, uint32_t *regs)
 	 * write core registers R0-Rx (see above read_registers() !)
 	 */
 	if (arc32->processor_type == ARCEM_NUM) {
-		arc_jtag_write_core_reg(&arc32->jtag_info, 0, ARC32_NUM_CORE_REGS, regs);
+		arc_jtag_write_core_reg(&arc32->jtag_info, 0, CORE_NUM_REGS, regs);
 	} else {
+#if 0
 		arc_jtag_write_core_reg(&arc32->jtag_info, 0, ARC32_LAST_EXTENSION_REG + 1, regs);
 		arc_jtag_write_core_reg(&arc32->jtag_info, LP_COUNT_REG, 1, regs + LP_COUNT_REG);
 		arc_jtag_write_core_reg(&arc32->jtag_info, LIDI_REG,     1, regs + LIDI_REG);
+#else
+		LOG_ERROR("We shouldn't be here");
+		assert(false);
+#endif
 	}
-	arc_jtag_write_core_reg(&arc32->jtag_info, PCL_REG, 1, regs + PCL_REG);
+	arc_jtag_write_core_reg(&arc32->jtag_info, arc32_regs_descriptions[PCL].addr, 1, regs + PCL);
 
 	/* Write auxiliary registers */
 	keep_alive();
-	arc_jtag_write_aux_reg(&arc32->jtag_info, aux_regs_addresses, aux_regs_addresses_count, regs + 64);
+	arc_jtag_write_aux_reg(&arc32->jtag_info, aux_regs_addresses, ARRAY_SIZE(aux_regs_addresses), regs + 64);
 
 	keep_alive();
 	return retval;
@@ -371,12 +514,25 @@ int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	struct arc32_common *arc32 = target_to_arc32(target);
 
 	/* get pointers to arch-specific information storage */
-	*reg_list_size = ARC32_NUM_GDB_REGS;
+	*reg_list_size = TOTAL_NUM_REGS;
 	*reg_list = malloc(sizeof(struct reg *) * (*reg_list_size));
 
-	/* build the ARC core reg list */
-	for (i = 0; i < ARC32_NUM_GDB_REGS; i++)
-		(*reg_list)[i] = &arc32->core_cache->reg_list[i];
+	if (reg_class == REG_CLASS_ALL) {
+		/* build the ARC core reg list */
+		LOG_INFO("reg class all");
+		for (i = 0; i < TOTAL_NUM_REGS; i++)
+			(*reg_list)[i] = &arc32->core_cache->reg_list[i];
+	} else {
+		LOG_INFO("reg class general");
+		int cur_index = 0;
+		for (i = 0; i < TOTAL_NUM_REGS; i++) {
+			if (i <= STATUS32) {
+				(*reg_list)[cur_index] = &arc32->core_cache->reg_list[i];
+				cur_index += 1;
+			}
+		}
+		*reg_list_size = cur_index;
+	}
 
 	return retval;
 }
@@ -384,6 +540,7 @@ int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 int arc_regs_print_core_registers(struct target *target)
 {
 	int retval = ERROR_OK;
+#if 0
 	int reg_nbr;
 	uint32_t value;
 
@@ -411,7 +568,7 @@ int arc_regs_print_core_registers(struct target *target)
 				LOG_USER(" "); /* give newline */
 		}
 	}
-
+#endif
 	LOG_USER(" "); /* give newline */
 
 	return retval;

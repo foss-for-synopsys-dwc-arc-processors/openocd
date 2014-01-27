@@ -24,7 +24,7 @@
 #define ARC_REGS_H
 
 #include "target.h"
-
+#if 0
 /* ARCompatISA-v2 register set definition */
 #define ARC32_NUM_CORE_REGS			32
 #define ARC32_NUM_EXTENSION_REGS	59 - 32 + 1	/* R59 - R32 + 1 */
@@ -44,6 +44,7 @@
 /* GNU GDB register set (expected to receive) */
 #define ARC32_NUM_AUX_REGS			47	/* expected by GDB */
 #define ARC32_NUM_GDB_REGS			97
+#endif
 
 
 /* --------------------------------------------------------------------------
@@ -132,6 +133,7 @@
 
 #define AUX_ICCM_BUILD_REG		0x78
 
+#if 0
 /* OpenOCD ARC core & aux registers hook structure */
 struct arc32_core_reg {
 	uint32_t num;
@@ -143,6 +145,107 @@ struct arc32_aux_reg {
 	uint32_t num;
 	struct target *target;
 	struct arc32_common *arc32_common;
+};
+#endif
+struct arc32_reg_desc {
+	uint32_t regnum;
+	char * const name;
+	uint32_t addr;
+};
+
+struct arc32_reg_arch_info {
+	const struct arc32_reg_desc *desc;
+	struct target *target;
+	struct arc32_common *arc32_common;
+};
+
+enum arc32_reg_number {
+	/* Core registers */
+	R0 = 0,
+	R1,
+	R2,
+	R3,
+	R4,
+	R5,
+	R6,
+	R7,
+	R8,
+	R9,
+	R10,
+	R11,
+	R12,
+	R13,
+	R14,
+	R15,
+	R16,
+	R17,
+	R18,
+	R19,
+	R20,
+	R21,
+	R22,
+	R23,
+	R24,
+	R25,
+	R26 = 26,
+	GP = 26,
+	R27 = 27,
+	FP = 27,
+	R28 = 28,
+	SP = 28,
+	R29 = 29,
+	ILINK = 29,
+	R30 = 30,
+	R31 = 31,
+	BLINK = 31,
+	/* Core extension registers */
+	R32 = 32,
+	R33,
+	R34,
+	R35,
+	R36,
+	R37,
+	R38,
+	R39,
+	R40,
+	R41,
+	R42,
+	R43,
+	R44,
+	R45,
+	R46,
+	R47,
+	R48,
+	R49,
+	R50,
+	R51,
+	R52,
+	R53,
+	R54,
+	R55,
+	R56,
+	R57,
+	/* In HS R58 and R59 are ACCL and ACCH. */
+	R58,
+	R59,
+	R60 = 60,
+	LP_COUNT = 60,
+	/* Reserved */
+	R61 = 61,
+	/* LIMM is not a realk registers. */
+	R62 = 62,
+	LIMM = 62,
+	R63 = 63,
+	PCL = 63,
+	CORE_NUM_REGS = PCL,
+	/* AUX registers */
+	PC = 64,
+	FIRST_AUX_REG = PC,
+	STATUS32,
+	LP_START,
+	LP_END,
+
+	TOTAL_NUM_REGS,
 };
 
 /* ----- Exported functions ------------------------------------------------ */

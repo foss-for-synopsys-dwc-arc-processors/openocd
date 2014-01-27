@@ -73,7 +73,11 @@ int arc32_save_context(struct target *target)
 	if (retval != ERROR_OK)
 		return retval;
 
+#if 0
 	for (i = 0; i < ARC32_NUM_GDB_REGS; i++) {
+#else
+		for (i = 0; i < TOTAL_NUM_REGS; i++) {
+#endif
 		if (!arc32->core_cache->reg_list[i].valid)
 			arc32->read_core_reg(target, i);
 	}
@@ -87,7 +91,11 @@ int arc32_restore_context(struct target *target)
 	int i;
 	struct arc32_common *arc32 = target_to_arc32(target);
 
+#if 0
 	for (i = 0; i < ARC32_NUM_GDB_REGS; i++) {
+#else
+		for (i = 0; i < TOTAL_NUM_REGS; i++) {
+#endif
 		if (arc32->core_cache->reg_list[i].dirty)
 			arc32->write_core_reg(target, i);
 	}
@@ -320,7 +328,12 @@ int arc32_arch_state(struct target *target)
 	LOG_DEBUG("target state: %s in: %s mode, PC at: 0x%08" PRIx32,
 		target_state_name(target),
 		arc_isa_strings[arc32->isa_mode],
+#if 0
 		buf_get_u32(arc32->core_cache->reg_list[PC_REG].value, 0, 32));
+#else
+		buf_get_u32(arc32->core_cache->reg_list[PC].value, 0, 32));
+#endif
+
 
 	return retval;
 }
@@ -335,7 +348,11 @@ int arc32_get_current_pc(struct target *target)
 	retval = arc_jtag_read_aux_reg_one(&arc32->jtag_info, AUX_PC_REG, &dpc);
 
 	/* save current PC */
+#if 0
 	buf_set_u32(arc32->core_cache->reg_list[PC_REG].value, 0, 32, dpc);
+#else
+	buf_set_u32(arc32->core_cache->reg_list[PC].value, 0, 32, dpc);
+#endif
 
 	return retval;
 }

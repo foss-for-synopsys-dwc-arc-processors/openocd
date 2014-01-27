@@ -58,7 +58,11 @@ struct arc32_common {
 
 	struct arc_jtag jtag_info;
 
+#if 0
 	uint32_t core_regs[ARC32_NUM_GDB_REGS];
+#else
+	uint32_t core_regs[TOTAL_NUM_REGS];
+#endif
 	struct reg_cache *core_cache;
 
 	enum arc_processor_type processor_type;
