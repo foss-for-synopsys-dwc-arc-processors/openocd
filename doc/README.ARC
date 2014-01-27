@@ -15,11 +15,12 @@
 	7. ARC OpenOCD configuration options
 	8. ARC-GDB development commands
 	9. Find your way in the source code
+	10. Using Digilent HS2
 
  NOTES:
 
 	1. Only ARC EM Starter Kit and Digilent HS1 and HS2 probes are supported.
-	3. There is NO Flash support in ARC OpenOCD implemented.
+	2. There is NO Flash support in ARC OpenOCD implemented.
 
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -655,5 +656,18 @@ In src/target is the ARC specific code base:
 	arc_regs.c + .h		ARC register access
 	arc_trgt.c + .h		target/board system functions
 
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  10. Using Digilent HS2
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+To use Digilent HS2 cable instead of HS1, you can use the same configuration
+files as for HS1, however with some changes:
+
+  1. Comment ft2232_device_desc parameter;
+  2. Change ft2232_layout to digilent-hs2;
+  3. Change ft2232_vip_pid to 0x0403 0x6014.
+
+Example can be found in tcl/interface/digilent-hs2.cfg.
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
