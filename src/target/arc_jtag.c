@@ -316,7 +316,7 @@ int arc_jtag_read_memory(struct arc_jtag *jtag_info, uint32_t addr,
 	assert(jtag_info != NULL);
 	assert(jtag_info->tap != NULL);
 
-	LOG_DEBUG("Reading memory: addr=0x%" PRIu32 ";count=%" PRIu32, addr, count);
+	LOG_DEBUG("Reading memory: addr=0x%" PRIx32 ";count=%" PRIu32, addr, count);
 
 	if (count == 0)
 		return retval;
@@ -557,8 +557,8 @@ int arc_jtag_read_aux_reg(struct arc_jtag *jtag_info, uint32_t *addr,
 	assert(jtag_info != NULL);
 	assert(jtag_info->tap != NULL);
 
-	LOG_DEBUG("Reading aux registers: addr[0]=0x%" PRIu32 ";count=%" PRIu32 ";buffer[0]=0x%08" PRIx32,
-		*addr, count, *buffer);
+	LOG_DEBUG("Reading aux registers: addr[0]=0x%" PRIx32 ";count=%" PRIu32,
+		*addr, count);
 
 	if (count == 0)
 		return retval;
@@ -597,13 +597,15 @@ int arc_jtag_read_aux_reg(struct arc_jtag *jtag_info, uint32_t *addr,
 		return retval;
 	}
 
+	LOG_DEBUG("data_buf[%i]=0x%" PRIx32, 0, ((uint32_t*)data_buf)[0]);
 	/* Convert byte-buffers to host presentation. */
 	for (i = 0; i < count; i++) {
 		buffer[i] = buf_get_u32(data_buf + 4*i, 0, 32);
+		LOG_DEBUG("buf[%i]=0x%" PRIx32, i, buffer[i]);
 	}
-
 	free(data_buf);
 	free(fields);
+	LOG_DEBUG("buf[0]=0x%" PRIx32, buffer[0]);
 
 	return retval;
 }

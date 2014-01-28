@@ -58,11 +58,8 @@ struct arc32_common {
 
 	struct arc_jtag jtag_info;
 
-#if 0
-	uint32_t core_regs[ARC32_NUM_GDB_REGS];
-#else
-	uint32_t core_regs[TOTAL_NUM_REGS];
-#endif
+	/* Register values as they are read from the target. */
+	//uint32_t core_regs[TOTAL_NUM_REGS];
 	struct reg_cache *core_cache;
 
 	enum arc_processor_type processor_type;
@@ -81,8 +78,8 @@ struct arc32_common {
 	struct arc32_comparator *data_break_list;
 
 	/* register cache to processor synchronization */
-	int (*read_core_reg)(struct target *target, int num);
-	int (*write_core_reg)(struct target *target, int num);
+	//int (*read_core_reg)(struct target *target, int num);
+	//int (*write_core_reg)(struct target *target, int num);
 
 	/* Cache control */
 	bool has_dcache;

@@ -153,10 +153,11 @@ struct arc32_reg_desc {
 	uint32_t addr;
 };
 
-struct arc32_reg_arch_info {
+struct arc_reg_t {
 	const struct arc32_reg_desc *desc;
 	struct target *target;
 	struct arc32_common *arc32_common;
+	uint32_t value;
 };
 
 enum arc32_reg_number {
@@ -199,7 +200,8 @@ enum arc32_reg_number {
 	R31 = 31,
 	BLINK = 31,
 	/* Core extension registers */
-	R32 = 32,
+	CORE_NUM_REGS = R31 + 1,
+	R32 = R31 + 1,
 	R33,
 	R34,
 	R35,
@@ -228,25 +230,35 @@ enum arc32_reg_number {
 	/* In HS R58 and R59 are ACCL and ACCH. */
 	R58,
 	R59,
+	EXTENSION_CORE_NUM_REGS = R59 + 1,
 	R60 = 60,
 	LP_COUNT = 60,
 	/* Reserved */
 	R61 = 61,
-	/* LIMM is not a realk registers. */
+	/* LIMM is not a real register. */
 	R62 = 62,
 	LIMM = 62,
 	R63 = 63,
 	PCL = 63,
-	CORE_NUM_REGS = PCL,
 	/* AUX registers */
 	PC = 64,
 	FIRST_AUX_REG = PC,
 	STATUS32,
+
+	/* Post GPR regs */
 	LP_START,
+	GPR_NUM_REGS = LP_START,
 	LP_END,
 
 	TOTAL_NUM_REGS,
 };
+
+#define PC_REG_ADDR 0x6
+#define STATUS32_REG_ADDR 0xA
+#define LP_START_REG_ADDR 0x2
+#define LP_END_REG_ADDR 0x3
+
+/* ----- Exported functions ------------------------------------------------ */
 
 /* ----- Exported functions ------------------------------------------------ */
 

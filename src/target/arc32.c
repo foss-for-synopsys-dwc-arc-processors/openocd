@@ -51,8 +51,8 @@ int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
 	arc32->bp_scanned = 0;
 	arc32->data_break_list = NULL;
 
-	arc32->read_core_reg = arc_regs_read_core_reg;
-	arc32->write_core_reg = arc_regs_write_core_reg;
+	//arc32->read_core_reg = arc_regs_read_core_reg;
+	//arc32->write_core_reg = arc_regs_write_core_reg;
 
 	/* Flush D$ by default. It is safe to assume that D$ is present,
 	 * because if it isn't, there will be no error, just a slight
@@ -68,21 +68,82 @@ int arc32_save_context(struct target *target)
 	int retval = ERROR_OK;
 	int i;
 	struct arc32_common *arc32 = target_to_arc32(target);
+	struct reg *reg_list = arc32->core_cache->reg_list;
 
+	assert(reg_list);
+
+	LOG_DEBUG("Enter");
+	uint32_t *values = calloc(TOTAL_NUM_REGS, sizeof(uint32_t));
+	if (!values) {
+		LOG_ERROR("Not enough memory");
+		return ERROR_FAIL;
+	}
+
+	/* Read all core regs */
+	retval = arc_jtag_read_core_reg(&arc32->jtag_info, 0, CORE_NUM_REGS, values);
+	for (i = 0; i < CORE_NUM_REGS; i++) {
+		if (!arc32->core_cache->reg_list[i].valid) {
+			struct arc_reg_t *arc_reg = reg_list[i].arch_info;
+			arc_reg->value = values[i];
+			buf_set_u32(arc32->core_cache->reg_list[i].value, 0, 32, arc_reg->value);
+			arc32->core_cache->reg_list[i].valid = true;
+			arc32->core_cache->reg_list[i].dirty = false;
+			LOG_DEBUG("Get register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+				i , arc_reg->desc->name, arc_reg->value);
+		}
+	}
+	for (i = R32; i < EXTENSION_CORE_NUM_REGS; i++) {
+		struct arc_reg_t *arc_reg = reg_list[i].arch_info;
+		arc_reg->value = 0;
+		buf_set_u32(arc32->core_cache->reg_list[i].value, 0, 32, arc_reg->value);
+		arc32->core_cache->reg_list[i].valid = true;
+		arc32->core_cache->reg_list[i].dirty = false;
+	}
+	reg_list[LP_COUNT].type->get(&reg_list[LP_COUNT]);
+	reg_list[PCL].type->get(&reg_list[PCL]);
+
+	/* Read PC and STATU32 only */
+	assert(GPR_NUM_REGS > FIRST_AUX_REG - 1);
+	int aux_num_regs = GPR_NUM_REGS - FIRST_AUX_REG - 1;
+// 	uint32_t aux_regs[aux_num_regs] = { PC, STATUS32 };
+	uint32_t aux_addrs[aux_num_regs];
+	for (i = 0; i < aux_num_regs; i++) {
+		uint32_t regnum = FIRST_AUX_REG + i;
+		struct arc_reg_t *arc_reg = reg_list[regnum].arch_info;
+		aux_addrs[i] = arc_reg->desc->addr;
+		LOG_DEBUG("will read AUX register %" PRIu32 " addr=0x%08" PRIx32, regnum, arc_reg->desc->addr);
+	}
+
+	retval = arc_jtag_read_aux_reg(&arc32->jtag_info, aux_addrs, aux_num_regs, values);
+	for (i = 0; i < aux_num_regs; i++) {
+		int regnum = FIRST_AUX_REG + i;
+//		if (!arc32->core_cache->reg_list[regnum].valid) {
+			struct arc_reg_t *arc_reg = reg_list[ regnum ].arch_info;
+			arc_reg->value = values[i];
+			buf_set_u32(arc32->core_cache->reg_list[regnum].value, 0, 32, arc_reg->value);
+			arc32->core_cache->reg_list[regnum].valid = true;
+			arc32->core_cache->reg_list[regnum].dirty = false;
+			LOG_DEBUG("Get register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+			    regnum , arc_reg->desc->name, arc_reg->value);
+//		}
+	}
+
+	free(values);
+
+#if 0
 	retval = arc_regs_read_registers(target, arc32->core_regs);
 	if (retval != ERROR_OK)
 		return retval;
-
 #if 0
 	for (i = 0; i < ARC32_NUM_GDB_REGS; i++) {
 #else
 		for (i = 0; i < TOTAL_NUM_REGS; i++) {
 #endif
-		if (!arc32->core_cache->reg_list[i].valid)
+		//if (!arc32->core_cache->reg_list[i].valid)
 			arc32->read_core_reg(target, i);
 	}
-
-	return ERROR_OK;
+#endif
+	return retval;
 }
 
 int arc32_restore_context(struct target *target)
@@ -90,21 +151,59 @@ int arc32_restore_context(struct target *target)
 	int retval = ERROR_OK;
 	int i;
 	struct arc32_common *arc32 = target_to_arc32(target);
+	struct reg *reg_list = arc32->core_cache->reg_list;
 
+	assert(reg_list);
+
+	uint32_t *values = calloc(TOTAL_NUM_REGS, sizeof(uint32_t));
+	uint32_t *aux_addrs = calloc(TOTAL_NUM_REGS, sizeof(uint32_t));
+	if (!values || !aux_addrs)  {
+		LOG_ERROR("Not enough memory");
+		free(values);
+		free(aux_addrs);
+		return ERROR_FAIL;
+	}
+
+	/* Dump all core regs */
+	for (i = 0; i < CORE_NUM_REGS; i++) {
+		struct arc_reg_t *arc_reg = reg_list[i].arch_info;
+		values[i] = arc_reg->value;
+	}
+	retval = arc_jtag_write_core_reg(&arc32->jtag_info, 0, CORE_NUM_REGS, values);
+	retval = arc_jtag_write_core_reg(&arc32->jtag_info, LP_COUNT, 1, &(((struct arc_reg_t*)(reg_list[LP_COUNT].arch_info))->value));
+	retval = arc_jtag_write_core_reg(&arc32->jtag_info, PCL, 1, &(((struct arc_reg_t*)reg_list[PCL].arch_info)->value));
+
+	/* Dump dirty AUX regs */
+	uint32_t aux_reg_index;
+	for (i = FIRST_AUX_REG, aux_reg_index = 0; i < TOTAL_NUM_REGS; i++) {
+		if (reg_list[i].dirty) {
+			struct arc_reg_t *arc_reg = reg_list[i].arch_info;
+			values[aux_reg_index] = arc_reg->value;
+			aux_addrs[aux_reg_index] = arc_reg->desc->addr;
+			LOG_DEBUG("AUX register %" PRIx32 " is dirty", aux_addrs[aux_reg_index]);
+			aux_reg_index += 1;
+		}
+	}
+	retval |= arc_jtag_write_aux_reg(&arc32->jtag_info, aux_addrs, aux_reg_index, values);
+
+	free(values);
+	free(aux_addrs);
+
+#if 0
 #if 0
 	for (i = 0; i < ARC32_NUM_GDB_REGS; i++) {
 #else
 		for (i = 0; i < TOTAL_NUM_REGS; i++) {
 #endif
-		if (arc32->core_cache->reg_list[i].dirty)
+		//if (arc32->core_cache->reg_list[i].dirty)
 			arc32->write_core_reg(target, i);
 	}
 
 	retval = arc_regs_write_registers(target, arc32->core_regs);
 	if (retval != ERROR_OK)
 		return retval;
-
-	return ERROR_OK;
+#endif
+	return retval;
 }
 
 int arc32_enable_interrupts(struct target *target, int enable)
