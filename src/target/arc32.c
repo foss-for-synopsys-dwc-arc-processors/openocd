@@ -104,7 +104,8 @@ int arc32_save_context(struct target *target)
 
 	/* Read PC and STATU32 only */
 	assert(GPR_NUM_REGS > FIRST_AUX_REG - 1);
-	int aux_num_regs = GPR_NUM_REGS - FIRST_AUX_REG - 1;
+	int aux_num_regs = GPR_NUM_REGS - FIRST_AUX_REG;
+	LOG_DEBUG("GPR_NUM_REGS=%i, FIRST_AUX_REG=%i = %i", GPR_NUM_REGS, FIRST_AUX_REG, aux_num_regs);
 // 	uint32_t aux_regs[aux_num_regs] = { PC, STATUS32 };
 	uint32_t aux_addrs[aux_num_regs];
 	for (i = 0; i < aux_num_regs; i++) {

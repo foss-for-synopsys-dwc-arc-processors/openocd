@@ -57,12 +57,12 @@ static const struct arc32_reg_desc arc32_regs_descriptions[TOTAL_NUM_REGS] = {
 	{ R23, "r23", 23 },
 	{ R24, "r24", 24 },
 	{ R25, "r25", 25 },
-	{ R26, "r26", 26 },
-	{ R27, "r27", 27 },
-	{ R28, "r28", 28 },
-	{ R29, "r29", 29 },
+	{ R26, "gp", 26 },
+	{ R27, "fp", 27 },
+	{ R28, "sp", 28 },
+	{ R29, "ilink", 29 },
 	{ R30, "r30", 30 },
-	{ R31, "r31", 31 },
+	{ R31, "blink", 31 },
 	{ R32, "r32", 32 },
 	{ R33, "r33", 33 },
 	{ R34, "r34", 34 },
@@ -91,15 +91,15 @@ static const struct arc32_reg_desc arc32_regs_descriptions[TOTAL_NUM_REGS] = {
 	{ R57, "r57", 57 },
 	{ R58, "r58", 58 },
 	{ R59, "r59", 59 },
-	{ R60, "LP_COUNT", 60 },
+	{ R60, "lp_count", 60 },
 	{ R61, "r61", 61 },
-	{ R62, "LIMM", 62 },
-	{ R63, "PCL", 63 },
+	{ R62, "limm", 62 },
+	{ R63, "pcl", 63 },
 	/* AUX */
-	{ PC, "PC", PC_REG_ADDR },
-	{ STATUS32, "STATUS32", STATUS32_REG_ADDR },
-	{ LP_START, "LP_START",  LP_START_REG_ADDR },
-	{ LP_END,   "LP_END",   LP_END_REG_ADDR },
+	{ PC, "pc", PC_REG_ADDR },
+	{ STATUS32, "status32", STATUS32_REG_ADDR },
+	{ LP_START, "lp_start",  LP_START_REG_ADDR },
+	{ LP_END,   "lp_end",   LP_END_REG_ADDR },
 };
 
 /*static uint32_t aux_regs_addresses[LP_END - PC + 1] = {
@@ -226,7 +226,7 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 	struct arc_reg_t *arc_reg = reg->arch_info;
 	struct target *target = arc_reg->target;
 	struct arc32_common *arc32 = target_to_arc32(target);
-	uint32_t regnum = arc_reg->desc->regnum;
+	const uint32_t regnum = arc_reg->desc->regnum;
 
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
@@ -240,7 +240,9 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 		return ERROR_OK;
 	}
 
-	if (regnum < CORE_NUM_REGS) {
+	if (regnum == LIMM || regnum == R61) {
+		arc_reg->value = 0;
+	} else	if (regnum < FIRST_AUX_REG) {
 		arc_jtag_read_core_reg(&arc32->jtag_info, arc_reg->desc->addr, 1, &arc_reg->value);
 	} else {
 		arc_jtag_read_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
@@ -589,6 +591,9 @@ int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	*reg_list_size = TOTAL_NUM_REGS;
 	*reg_list = malloc(sizeof(struct reg *) * (*reg_list_size));
 
+	/* OpenOCD gdb_server API seems to be inconsistent here: when it generates
+	 * XML tdesc it filters out !exist registers, however when creating a
+	 * g-packet it doesn't do so. REG_CLASS_ALL */
 	if (reg_class == REG_CLASS_ALL) {
 		/* build the ARC core reg list */
 		LOG_INFO("reg class all");
@@ -599,7 +604,7 @@ int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	} else {
 		int cur_index = 0;
 		for (i = 0; i < TOTAL_NUM_REGS; i++) {
-			if (i <= GPR_NUM_REGS){
+			if (i < GPR_NUM_REGS && arc32->core_cache->reg_list[i].exist){
 				(*reg_list)[cur_index] = &arc32->core_cache->reg_list[i];
 				cur_index += 1;
 			}
