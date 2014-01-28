@@ -162,6 +162,7 @@ struct arc_reg_t {
 
 enum arc32_reg_number {
 	/* Core registers */
+	FIRST_CORE_REG = 0,
 	R0 = 0,
 	R1,
 	R2,
@@ -188,19 +189,21 @@ enum arc32_reg_number {
 	R23,
 	R24,
 	R25,
-	R26 = 26,
-	GP = 26,
-	R27 = 27,
-	FP = 27,
-	R28 = 28,
-	SP = 28,
-	R29 = 29,
-	ILINK = 29,
-	R30 = 30,
-	R31 = 31,
-	BLINK = 31,
+	R26,
+	GP = R26,
+	R27,
+	FP = R27,
+	R28,
+	SP = R28,
+	R29,
+	ILINK = R29,
+	R30,
+	R31,
+	BLINK = R31,
+	LAST_CORE_REG = R31,
+
 	/* Core extension registers */
-	CORE_NUM_REGS = R31 + 1,
+	FIRST_CORE_EXT_REG = LAST_CORE_REG + 1,
 	R32 = R31 + 1,
 	R33,
 	R34,
@@ -230,27 +233,51 @@ enum arc32_reg_number {
 	/* In HS R58 and R59 are ACCL and ACCH. */
 	R58,
 	R59,
-	EXTENSION_CORE_NUM_REGS = R59 + 1,
+	LAST_CORE_EXT_REG = R59,
+
+	/* Additional core registers. */
 	R60 = 60,
-	LP_COUNT = 60,
-	/* Reserved */
-	R61 = 61,
-	/* LIMM is not a real register. */
-	R62 = 62,
-	LIMM = 62,
+	LP_COUNT = R60,
+	R61 = 61, /* Not a register: reserved address. */
+	R62 = 62, /* Not a register: long immediate value. */
+	LIMM = R62,
 	R63 = 63,
-	PCL = 63,
+	PCL = R63,
+	/* End of core register. */
+
 	/* AUX registers */
-	PC = 64,
-	FIRST_AUX_REG = PC,
-	STATUS32,
+	/* First register in this list are also "general" registers: the ones which
+	 * are included in GDB g/G-packeta. General registers start from the
+	 * regnum=0.  */
+	ARC_REG_FIRST_AUX = R63 +1,
+	ARC_REG_PC = R63 + 1,
+	ARC_REG_STATUS32,
+	ARC_REG_LAST_GDB_GENERAL = ARC_REG_STATUS32,
 
-	/* Post GPR regs */
-	LP_START,
-	GPR_NUM_REGS = LP_START,
-	LP_END,
+	/* Other baseline AUX registers. */
+	ARC_REG_IDENTITY,
+	ARC_REG_BTA,
+	ARC_REG_ECR,
+	ARC_REG_INT_VECTOR_BASE,
+	ARC_REG_AUX_USER_SP,
+	ARC_REG_ERET,
+	ARC_REG_ERBTA,
+	ARC_REG_ERSTATUS,
+	ARC_REG_EFA,
 
-	TOTAL_NUM_REGS,
+	/* ZD-loops */
+	ARC_REG_LP_START,
+	ARC_REG_LP_END,
+	ARC_REG_LAST_AUX = ARC_REG_LP_END,
+
+	/* BCR - Build configuration registers */
+	ARC_REG_BCR_VER,
+	ARC_REG_BTA_LINK_BUILD,
+	ARC_REG_VECBASE_AC_BUILD,
+	ARC_REG_RF_BUILD,
+	ARC_REG_ISA_CONFIG,
+
+	ARC_TOTAL_NUM_REGS,
 };
 
 #define PC_REG_ADDR 0x6

@@ -29,7 +29,7 @@
 /* ----- Supporting functions ---------------------------------------------- */
 
 /* Describe all possible registers. */
-static const struct arc32_reg_desc arc32_regs_descriptions[TOTAL_NUM_REGS] = {
+static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] = {
 	/* regnum, name, address */
 	{ R0, "r0", 0 },
 	{ R1, "r1", 1 },
@@ -96,10 +96,10 @@ static const struct arc32_reg_desc arc32_regs_descriptions[TOTAL_NUM_REGS] = {
 	{ R62, "limm", 62 },
 	{ R63, "pcl", 63 },
 	/* AUX */
-	{ PC, "pc", PC_REG_ADDR },
-	{ STATUS32, "status32", STATUS32_REG_ADDR },
-	{ LP_START, "lp_start",  LP_START_REG_ADDR },
-	{ LP_END,   "lp_end",   LP_END_REG_ADDR },
+	{ ARC_REG_PC, "pc", PC_REG_ADDR },
+	{ ARC_REG_STATUS32, "status32", STATUS32_REG_ADDR },
+	{ ARC_REG_LP_START, "lp_start",  LP_START_REG_ADDR },
+	{ ARC_REG_LP_END,   "lp_end",   LP_END_REG_ADDR },
 };
 
 /*static uint32_t aux_regs_addresses[LP_END - PC + 1] = {
@@ -231,7 +231,7 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
 
-	if (regnum >= TOTAL_NUM_REGS)
+	if (regnum >= ARC_TOTAL_NUM_REGS)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (reg->valid) {
@@ -242,7 +242,7 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 
 	if (regnum == LIMM || regnum == R61) {
 		arc_reg->value = 0;
-	} else	if (regnum < FIRST_AUX_REG) {
+	} else	if (regnum <= LAST_CORE_EXT_REG) {
 		arc_jtag_read_core_reg(&arc32->jtag_info, arc_reg->desc->addr, 1, &arc_reg->value);
 	} else {
 		arc_jtag_read_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
@@ -278,7 +278,7 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
 
-	if (regnum >= TOTAL_NUM_REGS)
+	if (regnum >= ARC_TOTAL_NUM_REGS)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	buf_set_u32(reg->value, 0, 32, value);
@@ -332,12 +332,12 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 	struct arc32_common *arc32 = target_to_arc32(target);
 	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
-	struct reg *reg_list = calloc(TOTAL_NUM_REGS, sizeof(struct reg));
+	struct reg *reg_list = calloc(ARC_TOTAL_NUM_REGS, sizeof(struct reg));
 #if 0
 	struct arc32_core_reg *arch_info =
 		malloc(sizeof(struct arc32_core_reg) * num_regs);
 #else
-	struct arc_reg_t *arch_info = calloc(TOTAL_NUM_REGS, sizeof(struct arc_reg_t));
+	struct arc_reg_t *arch_info = calloc(ARC_TOTAL_NUM_REGS, sizeof(struct arc_reg_t));
 #endif
 
 	/* Build the process context cache */
@@ -347,7 +347,7 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 #if 0
 	cache->num_regs = num_regs;
 #else
-	cache->num_regs = TOTAL_NUM_REGS;
+	cache->num_regs = ARC_TOTAL_NUM_REGS;
 #endif
 	(*cache_p) = cache;
 	arc32->core_cache = cache;
@@ -366,7 +366,7 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 	struct reg_feature *aux_baseline = calloc(1, sizeof(struct reg_feature));
 	aux_baseline->name = feature_aux_baseline_name;
 
-	for (i = 0; i < TOTAL_NUM_REGS; i++) {
+	for (i = 0; i < ARC_TOTAL_NUM_REGS; i++) {
 #if 0
 		arch_info[i] = arc_gdb_reg_list_arch_info[i];
 #else
@@ -426,14 +426,22 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 			reg_list[i].exist = false;
 		} else if (R60 <= i && i <= R63)
 			reg_list[i].feature = core_other;
-		else if (PC <= i && i <= LP_END)
+		else if (ARC_REG_PC <= i && i <= ARC_REG_LP_END)
 			reg_list[i].feature = aux_baseline;
 		else {
 			LOG_WARNING("Unknown register with number %" PRIu32, i);
 			reg_list[i].feature = NULL;
 		}
+
+		/* Temporary hack until proper detection of registers is implemented. */
+		if (i > ARC_REG_LAST_GDB_GENERAL) {
+			reg_list[i].exist = false;
+		} else {
+			LOG_DEBUG("reg n=%3i name=%3s group=%s feature=%s", i,
+					reg_list[i].name, reg_list[i].group,
+					reg_list[i].feature->name); }
+
 #endif
-		LOG_INFO("reg n=%3i name=%3s group=%s feature=%s", i, reg_list[i].name, reg_list[i].group, reg_list[i].feature->name);
 		// end XML
 	}
 
@@ -588,29 +596,31 @@ int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	struct arc32_common *arc32 = target_to_arc32(target);
 
 	/* get pointers to arch-specific information storage */
-	*reg_list_size = TOTAL_NUM_REGS;
+	*reg_list_size = ARC_TOTAL_NUM_REGS;
 	*reg_list = malloc(sizeof(struct reg *) * (*reg_list_size));
 
 	/* OpenOCD gdb_server API seems to be inconsistent here: when it generates
 	 * XML tdesc it filters out !exist registers, however when creating a
-	 * g-packet it doesn't do so. REG_CLASS_ALL */
+	 * g-packet it doesn't do so. REG_CLASS_ALL is used in first case, and
+	 * REG_CLASS_GENERAL used in the latter one. Due to this we had to filter
+	 * out !exist register for "general", but not for "all". Attempts to filter out
+	 * !exist for "all" as well will cause a failed check in OpenOCD GDB
+	 * server. */
 	if (reg_class == REG_CLASS_ALL) {
-		/* build the ARC core reg list */
-		LOG_INFO("reg class all");
-		for (i = 0; i < TOTAL_NUM_REGS; i++) {
-				(*reg_list)[i] = &arc32->core_cache->reg_list[i];
+		for (i = 0; i < ARC_TOTAL_NUM_REGS; i++) {
+			(*reg_list)[i] = &arc32->core_cache->reg_list[i];
 		}
-		LOG_INFO("reg class all, regs=%i", *reg_list_size);
+		LOG_DEBUG("REG_CLASS_ALL: number of regs=%i", *reg_list_size);
 	} else {
 		int cur_index = 0;
-		for (i = 0; i < TOTAL_NUM_REGS; i++) {
-			if (i < GPR_NUM_REGS && arc32->core_cache->reg_list[i].exist){
+		for (i = 0; i < ARC_TOTAL_NUM_REGS; i++) {
+			if (i <= ARC_REG_LAST_GDB_GENERAL && arc32->core_cache->reg_list[i].exist){
 				(*reg_list)[cur_index] = &arc32->core_cache->reg_list[i];
 				cur_index += 1;
 			}
 		}
 		*reg_list_size = cur_index;
-		LOG_INFO("reg class general, regs=%i", *reg_list_size);
+		LOG_DEBUG("REG_CLASS_GENERAL: number of regs=%i", *reg_list_size);
 	}
 
 	return retval;

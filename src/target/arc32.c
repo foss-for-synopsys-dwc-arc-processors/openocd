@@ -73,15 +73,16 @@ int arc32_save_context(struct target *target)
 	assert(reg_list);
 
 	LOG_DEBUG("Enter");
-	uint32_t *values = calloc(TOTAL_NUM_REGS, sizeof(uint32_t));
+	uint32_t *values = calloc(ARC_TOTAL_NUM_REGS, sizeof(uint32_t));
 	if (!values) {
 		LOG_ERROR("Not enough memory");
 		return ERROR_FAIL;
 	}
 
 	/* Read all core regs */
-	retval = arc_jtag_read_core_reg(&arc32->jtag_info, 0, CORE_NUM_REGS, values);
-	for (i = 0; i < CORE_NUM_REGS; i++) {
+	retval = arc_jtag_read_core_reg(&arc32->jtag_info, FIRST_CORE_REG,
+			LAST_CORE_REG - FIRST_CORE_REG + 1, values);
+	for (i = FIRST_CORE_REG; i <= LAST_CORE_REG; i++) {
 		if (!arc32->core_cache->reg_list[i].valid) {
 			struct arc_reg_t *arc_reg = reg_list[i].arch_info;
 			arc_reg->value = values[i];
@@ -92,7 +93,7 @@ int arc32_save_context(struct target *target)
 				i , arc_reg->desc->name, arc_reg->value);
 		}
 	}
-	for (i = R32; i < EXTENSION_CORE_NUM_REGS; i++) {
+	for (i = FIRST_CORE_EXT_REG; i < LAST_CORE_EXT_REG; i++) {
 		struct arc_reg_t *arc_reg = reg_list[i].arch_info;
 		arc_reg->value = 0;
 		buf_set_u32(arc32->core_cache->reg_list[i].value, 0, 32, arc_reg->value);
@@ -103,13 +104,12 @@ int arc32_save_context(struct target *target)
 	reg_list[PCL].type->get(&reg_list[PCL]);
 
 	/* Read PC and STATU32 only */
-	assert(GPR_NUM_REGS > FIRST_AUX_REG - 1);
-	int aux_num_regs = GPR_NUM_REGS - FIRST_AUX_REG;
-	LOG_DEBUG("GPR_NUM_REGS=%i, FIRST_AUX_REG=%i = %i", GPR_NUM_REGS, FIRST_AUX_REG, aux_num_regs);
+	int aux_num_regs = ARC_REG_LAST_GDB_GENERAL - ARC_REG_FIRST_AUX + 1;
+	assert(aux_num_regs >= 0);
 // 	uint32_t aux_regs[aux_num_regs] = { PC, STATUS32 };
 	uint32_t aux_addrs[aux_num_regs];
 	for (i = 0; i < aux_num_regs; i++) {
-		uint32_t regnum = FIRST_AUX_REG + i;
+		uint32_t regnum = ARC_REG_FIRST_AUX + i;
 		struct arc_reg_t *arc_reg = reg_list[regnum].arch_info;
 		aux_addrs[i] = arc_reg->desc->addr;
 		LOG_DEBUG("will read AUX register %" PRIu32 " addr=0x%08" PRIx32, regnum, arc_reg->desc->addr);
@@ -117,7 +117,7 @@ int arc32_save_context(struct target *target)
 
 	retval = arc_jtag_read_aux_reg(&arc32->jtag_info, aux_addrs, aux_num_regs, values);
 	for (i = 0; i < aux_num_regs; i++) {
-		int regnum = FIRST_AUX_REG + i;
+		int regnum = ARC_REG_FIRST_AUX + i;
 //		if (!arc32->core_cache->reg_list[regnum].valid) {
 			struct arc_reg_t *arc_reg = reg_list[ regnum ].arch_info;
 			arc_reg->value = values[i];
@@ -156,8 +156,8 @@ int arc32_restore_context(struct target *target)
 
 	assert(reg_list);
 
-	uint32_t *values = calloc(TOTAL_NUM_REGS, sizeof(uint32_t));
-	uint32_t *aux_addrs = calloc(TOTAL_NUM_REGS, sizeof(uint32_t));
+	uint32_t *values = calloc(ARC_TOTAL_NUM_REGS, sizeof(uint32_t));
+	uint32_t *aux_addrs = calloc(ARC_TOTAL_NUM_REGS, sizeof(uint32_t));
 	if (!values || !aux_addrs)  {
 		LOG_ERROR("Not enough memory");
 		free(values);
@@ -166,17 +166,17 @@ int arc32_restore_context(struct target *target)
 	}
 
 	/* Dump all core regs */
-	for (i = 0; i < CORE_NUM_REGS; i++) {
+	for (i = FIRST_CORE_REG; i <= LAST_CORE_REG; i++) {
 		struct arc_reg_t *arc_reg = reg_list[i].arch_info;
 		values[i] = arc_reg->value;
 	}
-	retval = arc_jtag_write_core_reg(&arc32->jtag_info, 0, CORE_NUM_REGS, values);
+	retval = arc_jtag_write_core_reg(&arc32->jtag_info, FIRST_CORE_REG, LAST_CORE_REG - FIRST_CORE_REG + 1, values);
 	retval = arc_jtag_write_core_reg(&arc32->jtag_info, LP_COUNT, 1, &(((struct arc_reg_t*)(reg_list[LP_COUNT].arch_info))->value));
 	retval = arc_jtag_write_core_reg(&arc32->jtag_info, PCL, 1, &(((struct arc_reg_t*)reg_list[PCL].arch_info)->value));
 
 	/* Dump dirty AUX regs */
 	uint32_t aux_reg_index;
-	for (i = FIRST_AUX_REG, aux_reg_index = 0; i < TOTAL_NUM_REGS; i++) {
+	for (i = ARC_REG_FIRST_AUX, aux_reg_index = 0; i <= ARC_REG_LAST_AUX; i++) {
 		if (reg_list[i].dirty) {
 			struct arc_reg_t *arc_reg = reg_list[i].arch_info;
 			values[aux_reg_index] = arc_reg->value;
@@ -431,7 +431,7 @@ int arc32_arch_state(struct target *target)
 #if 0
 		buf_get_u32(arc32->core_cache->reg_list[PC_REG].value, 0, 32));
 #else
-		buf_get_u32(arc32->core_cache->reg_list[PC].value, 0, 32));
+		buf_get_u32(arc32->core_cache->reg_list[ARC_REG_PC].value, 0, 32));
 #endif
 
 
@@ -448,11 +448,7 @@ int arc32_get_current_pc(struct target *target)
 	retval = arc_jtag_read_aux_reg_one(&arc32->jtag_info, AUX_PC_REG, &dpc);
 
 	/* save current PC */
-#if 0
-	buf_set_u32(arc32->core_cache->reg_list[PC_REG].value, 0, 32, dpc);
-#else
-	buf_set_u32(arc32->core_cache->reg_list[PC].value, 0, 32, dpc);
-#endif
+	buf_set_u32(arc32->core_cache->reg_list[ARC_REG_PC].value, 0, 32, dpc);
 
 	return retval;
 }
