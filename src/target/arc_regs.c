@@ -243,7 +243,7 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 	if (regnum == LIMM || regnum == R61) {
 		arc_reg->value = 0;
 	} else	if (regnum <= LAST_CORE_EXT_REG) {
-		arc_jtag_read_core_reg(&arc32->jtag_info, arc_reg->desc->addr, 1, &arc_reg->value);
+		arc_jtag_read_core_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
 	} else {
 		arc_jtag_read_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
 	}
@@ -296,9 +296,19 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 	//reg_value = buf_get_u32(arc32->core_cache->reg_list[num].value, 0, 32);
 	//arc32->core_regs[num] = reg_value;
 	arc_reg->value = value;
+
+	// Write to target.
+	if (regnum == LIMM || regnum == R61) {
+		// don't do anything.
+	} else	if (regnum <= LAST_CORE_EXT_REG) {
+		arc_jtag_write_core_reg_one(&arc32->jtag_info, arc_reg->desc->addr, arc_reg->value);
+	} else {
+		arc_jtag_write_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, arc_reg->value);
+	}
+
 	LOG_DEBUG("Set register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32, regnum, arc_reg->desc->name, value);
 	arc32->core_cache->reg_list[regnum].valid = true;
-	arc32->core_cache->reg_list[regnum].dirty = true;
+	arc32->core_cache->reg_list[regnum].dirty = false;
 
 	return retval;
 }

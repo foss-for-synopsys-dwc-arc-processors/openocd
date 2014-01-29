@@ -114,7 +114,7 @@ COMMAND_HANDLER(handle_read_core_reg_command)
 		if (CMD_ARGC >= 1) {
 			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], reg_nbr);
 			LOG_DEBUG("CMD_ARGC:%u  CMD_ARGV: 0x%" PRIx32, CMD_ARGC, reg_nbr);
-			arc_jtag_read_core_reg(&arc32->jtag_info, reg_nbr, 1, &value);
+			arc_jtag_read_core_reg_one(&arc32->jtag_info, reg_nbr, &value);
 			LOG_INFO("Core reg: 0x%" PRIx32 " contains: 0x%08" PRIx32, reg_nbr, value);
 		} else
 			LOG_ERROR(" > missing reg nbr to read.");
@@ -148,7 +148,7 @@ COMMAND_HANDLER(handle_write_core_reg_command)
 			LOG_DEBUG("CMD_ARGC:%u  CMD_ARGV: 0x%" PRIx32, CMD_ARGC, reg_nbr);
 			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], value);
 			LOG_DEBUG("CMD_ARGC:%u  CMD_ARGV: 0x%08" PRIx32, CMD_ARGC, value);
-			arc_jtag_write_core_reg(&arc32->jtag_info, reg_nbr, 1, &value);
+			arc_jtag_write_core_reg_one(&arc32->jtag_info, reg_nbr, value);
 			LOG_DEBUG("Core reg: 0x%" PRIx32 " contains: 0x%08" PRIx32, reg_nbr, value);
 		} else
 			LOG_ERROR(" > missing reg nbr or value to write.");

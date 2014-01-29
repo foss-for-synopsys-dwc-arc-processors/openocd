@@ -73,15 +73,21 @@ int arc32_save_context(struct target *target)
 	assert(reg_list);
 
 	LOG_DEBUG("Enter");
+	uint32_t *core_addrs = calloc(LAST_CORE_REG - FIRST_CORE_REG + 1, sizeof(uint32_t));
 	uint32_t *values = calloc(ARC_TOTAL_NUM_REGS, sizeof(uint32_t));
-	if (!values) {
+	if (!values || !core_addrs)  {
 		LOG_ERROR("Not enough memory");
+		free(core_addrs);
+		free(values);
 		return ERROR_FAIL;
 	}
 
 	/* Read all core regs */
-	retval = arc_jtag_read_core_reg(&arc32->jtag_info, FIRST_CORE_REG,
-			LAST_CORE_REG - FIRST_CORE_REG + 1, values);
+	for (i = FIRST_CORE_REG; i <= LAST_CORE_REG; i++) {
+		core_addrs[i - FIRST_CORE_REG] = i;
+	}
+	retval = arc_jtag_read_core_reg(&arc32->jtag_info, core_addrs,
+		LAST_CORE_REG - FIRST_CORE_REG + 1, values);
 	for (i = FIRST_CORE_REG; i <= LAST_CORE_REG; i++) {
 		if (!arc32->core_cache->reg_list[i].valid) {
 			struct arc_reg_t *arc_reg = reg_list[i].arch_info;
@@ -130,6 +136,7 @@ int arc32_save_context(struct target *target)
 	}
 
 	free(values);
+	free(core_addrs);
 
 #if 0
 	retval = arc_regs_read_registers(target, arc32->core_regs);
@@ -155,24 +162,26 @@ int arc32_restore_context(struct target *target)
 	struct reg *reg_list = arc32->core_cache->reg_list;
 
 	assert(reg_list);
-
 	uint32_t *values = calloc(ARC_TOTAL_NUM_REGS, sizeof(uint32_t));
 	uint32_t *aux_addrs = calloc(ARC_TOTAL_NUM_REGS, sizeof(uint32_t));
-	if (!values || !aux_addrs)  {
+	uint32_t *core_addrs = calloc(LAST_CORE_REG - FIRST_CORE_REG + 1, sizeof(uint32_t));
+	if (!values || !aux_addrs || !core_addrs)  {
 		LOG_ERROR("Not enough memory");
 		free(values);
 		free(aux_addrs);
+		free(core_addrs);
 		return ERROR_FAIL;
 	}
 
 	/* Dump all core regs */
 	for (i = FIRST_CORE_REG; i <= LAST_CORE_REG; i++) {
 		struct arc_reg_t *arc_reg = reg_list[i].arch_info;
-		values[i] = arc_reg->value;
+		values[i - FIRST_CORE_REG] = arc_reg->value;
+		core_addrs[i - FIRST_CORE_REG] = i;
 	}
-	retval = arc_jtag_write_core_reg(&arc32->jtag_info, FIRST_CORE_REG, LAST_CORE_REG - FIRST_CORE_REG + 1, values);
-	retval = arc_jtag_write_core_reg(&arc32->jtag_info, LP_COUNT, 1, &(((struct arc_reg_t*)(reg_list[LP_COUNT].arch_info))->value));
-	retval = arc_jtag_write_core_reg(&arc32->jtag_info, PCL, 1, &(((struct arc_reg_t*)reg_list[PCL].arch_info)->value));
+	retval = arc_jtag_write_core_reg(&arc32->jtag_info, core_addrs, LAST_CORE_REG - FIRST_CORE_REG + 1, values);
+	retval = arc_jtag_write_core_reg_one(&arc32->jtag_info, LP_COUNT, (((struct arc_reg_t*)(reg_list[LP_COUNT].arch_info))->value));
+	retval = arc_jtag_write_core_reg_one(&arc32->jtag_info, PCL, (((struct arc_reg_t*)reg_list[PCL].arch_info)->value));
 
 	/* Dump dirty AUX regs */
 	uint32_t aux_reg_index;
