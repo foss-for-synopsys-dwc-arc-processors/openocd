@@ -297,18 +297,9 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 	//arc32->core_regs[num] = reg_value;
 	arc_reg->value = value;
 
-	// Write to target.
-	if (regnum == ARC_REG_LIMM || regnum == ARC_REG_RESERVED) {
-		// don't do anything.
-	} else	if (regnum < ARC_REG_AFTER_CORE_EXT) {
-		arc_jtag_write_core_reg_one(&arc32->jtag_info, arc_reg->desc->addr, arc_reg->value);
-	} else {
-		arc_jtag_write_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, arc_reg->value);
-	}
-
 	LOG_DEBUG("Set register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32, regnum, arc_reg->desc->name, value);
 	arc32->core_cache->reg_list[regnum].valid = true;
-	arc32->core_cache->reg_list[regnum].dirty = false;
+	arc32->core_cache->reg_list[regnum].dirty = true;
 
 	return retval;
 }
