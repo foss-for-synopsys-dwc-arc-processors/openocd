@@ -151,6 +151,7 @@ struct arc32_reg_desc {
 	uint32_t regnum;
 	char * const name;
 	uint32_t addr;
+	bool readonly;
 };
 
 struct arc_reg_t {
@@ -272,19 +273,243 @@ enum arc32_reg_number {
 	ARC_REG_AFTER_AUX,
 
 	/* BCR - Build configuration registers */
+	ARC_REG_FIRST_BCR = ARC_REG_AFTER_AUX,
 	ARC_REG_BCR_VER = ARC_REG_AFTER_AUX,
 	ARC_REG_BTA_LINK_BUILD,
 	ARC_REG_VECBASE_AC_BUILD,
+	ARC_REG_MPU_BUILD,
 	ARC_REG_RF_BUILD,
+	ARC_REG_D_CACHE_BUILD,
+	ARC_REG_DCCM_BUILD,
+	ARC_REG_TIMER_BUILD,
+	ARC_REG_AP_BUILD,
+	ARC_REG_I_CACHE_BUILD,
+	ARC_REG_ICCM_BUILD,
+	ARC_REG_MULTIPLY_BUILD,
+	ARC_REG_SWAP_BUILD,
+	ARC_REG_NORM_BUILD,
+	ARC_REG_MINMAX_BUILD,
+	ARC_REG_BARREL_BUILD,
 	ARC_REG_ISA_CONFIG,
+	ARC_REG_STACK_REGION_BUILD,
+	ARC_REG_CPROT_BUILD,
+	ARC_REG_IRQ_BUILD,
+	ARC_REG_IFQUEUE_BUILD,
+	ARC_REG_SMART_BUILD,
 
-	ARC_TOTAL_NUM_REGS,
+	ARC_REG_AFTER_BCR,
+	ARC_TOTAL_NUM_REGS = ARC_REG_AFTER_BCR,
 };
 
 #define PC_REG_ADDR 0x6
 #define STATUS32_REG_ADDR 0xA
 #define LP_START_REG_ADDR 0x2
 #define LP_END_REG_ADDR 0x3
+
+struct bcr_set_t {
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+		};
+	} bcr_ver;
+
+	union {
+		uint32_t raw;
+		struct {
+			bool p : 1;
+		};
+	} bta_link_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t __raz   : 2;
+			uint8_t version : 8;
+			uint32_t addr   : 22;
+		};
+	} vecbase_ac_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t regions : 8;
+		};
+	} mpu_build;
+
+	union {
+
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			bool p    : 1;
+			bool e    : 1;
+			bool r    : 1;
+			uint8_t b : 3;
+			uint8_t d : 2;
+		};
+	} rf_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version  : 8;
+			uint8_t assoc    : 4;
+			uint8_t capacity : 4;
+			uint8_t bsize    : 4;
+			uint8_t fl       : 2;
+		};
+	} d_cache_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t size    : 4;
+		};
+	} dccm_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			bool t0         : 1;
+			bool t1         : 1;
+			bool rtc        : 1;
+			uint8_t __raz   : 5;
+			uint8_t p0      : 4;
+			uint8_t p1      : 4;
+		};
+	} timer_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t type    : 4;
+		};
+	} ap_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t assoc   : 4;
+			uint8_t capacity: 4;
+			uint8_t bsize   : 4;
+			uint8_t fl      : 2;
+		};
+	} i_cache_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version    : 8;
+			uint8_t iccm0_size : 4;
+			uint8_t iccm1_size : 4;
+		};
+	} iccm_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version32 : 8;
+			uint8_t type      : 2;
+			uint8_t cyc       : 2;
+			uint8_t __raz     : 4;
+			uint8_t version16 : 8;
+		};
+	} multiply_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+		};
+	} swap_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+		};
+	} norm_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+		};
+	} minmax_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t b       : 2;
+		};
+	} barrel_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version  : 8;
+			uint8_t pc_size  : 4;
+			uint8_t lpc_size : 4;
+			uint8_t addr_size: 4;
+			bool b           : 1;
+			bool a           : 1;
+			uint8_t __raz    : 2;
+			uint8_t c        : 4;
+			uint8_t d        : 4;
+		};
+	} isa_config;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+		};
+	} stack_region_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+		};
+	} cprot_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t irqs    : 4;
+			uint8_t exts    : 4;
+			uint8_t p       : 4;
+			bool f          : 1;
+		};
+	} irq_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t bd      : 3;
+		};
+	} ifqueue_build;
+
+	union {
+		uint32_t raw;
+		struct {
+			uint8_t version : 8;
+			uint8_t __raz   : 2;
+			uint32_t stack_size : 22;
+		};
+	} smart_build;
+};
+
 
 /* ----- Exported functions ------------------------------------------------ */
 
@@ -300,6 +525,7 @@ int arc_regs_write_registers(struct target *target, uint32_t *regs);
 int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	int *reg_list_size, enum target_register_class reg_class);
 
+int arc_regs_read_bcrs(struct target *target);
 int arc_regs_print_core_registers(struct target *target);
 int arc_regs_print_aux_registers(struct arc_jtag *jtag_info);
 

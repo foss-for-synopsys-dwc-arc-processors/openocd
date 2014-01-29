@@ -79,6 +79,9 @@ int arc32_save_context(struct target *target)
 	LOG_DEBUG("-");
 	assert(reg_list);
 
+	if (!arc32->bcr_init)
+		arc_regs_read_bcrs(target);
+
 	/* We assume that there is at least one AUX register in the list. */
 	const uint32_t core_regs_size = ARC_REG_AFTER_CORE_EXT * sizeof(uint32_t);
 	const uint32_t aux_regs_size = (ARC_REG_AFTER_GDB_GENERAL - ARC_REG_FIRST_AUX) *
@@ -184,9 +187,14 @@ int arc32_restore_context(struct target *target)
 	LOG_DEBUG("-");
 	assert(reg_list);
 
+	if (!arc32->bcr_init) {
+		LOG_ERROR("Attempt to restore context before saving it first.");
+		return ERROR_FAIL;
+	}
+
 	/* We assume that there is at least one AUX register in the list. */
 	const uint32_t core_regs_size = ARC_REG_AFTER_CORE_EXT * sizeof(uint32_t);
-	const uint32_t aux_regs_size = (ARC_TOTAL_NUM_REGS - ARC_REG_FIRST_AUX) *
+	const uint32_t aux_regs_size = (ARC_REG_AFTER_AUX - ARC_REG_FIRST_AUX) *
 		sizeof(uint32_t);
 	uint32_t *core_values = malloc(core_regs_size);
 	uint32_t *aux_values = malloc(aux_regs_size);
@@ -206,7 +214,7 @@ int arc32_restore_context(struct target *target)
 	memset(aux_values, 0xdeadbeef, aux_regs_size);
 	memset(aux_addrs, 0xdeadbeef, aux_regs_size);
 
-	for (i = 0; i < ARC_TOTAL_NUM_REGS; i++) {
+	for (i = 0; i < ARC_REG_AFTER_AUX; i++) {
 		struct reg *reg = &(reg_list[i]);
 		struct arc_reg_t *arc_reg = reg->arch_info;
 		if (reg->valid && reg->exist && reg->dirty) {

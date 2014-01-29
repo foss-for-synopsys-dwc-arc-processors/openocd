@@ -89,6 +89,9 @@ struct arc32_common {
 	/* If true, then caches have been already flushed since core has been
 	 * halted. */
 	bool cache_invalidated;
+
+	bool bcr_init;
+	struct bcr_set_t bcr_set;
 };
 
 //#define ARC32_FASTDATA_HANDLER_SIZE	0x8000 /* haps51 */

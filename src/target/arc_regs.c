@@ -30,76 +30,108 @@
 
 /* Describe all possible registers. */
 static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] = {
-	/* regnum, name, address */
-	{ ARC_REG_R0, "r0", 0 },
-	{ ARC_REG_R1, "r1", 1 },
-	{ ARC_REG_R2, "r2", 2 },
-	{ ARC_REG_R3, "r3", 3 },
-	{ ARC_REG_R4, "r4", 4 },
-	{ ARC_REG_R5, "r5", 5 },
-	{ ARC_REG_R6, "r6", 6 },
-	{ ARC_REG_R7, "r7", 7 },
-	{ ARC_REG_R8, "r8", 8 },
-	{ ARC_REG_R9, "r9", 9 },
-	{ ARC_REG_R10, "r10", 10 },
-	{ ARC_REG_R11, "r11", 11 },
-	{ ARC_REG_R12, "r12", 12 },
-	{ ARC_REG_R13, "r13", 13 },
-	{ ARC_REG_R14, "r14", 14 },
-	{ ARC_REG_R15, "r15", 15 },
-	{ ARC_REG_R16, "r16", 16 },
-	{ ARC_REG_R17, "r17", 17 },
-	{ ARC_REG_R18, "r18", 18 },
-	{ ARC_REG_R19, "r19", 19 },
-	{ ARC_REG_R20, "r20", 20 },
-	{ ARC_REG_R21, "r21", 21 },
-	{ ARC_REG_R22, "r22", 22 },
-	{ ARC_REG_R23, "r23", 23 },
-	{ ARC_REG_R24, "r24", 24 },
-	{ ARC_REG_R25, "r25", 25 },
-	{ ARC_REG_R26, "gp", 26 },
-	{ ARC_REG_R27, "fp", 27 },
-	{ ARC_REG_R28, "sp", 28 },
-	{ ARC_REG_R29, "ilink", 29 },
-	{ ARC_REG_R30, "r30", 30 },
-	{ ARC_REG_R31, "blink", 31 },
-	{ ARC_REG_R32, "r32", 32 },
-	{ ARC_REG_R33, "r33", 33 },
-	{ ARC_REG_R34, "r34", 34 },
-	{ ARC_REG_R35, "r35", 35 },
-	{ ARC_REG_R36, "r36", 36 },
-	{ ARC_REG_R37, "r37", 37 },
-	{ ARC_REG_R38, "r38", 38 },
-	{ ARC_REG_R39, "r39", 39 },
-	{ ARC_REG_R40, "r40", 40 },
-	{ ARC_REG_R41, "r41", 41 },
-	{ ARC_REG_R42, "r42", 42 },
-	{ ARC_REG_R43, "r43", 43 },
-	{ ARC_REG_R44, "r44", 44 },
-	{ ARC_REG_R45, "r45", 45 },
-	{ ARC_REG_R46, "r46", 46 },
-	{ ARC_REG_R47, "r47", 47 },
-	{ ARC_REG_R48, "r48", 48 },
-	{ ARC_REG_R49, "r49", 49 },
-	{ ARC_REG_R50, "r50", 50 },
-	{ ARC_REG_R51, "r51", 51 },
-	{ ARC_REG_R52, "r52", 52 },
-	{ ARC_REG_R53, "r53", 53 },
-	{ ARC_REG_R54, "r54", 54 },
-	{ ARC_REG_R55, "r55", 55 },
-	{ ARC_REG_R56, "r56", 56 },
-	{ ARC_REG_R57, "r57", 57 },
-	{ ARC_REG_R58, "r58", 58 },
-	{ ARC_REG_R59, "r59", 59 },
-	{ ARC_REG_R60, "lp_count", 60 },
-	{ ARC_REG_R61, "r61", 61 },
-	{ ARC_REG_R62, "limm", 62 },
-	{ ARC_REG_R63, "pcl", 63 },
+	/* regnum, name, address, readonly */
+	{ ARC_REG_R0,  "r0",  0,  false },
+	{ ARC_REG_R1,  "r1",  1,  false },
+	{ ARC_REG_R2,  "r2",  2,  false },
+	{ ARC_REG_R3,  "r3",  3,  false },
+	{ ARC_REG_R4,  "r4",  4,  false },
+	{ ARC_REG_R5,  "r5",  5,  false },
+	{ ARC_REG_R6,  "r6",  6,  false },
+	{ ARC_REG_R7,  "r7",  7,  false },
+	{ ARC_REG_R8,  "r8",  8,  false },
+	{ ARC_REG_R9,  "r9",  9,  false },
+	{ ARC_REG_R10, "r10", 10, false },
+	{ ARC_REG_R11, "r11", 11, false },
+	{ ARC_REG_R12, "r12", 12, false },
+	{ ARC_REG_R13, "r13", 13, false },
+	{ ARC_REG_R14, "r14", 14, false },
+	{ ARC_REG_R15, "r15", 15, false },
+	{ ARC_REG_R16, "r16", 16, false },
+	{ ARC_REG_R17, "r17", 17, false },
+	{ ARC_REG_R18, "r18", 18, false },
+	{ ARC_REG_R19, "r19", 19, false },
+	{ ARC_REG_R20, "r20", 20, false },
+	{ ARC_REG_R21, "r21", 21, false },
+	{ ARC_REG_R22, "r22", 22, false },
+	{ ARC_REG_R23, "r23", 23, false },
+	{ ARC_REG_R24, "r24", 24, false },
+	{ ARC_REG_R25, "r25", 25, false },
+	{ ARC_REG_GP,  "gp",  26, false },
+	{ ARC_REG_FP,  "fp",  27, false },
+	{ ARC_REG_SP,  "sp",  28, false },
+	{ ARC_REG_ILINK, "ilink", 29, false },
+	{ ARC_REG_R30, "r30", 30, false },
+	{ ARC_REG_BLINK, "blink", 31, false },
+	{ ARC_REG_R32, "r32", 32, false },
+	{ ARC_REG_R33, "r33", 33, false },
+	{ ARC_REG_R34, "r34", 34, false },
+	{ ARC_REG_R35, "r35", 35, false },
+	{ ARC_REG_R36, "r36", 36, false },
+	{ ARC_REG_R37, "r37", 37, false },
+	{ ARC_REG_R38, "r38", 38, false },
+	{ ARC_REG_R39, "r39", 39, false },
+	{ ARC_REG_R40, "r40", 40, false },
+	{ ARC_REG_R41, "r41", 41, false },
+	{ ARC_REG_R42, "r42", 42, false },
+	{ ARC_REG_R43, "r43", 43, false },
+	{ ARC_REG_R44, "r44", 44, false },
+	{ ARC_REG_R45, "r45", 45, false },
+	{ ARC_REG_R46, "r46", 46, false },
+	{ ARC_REG_R47, "r47", 47, false },
+	{ ARC_REG_R48, "r48", 48, false },
+	{ ARC_REG_R49, "r49", 49, false },
+	{ ARC_REG_R50, "r50", 50, false },
+	{ ARC_REG_R51, "r51", 51, false },
+	{ ARC_REG_R52, "r52", 52, false },
+	{ ARC_REG_R53, "r53", 53, false },
+	{ ARC_REG_R54, "r54", 54, false },
+	{ ARC_REG_R55, "r55", 55, false },
+	{ ARC_REG_R56, "r56", 56, false },
+	{ ARC_REG_R57, "r57", 57, false },
+	{ ARC_REG_R58, "r58", 58, false },
+	{ ARC_REG_R59, "r59", 59, false },
+	{ ARC_REG_LP_COUNT, "lp_count", 60, false },
+	{ ARC_REG_RESERVED, "reserved", 61, true },
+	{ ARC_REG_LIMM, "limm", 62, true },
+	{ ARC_REG_R63, "pcl", 63, true },
 	/* AUX */
-	{ ARC_REG_PC, "pc", PC_REG_ADDR },
-	{ ARC_REG_STATUS32, "status32", STATUS32_REG_ADDR },
-	{ ARC_REG_LP_START, "lp_start",  LP_START_REG_ADDR },
-	{ ARC_REG_LP_END,   "lp_end",   LP_END_REG_ADDR },
+	{ ARC_REG_PC, "pc", PC_REG_ADDR, false },
+	{ ARC_REG_STATUS32, "status32", STATUS32_REG_ADDR, false },
+	{ ARC_REG_IDENTITY, "idenity", 0x4, true },
+	{ ARC_REG_BTA, "bta", 0x412, false },
+	{ ARC_REG_ECR, "ecr", 0x403, false },
+	{ ARC_REG_INT_VECTOR_BASE, "int_vector_base", 0x25, false },
+	{ ARC_REG_AUX_USER_SP, "aux_user_sp", 0xd, false },
+	{ ARC_REG_ERET, "eret", 0x400, false },
+	{ ARC_REG_ERBTA, "erbta", 0x401, false },
+	{ ARC_REG_ERSTATUS, "erstatus", 0x402, false },
+	{ ARC_REG_EFA, "efa", 0x404, false },
+	{ ARC_REG_LP_START, "lp_start",  LP_START_REG_ADDR, false },
+	{ ARC_REG_LP_END,   "lp_end",   LP_END_REG_ADDR, false },
+	/* BCR */
+	{ ARC_REG_BCR_VER, "bcr_ver", 0x60, true },
+	{ ARC_REG_BTA_LINK_BUILD, "bta_link_build", 0x63, true },
+	{ ARC_REG_VECBASE_AC_BUILD, "vecbase_ac_build", 0x68, true },
+	{ ARC_REG_MPU_BUILD, "mpu_build", 0x6D, true },
+	{ ARC_REG_RF_BUILD, "rf_build", 0x6E, true },
+	{ ARC_REG_D_CACHE_BUILD, "d_cache_build", 0x72, true },
+	{ ARC_REG_DCCM_BUILD, "dccm_build", 0x74, true },
+	{ ARC_REG_TIMER_BUILD, "timer_build", 0x75, true },
+	{ ARC_REG_AP_BUILD, "ap_build", 0x76, true },
+	{ ARC_REG_I_CACHE_BUILD, "i_cache_build", 0x77, true },
+	{ ARC_REG_ICCM_BUILD, "iccm_build", 0x78, true },
+	{ ARC_REG_MULTIPLY_BUILD, "multiply_build", 0x7B, true },
+	{ ARC_REG_SWAP_BUILD, "swap_build", 0x7C, true },
+	{ ARC_REG_NORM_BUILD, "norm_build", 0x7D, true },
+	{ ARC_REG_MINMAX_BUILD, "minmax_build", 0x7E, true },
+	{ ARC_REG_BARREL_BUILD, "barrel_build", 0x7F, true },
+	{ ARC_REG_ISA_CONFIG, "isa_config", 0xC1, true },
+	{ ARC_REG_STACK_REGION_BUILD, "stack_region_build", 0xC5, true },
+	{ ARC_REG_CPROT_BUILD, "cprot_build", 0xC9, true },
+	{ ARC_REG_IRQ_BUILD, "irq_build", 0xF3, true },
+	{ ARC_REG_IFQUEUE_BUILD, "ifqueue_build", 0xFE, true },
+	{ ARC_REG_SMART_BUILD, "smart_build", 0xFF, true },
 };
 
 static int arc_regs_get_core_reg(struct reg *reg) {
@@ -117,6 +149,9 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 
 	if (regnum >= ARC_TOTAL_NUM_REGS)
 		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	if (!arc32->bcr_init)
+		arc_regs_read_bcrs(target);
 
 	if (reg->valid) {
 		LOG_DEBUG("Get register (cached) regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
@@ -164,6 +199,9 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 	if (regnum >= ARC_TOTAL_NUM_REGS)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
+	if (!arc32->bcr_init)
+		arc_regs_read_bcrs(target);
+
 	buf_set_u32(reg->value, 0, 32, value);
 
 	arc_reg->value = value;
@@ -180,7 +218,86 @@ static const struct reg_arch_type arc32_reg_type = {
 	.set = arc_regs_set_core_reg,
 };
 
-/* ----- Exported functions ------------------------------------------------ */
+/**
+ * Read BCRs.
+ */
+int arc_regs_read_bcrs(struct target *target)
+{
+	int retval = ERROR_OK;
+	LOG_DEBUG("-");
+
+	struct arc32_common *arc32 = target_to_arc32(target);
+
+	/* BCRs never change. No need to execute this function multiple times. */
+	if (arc32->bcr_init)
+		return retval;
+
+	uint32_t numregs = ARC_REG_AFTER_BCR - ARC_REG_FIRST_BCR;
+	uint32_t *addrs = calloc(numregs, sizeof(uint32_t));
+	uint32_t *values = calloc(numregs, sizeof(uint32_t));
+
+	for (unsigned i = ARC_REG_FIRST_BCR; i < ARC_REG_AFTER_BCR; i++) {
+		addrs[i - ARC_REG_FIRST_BCR]  = arc32_regs_descriptions[i].addr;
+	}
+	retval = arc_jtag_read_aux_reg(&arc32->jtag_info, addrs, numregs, values);
+	if (ERROR_OK != retval) {
+		LOG_ERROR("Error reading BCR registers from target.");
+		free(addrs);
+		free(values);
+		return retval;
+	}
+
+	for (unsigned i = ARC_REG_FIRST_BCR; i < ARC_REG_AFTER_BCR; i++) {
+		LOG_DEBUG("0x%" PRIx32 " %s = 0x%08" PRIx32,
+				arc32_regs_descriptions[i].addr,
+				arc32_regs_descriptions[i].name,
+			values[i - ARC_REG_FIRST_BCR]);
+	}
+
+	/* Parse RF_BUILD */
+	struct bcr_set_t *bcrs = &(arc32->bcr_set);
+	bcrs->bcr_ver.raw = values[ARC_REG_BCR_VER - ARC_REG_FIRST_BCR];
+	bcrs->bta_link_build.raw = values[ARC_REG_BTA_LINK_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->vecbase_ac_build.raw = values[ARC_REG_VECBASE_AC_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->mpu_build.raw = values[ARC_REG_MPU_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->rf_build.raw = values[ARC_REG_RF_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->d_cache_build.raw = values[ARC_REG_D_CACHE_BUILD - ARC_REG_FIRST_BCR];
+
+	bcrs->dccm_build.raw = values[ARC_REG_DCCM_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->timer_build.raw = values[ARC_REG_TIMER_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->ap_build.raw = values[ARC_REG_AP_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->i_cache_build.raw = values[ARC_REG_I_CACHE_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->iccm_build.raw = values[ARC_REG_ICCM_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->multiply_build.raw = values[ARC_REG_MULTIPLY_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->swap_build.raw = values[ARC_REG_SWAP_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->norm_build.raw = values[ARC_REG_NORM_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->minmax_build.raw = values[ARC_REG_MINMAX_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->barrel_build.raw = values[ARC_REG_BARREL_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->isa_config.raw = values[ARC_REG_ISA_CONFIG - ARC_REG_FIRST_BCR];
+	bcrs->stack_region_build.raw = values[ARC_REG_STACK_REGION_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->cprot_build.raw = values[ARC_REG_CPROT_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->irq_build.raw = values[ARC_REG_IRQ_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->ifqueue_build.raw = values[ARC_REG_IFQUEUE_BUILD - ARC_REG_FIRST_BCR];
+	bcrs->smart_build.raw = values[ARC_REG_SMART_BUILD - ARC_REG_FIRST_BCR];
+
+	free(addrs);
+	free(values);
+
+	/* Now that values are parsed we can disable nonexistent registers. */
+	for (unsigned regnum = 0; regnum < ARC_TOTAL_NUM_REGS; regnum++) {
+		/* Core regs missing from RF16 builds */
+		if (bcrs->rf_build.e &&
+		   ((regnum > ARC_REG_R3 && regnum < ARC_REG_R10) ||
+			(regnum > ARC_REG_R15 && regnum < ARC_REG_R26))) {
+			arc32->core_cache->reg_list[regnum].exist = false;
+		}
+	}
+
+	/* Ensure that this function will not be called in the future. */
+	arc32->bcr_init = true;
+
+	return retval;
+}
 
 static const char * const general_group_name = "general";
 static const char * const float_group_name = "float";
@@ -252,20 +369,16 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 			reg_list[i].exist = false;
 		} else if (ARC_REG_AFTER_CORE_EXT <= i && i < ARC_REG_FIRST_AUX)
 			reg_list[i].feature = core_other;
-		else if (ARC_REG_PC <= i && i <= ARC_REG_LP_END)
+		else if (ARC_REG_PC <= i)
 			reg_list[i].feature = aux_baseline;
 		else {
 			LOG_WARNING("Unknown register with number %" PRIu32, i);
 			reg_list[i].feature = NULL;
 		}
 
-		/* Temporary hack until proper detection of registers is implemented. */
-		if (i >= ARC_REG_AFTER_GDB_GENERAL) {
-			reg_list[i].exist = false;
-		} else {
-			LOG_DEBUG("reg n=%3i name=%3s group=%s feature=%s", i,
-					reg_list[i].name, reg_list[i].group,
-					reg_list[i].feature->name); }
+		LOG_DEBUG("reg n=%3i name=%3s group=%s feature=%s", i,
+			reg_list[i].name, reg_list[i].group,
+			reg_list[i].feature->name);
 
 		// end XML
 	}
