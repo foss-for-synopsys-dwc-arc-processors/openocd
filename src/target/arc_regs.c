@@ -31,70 +31,70 @@
 /* Describe all possible registers. */
 static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] = {
 	/* regnum, name, address */
-	{ R0, "r0", 0 },
-	{ R1, "r1", 1 },
-	{ R2, "r2", 2 },
-	{ R3, "r3", 3 },
-	{ R4, "r4", 4 },
-	{ R5, "r5", 5 },
-	{ R6, "r6", 6 },
-	{ R7, "r7", 7 },
-	{ R8, "r8", 8 },
-	{ R9, "r9", 9 },
-	{ R10, "r10", 10 },
-	{ R11, "r11", 11 },
-	{ R12, "r12", 12 },
-	{ R13, "r13", 13 },
-	{ R14, "r14", 14 },
-	{ R15, "r15", 15 },
-	{ R16, "r16", 16 },
-	{ R17, "r17", 17 },
-	{ R18, "r18", 18 },
-	{ R19, "r19", 19 },
-	{ R20, "r20", 20 },
-	{ R21, "r21", 21 },
-	{ R22, "r22", 22 },
-	{ R23, "r23", 23 },
-	{ R24, "r24", 24 },
-	{ R25, "r25", 25 },
-	{ R26, "gp", 26 },
-	{ R27, "fp", 27 },
-	{ R28, "sp", 28 },
-	{ R29, "ilink", 29 },
-	{ R30, "r30", 30 },
-	{ R31, "blink", 31 },
-	{ R32, "r32", 32 },
-	{ R33, "r33", 33 },
-	{ R34, "r34", 34 },
-	{ R35, "r35", 35 },
-	{ R36, "r36", 36 },
-	{ R37, "r37", 37 },
-	{ R38, "r38", 38 },
-	{ R39, "r39", 39 },
-	{ R40, "r40", 40 },
-	{ R41, "r41", 41 },
-	{ R42, "r42", 42 },
-	{ R43, "r43", 43 },
-	{ R44, "r44", 44 },
-	{ R45, "r45", 45 },
-	{ R46, "r46", 46 },
-	{ R47, "r47", 47 },
-	{ R48, "r48", 48 },
-	{ R49, "r49", 49 },
-	{ R50, "r50", 50 },
-	{ R51, "r51", 51 },
-	{ R52, "r52", 52 },
-	{ R53, "r53", 53 },
-	{ R54, "r54", 54 },
-	{ R55, "r55", 55 },
-	{ R56, "r56", 56 },
-	{ R57, "r57", 57 },
-	{ R58, "r58", 58 },
-	{ R59, "r59", 59 },
-	{ R60, "lp_count", 60 },
-	{ R61, "r61", 61 },
-	{ R62, "limm", 62 },
-	{ R63, "pcl", 63 },
+	{ ARC_REG_R0, "r0", 0 },
+	{ ARC_REG_R1, "r1", 1 },
+	{ ARC_REG_R2, "r2", 2 },
+	{ ARC_REG_R3, "r3", 3 },
+	{ ARC_REG_R4, "r4", 4 },
+	{ ARC_REG_R5, "r5", 5 },
+	{ ARC_REG_R6, "r6", 6 },
+	{ ARC_REG_R7, "r7", 7 },
+	{ ARC_REG_R8, "r8", 8 },
+	{ ARC_REG_R9, "r9", 9 },
+	{ ARC_REG_R10, "r10", 10 },
+	{ ARC_REG_R11, "r11", 11 },
+	{ ARC_REG_R12, "r12", 12 },
+	{ ARC_REG_R13, "r13", 13 },
+	{ ARC_REG_R14, "r14", 14 },
+	{ ARC_REG_R15, "r15", 15 },
+	{ ARC_REG_R16, "r16", 16 },
+	{ ARC_REG_R17, "r17", 17 },
+	{ ARC_REG_R18, "r18", 18 },
+	{ ARC_REG_R19, "r19", 19 },
+	{ ARC_REG_R20, "r20", 20 },
+	{ ARC_REG_R21, "r21", 21 },
+	{ ARC_REG_R22, "r22", 22 },
+	{ ARC_REG_R23, "r23", 23 },
+	{ ARC_REG_R24, "r24", 24 },
+	{ ARC_REG_R25, "r25", 25 },
+	{ ARC_REG_R26, "gp", 26 },
+	{ ARC_REG_R27, "fp", 27 },
+	{ ARC_REG_R28, "sp", 28 },
+	{ ARC_REG_R29, "ilink", 29 },
+	{ ARC_REG_R30, "r30", 30 },
+	{ ARC_REG_R31, "blink", 31 },
+	{ ARC_REG_R32, "r32", 32 },
+	{ ARC_REG_R33, "r33", 33 },
+	{ ARC_REG_R34, "r34", 34 },
+	{ ARC_REG_R35, "r35", 35 },
+	{ ARC_REG_R36, "r36", 36 },
+	{ ARC_REG_R37, "r37", 37 },
+	{ ARC_REG_R38, "r38", 38 },
+	{ ARC_REG_R39, "r39", 39 },
+	{ ARC_REG_R40, "r40", 40 },
+	{ ARC_REG_R41, "r41", 41 },
+	{ ARC_REG_R42, "r42", 42 },
+	{ ARC_REG_R43, "r43", 43 },
+	{ ARC_REG_R44, "r44", 44 },
+	{ ARC_REG_R45, "r45", 45 },
+	{ ARC_REG_R46, "r46", 46 },
+	{ ARC_REG_R47, "r47", 47 },
+	{ ARC_REG_R48, "r48", 48 },
+	{ ARC_REG_R49, "r49", 49 },
+	{ ARC_REG_R50, "r50", 50 },
+	{ ARC_REG_R51, "r51", 51 },
+	{ ARC_REG_R52, "r52", 52 },
+	{ ARC_REG_R53, "r53", 53 },
+	{ ARC_REG_R54, "r54", 54 },
+	{ ARC_REG_R55, "r55", 55 },
+	{ ARC_REG_R56, "r56", 56 },
+	{ ARC_REG_R57, "r57", 57 },
+	{ ARC_REG_R58, "r58", 58 },
+	{ ARC_REG_R59, "r59", 59 },
+	{ ARC_REG_R60, "lp_count", 60 },
+	{ ARC_REG_R61, "r61", 61 },
+	{ ARC_REG_R62, "limm", 62 },
+	{ ARC_REG_R63, "pcl", 63 },
 	/* AUX */
 	{ ARC_REG_PC, "pc", PC_REG_ADDR },
 	{ ARC_REG_STATUS32, "status32", STATUS32_REG_ADDR },
@@ -240,9 +240,9 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 		return ERROR_OK;
 	}
 
-	if (regnum == LIMM || regnum == R61) {
+	if (regnum == ARC_REG_LIMM || regnum == ARC_REG_RESERVED) {
 		arc_reg->value = 0;
-	} else	if (regnum <= LAST_CORE_EXT_REG) {
+	} else	if (regnum < ARC_REG_AFTER_CORE_EXT) {
 		arc_jtag_read_core_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
 	} else {
 		arc_jtag_read_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
@@ -298,9 +298,9 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 	arc_reg->value = value;
 
 	// Write to target.
-	if (regnum == LIMM || regnum == R61) {
+	if (regnum == ARC_REG_LIMM || regnum == ARC_REG_RESERVED) {
 		// don't do anything.
-	} else	if (regnum <= LAST_CORE_EXT_REG) {
+	} else	if (regnum < ARC_REG_AFTER_CORE_EXT) {
 		arc_jtag_write_core_reg_one(&arc32->jtag_info, arc_reg->desc->addr, arc_reg->value);
 	} else {
 		arc_jtag_write_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, arc_reg->value);
@@ -425,16 +425,16 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 			reg_list[i].feature = aux_baseline;
 		}
 #else
-		if (i < GP)
+		if (i < ARC_REG_GP)
 			reg_list[i].feature = core_basecase;
-		else if (GP <= i && i < ILINK)
+		else if (ARC_REG_GP <= i && i < ARC_REG_ILINK)
 			reg_list[i].feature = core_pointers;
-		else if (ILINK <= i && i < R32)
+		else if (ARC_REG_ILINK <= i && i < ARC_REG_AFTER_CORE)
 			reg_list[i].feature = core_link;
-		else if ((R32 <= i && i < R60) || i == R61 || i == R62) {
+		else if ((ARC_REG_FIRST_CORE_EXT <= i && i < ARC_REG_AFTER_CORE_EXT) || i == ARC_REG_LIMM || i == ARC_REG_RESERVED) {
 			reg_list[i].feature = core_extension;
 			reg_list[i].exist = false;
-		} else if (R60 <= i && i <= R63)
+		} else if (ARC_REG_AFTER_CORE_EXT <= i && i < ARC_REG_FIRST_AUX)
 			reg_list[i].feature = core_other;
 		else if (ARC_REG_PC <= i && i <= ARC_REG_LP_END)
 			reg_list[i].feature = aux_baseline;
@@ -444,7 +444,7 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 		}
 
 		/* Temporary hack until proper detection of registers is implemented. */
-		if (i > ARC_REG_LAST_GDB_GENERAL) {
+		if (i >= ARC_REG_AFTER_GDB_GENERAL) {
 			reg_list[i].exist = false;
 		} else {
 			LOG_DEBUG("reg n=%3i name=%3s group=%s feature=%s", i,
@@ -624,7 +624,7 @@ int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	} else {
 		int cur_index = 0;
 		for (i = 0; i < ARC_TOTAL_NUM_REGS; i++) {
-			if (i <= ARC_REG_LAST_GDB_GENERAL && arc32->core_cache->reg_list[i].exist){
+			if (i < ARC_REG_AFTER_GDB_GENERAL && arc32->core_cache->reg_list[i].exist){
 				(*reg_list)[cur_index] = &arc32->core_cache->reg_list[i];
 				cur_index += 1;
 			}
