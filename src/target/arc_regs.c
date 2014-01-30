@@ -423,11 +423,11 @@ int arc_regs_read_bcrs(struct target *target)
 				if (bcrs->isa_config.lpc_size)
 					reg_list[regnum].exist = true;
 				break;
-			/* Enable code density registers. */
+			/* Enable code density registers (not for ISAv1). */
 			case ARC_REG_JLI_BASE:
 			case ARC_REG_LDI_BASE:
 			case ARC_REG_EI_BASE:
-				if (bcrs->isa_config.c)
+				if (bcrs->isa_config.c && bcrs->isa_config.version >= 2)
 					reg_list[regnum].exist = true;
 				break;
 			/* Timer 0 */
