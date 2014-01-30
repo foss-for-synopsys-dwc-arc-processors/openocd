@@ -299,8 +299,10 @@ enum arc32_reg_number {
 	ARC_REG_AUX_IRQ_HINT,
 	ARC_REG_IRQ_PRIORITY,
 	ARC_REG_AUX_ICCM,
-	ARC_REG_AUX_CACHE_LIMIT,
-	ARC_REG_DMP_PERIPHERAL,
+	/* I haven't found a way to probe for this register */
+	/*ARC_REG_AUX_CACHE_LIMIT,*/
+	/* There is no way to probe this register.
+	ARC_REG_DMP_PERIPHERAL,*/
 	ARC_REG_USTACK_TOP,
 	ARC_REG_USTACK_BASE,
 	ARC_REG_KSTACK_TOP,
@@ -319,15 +321,50 @@ enum arc32_reg_number {
 	ARC_REG_IRQ_ENABLE,
 	ARC_REG_IRQ_TRIGGER,
 	ARC_REG_IRQ_STATUS,
-	ARC_REG_XPU,
+	/* XPU and XFLAGS registers are listed in ISA, however they are present
+	 * only in designes with extension and instructions and there is no way to
+	 * check for their existenct at runtime. OpenOCD will not probe for them.
+	 */
+	/* ARC_REG_XPU, */
 	ARC_REG_BTA,
 	ARC_REG_IRQ_PULSE_CANCEL,
 	ARC_REG_IRQ_PENDING,
 	ARC_REG_MPU_ECR,
+	/* Registers to describe MPU regions: RDB and RDP */ 
 	ARC_REG_MPU_RDB0,
 	ARC_REG_MPU_RDP0,
-	// MPU regs....
-	ARC_REG_XFLAGS,
+	ARC_REG_MPU_RDB1,
+	ARC_REG_MPU_RDP1,
+	ARC_REG_MPU_RDB2,
+	ARC_REG_MPU_RDP2,
+	ARC_REG_MPU_RDB3,
+	ARC_REG_MPU_RDP3,
+	ARC_REG_MPU_RDB4,
+	ARC_REG_MPU_RDP4,
+	ARC_REG_MPU_RDB5,
+	ARC_REG_MPU_RDP5,
+	ARC_REG_MPU_RDB6,
+	ARC_REG_MPU_RDP6,
+	ARC_REG_MPU_RDB7,
+	ARC_REG_MPU_RDP7,
+	ARC_REG_MPU_RDB8,
+	ARC_REG_MPU_RDP8,
+	ARC_REG_MPU_RDB9,
+	ARC_REG_MPU_RDP9,
+	ARC_REG_MPU_RDB10,
+	ARC_REG_MPU_RDP10,
+	ARC_REG_MPU_RDB11,
+	ARC_REG_MPU_RDP11,
+	ARC_REG_MPU_RDB12,
+	ARC_REG_MPU_RDP12,
+	ARC_REG_MPU_RDB13,
+	ARC_REG_MPU_RDP13,
+	ARC_REG_MPU_RDB14,
+	ARC_REG_MPU_RDP14,
+	ARC_REG_MPU_RDB15,
+	ARC_REG_MPU_RDP15,
+	/* See note for XPU */
+	/*ARC_REG_XFLAGS,*/
 	ARC_REG_SMART_CONTROL,
 	ARC_REG_SMART_DATA,
 

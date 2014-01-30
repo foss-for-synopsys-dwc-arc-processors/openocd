@@ -138,8 +138,6 @@ static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] =
 	{ ARC_REG_AUX_IRQ_HINT,     "irq_hint",         0x201,  false },
 	{ ARC_REG_IRQ_PRIORITY,     "irq_priority",     0x206,  false },
 	{ ARC_REG_AUX_ICCM,         "aux_iccm",         0x208,  false },
-	{ ARC_REG_AUX_CACHE_LIMIT,  "aux_cache_limit",  0x209,  false },
-	{ ARC_REG_DMP_PERIPHERAL,   "dmp_peripheral",   0x20A,  false },
 	{ ARC_REG_USTACK_TOP,       "ustack_top",       0x260,  false },
 	{ ARC_REG_USTACK_BASE,      "ustack_base",      0x261,  false },
 	{ ARC_REG_KSTACK_TOP,       "kstack_top",       0x264,  false },
@@ -158,14 +156,42 @@ static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] =
 	{ ARC_REG_IRQ_ENABLE,       "irq_enable",       0x40C,  false },
 	{ ARC_REG_IRQ_TRIGGER,      "irq_trigger",      0x40D,  false },
 	{ ARC_REG_IRQ_STATUS,       "irq_status",       0x40F,  false },
-	{ ARC_REG_XPU,              "xpu",              0x410,  false },
 	{ ARC_REG_BTA,              "bta",              0x412,  false },
 	{ ARC_REG_IRQ_PULSE_CANCEL, "irq_pulse_cancel", 0x415,  false },
 	{ ARC_REG_IRQ_PENDING,      "irq_pending",      0x416,  false },
 	{ ARC_REG_MPU_ECR,          "mpu_ecr",          0x420,  false },
 	{ ARC_REG_MPU_RDB0,         "mpu_rdb0",         0x422,  false },
 	{ ARC_REG_MPU_RDP0,         "mpu_rdp0",         0x423,  false },
-	{ ARC_REG_XFLAGS,           "xflags",           0x44F,  false },
+	{ ARC_REG_MPU_RDB1,         "mpu_rdb1",         0x424,  false },
+	{ ARC_REG_MPU_RDP1,         "mpu_rdp1",         0x425,  false },
+	{ ARC_REG_MPU_RDB2,         "mpu_rdb2",         0x426,  false },
+	{ ARC_REG_MPU_RDP2,         "mpu_rdp2",         0x427,  false },
+	{ ARC_REG_MPU_RDB3,         "mpu_rdb3",         0x428,  false },
+	{ ARC_REG_MPU_RDP3,         "mpu_rdp3",         0x429,  false },
+	{ ARC_REG_MPU_RDB4,         "mpu_rdb4",         0x42A,  false },
+	{ ARC_REG_MPU_RDP4,         "mpu_rdp4",         0x42B,  false },
+	{ ARC_REG_MPU_RDB5,         "mpu_rdb5",         0x42C,  false },
+	{ ARC_REG_MPU_RDP5,         "mpu_rdp5",         0x42D,  false },
+	{ ARC_REG_MPU_RDB6,         "mpu_rdb6",         0x42E,  false },
+	{ ARC_REG_MPU_RDP6,         "mpu_rdp6",         0x42F,  false },
+	{ ARC_REG_MPU_RDB7,         "mpu_rdb7",         0x430,  false },
+	{ ARC_REG_MPU_RDP7,         "mpu_rdp7",         0x431,  false },
+	{ ARC_REG_MPU_RDB8,         "mpu_rdb8",         0x432,  false },
+	{ ARC_REG_MPU_RDP8,         "mpu_rdp8",         0x433,  false },
+	{ ARC_REG_MPU_RDB9,         "mpu_rdb9",         0x434,  false },
+	{ ARC_REG_MPU_RDP9,         "mpu_rdp9",         0x435,  false },
+	{ ARC_REG_MPU_RDB10,        "mpu_rdb10",        0x436,  false },
+	{ ARC_REG_MPU_RDP10,        "mpu_rdp10",        0x437,  false },
+	{ ARC_REG_MPU_RDB11,        "mpu_rdb11",        0x438,  false },
+	{ ARC_REG_MPU_RDP11,        "mpu_rdp11",        0x439,  false },
+	{ ARC_REG_MPU_RDB12,        "mpu_rdb12",        0x43A,  false },
+	{ ARC_REG_MPU_RDP12,        "mpu_rdp12",        0x43B,  false },
+	{ ARC_REG_MPU_RDB13,        "mpu_rdb13",        0x43C,  false },
+	{ ARC_REG_MPU_RDP13,        "mpu_rdp13",        0x43D,  false },
+	{ ARC_REG_MPU_RDB14,        "mpu_rdb14",        0x43E,  false },
+	{ ARC_REG_MPU_RDP14,        "mpu_rdp14",        0x43F,  false },
+	{ ARC_REG_MPU_RDB15,        "mpu_rdb15",        0x440,  false },
+	{ ARC_REG_MPU_RDP15,        "mpu_rdp15",        0x441,  false },
 	{ ARC_REG_SMART_CONTROL,    "smart_control",    0x700,  false },
 	{ ARC_REG_SMART_DATA,       "smart_data",       0x701,  false },
 	/* BCR */
@@ -313,6 +339,10 @@ int arc_regs_read_bcrs(struct target *target)
 			values[i - ARC_REG_FIRST_BCR]);
 	}
 
+		LOG_DEBUG("0x%" PRIx32 " %s = 0x%08" PRIx32,
+				arc32_regs_descriptions[ARC_REG_I_CACHE_BUILD].addr,
+				arc32_regs_descriptions[ARC_REG_I_CACHE_BUILD].name,
+			values[ARC_REG_I_CACHE_BUILD - ARC_REG_FIRST_BCR]);
 	/* Parse RF_BUILD */
 	struct bcr_set_t *bcrs = &(arc32->bcr_set);
 	bcrs->bcr_ver.raw = values[ARC_REG_BCR_VER - ARC_REG_FIRST_BCR];
@@ -342,14 +372,178 @@ int arc_regs_read_bcrs(struct target *target)
 	free(addrs);
 	free(values);
 
+	/* AUX registers are disabled by default, enable them depending on BCR
+	 * contents. */
+	struct reg *reg_list = arc32->core_cache->reg_list;
+	/* Enable baseline registers which are always present. */
+	reg_list[ARC_REG_IDENTITY].exist = true;
+	reg_list[ARC_REG_PC].exist = true;
+	reg_list[ARC_REG_STATUS32].exist = true;
+	reg_list[ARC_REG_BTA].exist = true;
+	reg_list[ARC_REG_ECR].exist = true;
+	reg_list[ARC_REG_INT_VECTOR_BASE].exist = true;
+	reg_list[ARC_REG_AUX_USER_SP].exist = true;
+	reg_list[ARC_REG_ERET].exist = true;
+	reg_list[ARC_REG_ERBTA].exist = true;
+	reg_list[ARC_REG_ERSTATUS].exist = true;
+	reg_list[ARC_REG_EFA].exist = true;
+
+	/* Enable debug registers. They accompany debug host interface, so there is
+	 * no way OpenOCD could communicate with target that has no such registers.
+	 */
+	reg_list[ARC_REG_DEBUG].exist = true;
+	reg_list[ARC_REG_DEBUGI].exist = true;
+
 	/* Now that values are parsed we can disable nonexistent registers. */
 	for (unsigned regnum = 0; regnum < ARC_TOTAL_NUM_REGS; regnum++) {
 		/* Core regs missing from RF16 builds */
 		if (bcrs->rf_build.e &&
 		   ((regnum > ARC_REG_R3 && regnum < ARC_REG_R10) ||
 			(regnum > ARC_REG_R15 && regnum < ARC_REG_R26))) {
-			arc32->core_cache->reg_list[regnum].exist = false;
+			reg_list[regnum].exist = false;
+			continue;
 		}
+
+		/* Enable MPU regions registers */
+		if (regnum >= ARC_REG_MPU_RDB0 && regnum <= ARC_REG_MPU_RDP15 &&
+			(bcrs->mpu_build.version >= 2)) {
+			const unsigned num_regions = bcrs->mpu_build.regions;
+			/* Shift because we have two registers per region. Add  */
+			const unsigned region_id = (regnum - ARC_REG_MPU_RDB0) >> 1;
+			if (region_id + 1 >= num_regions) {
+				reg_list[regnum].exist = true;
+			}
+			continue;
+		}
+
+		switch (regnum) {
+			/* Enable zero-delay loop registers. */
+			case ARC_REG_LP_START:
+			case ARC_REG_LP_END:
+				if (bcrs->isa_config.lpc_size)
+					reg_list[regnum].exist = true;
+				break;
+			/* Enable code density registers. */
+			case ARC_REG_JLI_BASE:
+			case ARC_REG_LDI_BASE:
+			case ARC_REG_EI_BASE:
+				if (bcrs->isa_config.c)
+					reg_list[regnum].exist = true;
+				break;
+			/* Timer 0 */
+			case ARC_REG_COUNT0:
+			case ARC_REG_CONTROL0:
+			case ARC_REG_LIMIT0:
+				if (bcrs->timer_build.t0)
+					reg_list[regnum].exist = true;
+				break;
+			/* Timer 1 */
+			case ARC_REG_COUNT1:
+			case ARC_REG_CONTROL1:
+			case ARC_REG_LIMIT1:
+				if (bcrs->timer_build.t1)
+					reg_list[regnum].exist = true;
+				break;
+			/* RTC: 64-bit timer */
+			case ARC_REG_AUX_RTC_CTRL:
+			case ARC_REG_AUX_RTC_LOW:
+			case ARC_REG_AUX_RTC_HIGH:
+				if (bcrs->timer_build.rtc)
+					reg_list[regnum].exist = true;
+				break;
+			/* I$ with feature level 0 and up*/
+			case ARC_REG_IC_IVIC:
+			case ARC_REG_IC_CTRL:
+				if (bcrs->i_cache_build.version >= 4)
+					reg_list[regnum].exist = true;
+				break;
+			/* I$ with feature level 1 and up */
+			case ARC_REG_IC_LIL:
+			case ARC_REG_IC_IVIL:
+				if (bcrs->i_cache_build.version >= 4 && bcrs->i_cache_build.fl > 0)
+					reg_list[regnum].exist = true;
+				break;
+			/* I$ with feature level 2 */
+			case ARC_REG_IC_RAM_ADDR:
+			case ARC_REG_IC_TAG:
+			case ARC_REG_IC_DATA:
+				if (bcrs->i_cache_build.version >= 4 && bcrs->i_cache_build.fl > 1)
+					reg_list[regnum].exist = true;
+				break;
+			/* D$ with feature level 0 and up*/
+			case ARC_REG_DC_IVDC:
+			case ARC_REG_DC_CTRL:
+			case ARC_REG_DC_FLSH:
+				if (bcrs->d_cache_build.version >= 4)
+					reg_list[regnum].exist = true;
+				break;
+			/* D$ with feature level 1 and up */
+			case ARC_REG_DC_LDL:
+			case ARC_REG_DC_IVDL:
+			case ARC_REG_DC_FLDL:
+				if (bcrs->d_cache_build.version >= 4 && bcrs->d_cache_build.fl > 0)
+					reg_list[regnum].exist = true;
+				break;
+			/* D$ with feature level 2 */
+			case ARC_REG_DC_RAM_ADDR:
+			case ARC_REG_DC_TAG:
+			case ARC_REG_DC_DATA:
+				if (bcrs->d_cache_build.version >= 4 && bcrs->d_cache_build.fl > 1)
+					reg_list[regnum].exist = true;
+				break;
+			/* DCCM regs */
+			case ARC_REG_AUX_DCCM:
+				if (bcrs->dccm_build.version >= 3)
+					reg_list[regnum].exist = true;
+				break;
+			/* ICCM regs */
+			case ARC_REG_AUX_ICCM:
+				if (bcrs->dccm_build.version >= 4)
+					reg_list[regnum].exist = true;
+				break;
+			/* Enable MPU registers. */
+			case ARC_REG_MPU_EN:
+			case ARC_REG_MPU_ECR:
+				if (bcrs->mpu_build.version >= 2)
+					reg_list[regnum].exist = true;
+				break;
+			/* Enable SMART registers */
+			case ARC_REG_SMART_CONTROL:
+			case ARC_REG_SMART_DATA:
+				if (bcrs->smart_build.version >= 3)
+					reg_list[regnum].exist = true;
+				break;
+			/* Enable STATUS32_P0 for fast interrupts. */
+			case ARC_REG_STATUS32_P0:
+				if (bcrs->irq_build.version >= 2 && bcrs->irq_build.f)
+					reg_list[regnum].exist = true;
+				break;
+			/* Enable interrupt registers  */
+			case ARC_REG_AUX_IRQ_CTRL:
+			case ARC_REG_AUX_IRQ_ACT:
+			case ARC_REG_IRQ_SELECT:
+			case ARC_REG_IRQ_PRIORITY:
+			case ARC_REG_IRQ_ENABLE:
+			case ARC_REG_IRQ_TRIGGER:
+			case ARC_REG_IRQ_PENDING:
+			case ARC_REG_IRQ_PULSE_CANCEL:
+			case ARC_REG_IRQ_STATUS:
+			case ARC_REG_IRQ_PRIORITY_PENDING:
+			case ARC_REG_AUX_IRQ_HINT:
+			case ARC_REG_ICAUSE:
+				if (bcrs->irq_build.version >= 2 && bcrs->irq_build.irqs)
+					reg_list[regnum].exist = true;
+				break;
+			/* Stack checking registers */
+			case ARC_REG_KSTACK_BASE:
+			case ARC_REG_KSTACK_TOP:
+			case ARC_REG_USTACK_BASE:
+			case ARC_REG_USTACK_TOP:
+				if (bcrs->stack_region_build.version >= 2)
+					reg_list[regnum].exist = true;
+				break;
+		}
+
 	}
 
 	/* Ensure that this function will not be called in the future. */
@@ -435,8 +629,8 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 			reg_list[i].feature = NULL;
 		}
 
-		/* Disable optional registers by default */
-		if ( i >= ARC_REG_AFTER_GDB_GENERAL)
+		/* Disable optional registers by default, except for BCRs. */
+		if ( i >= ARC_REG_AFTER_GDB_GENERAL && i < ARC_REG_AFTER_AUX)
 			reg_list[i].exist = false;
 
 		LOG_DEBUG("reg n=%3i name=%3s group=%s feature=%s", i,
