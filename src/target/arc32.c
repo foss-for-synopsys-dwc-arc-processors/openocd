@@ -476,11 +476,7 @@ int arc32_arch_state(struct target *target)
 	LOG_DEBUG("target state: %s in: %s mode, PC at: 0x%08" PRIx32,
 		target_state_name(target),
 		arc_isa_strings[arc32->isa_mode],
-#if 0
-		buf_get_u32(arc32->core_cache->reg_list[PC_REG].value, 0, 32));
-#else
 		buf_get_u32(arc32->core_cache->reg_list[ARC_REG_PC].value, 0, 32));
-#endif
 
 
 	return retval;
