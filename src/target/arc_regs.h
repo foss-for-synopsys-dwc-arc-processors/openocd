@@ -151,6 +151,7 @@ struct arc32_reg_desc {
 	uint32_t regnum;
 	char * const name;
 	uint32_t addr;
+	enum reg_type gdb_type;
 	bool readonly;
 	/* Previously GDB for ARC didn't supported XML target descriptions and used
 	 * one format of g/G-packet to fit all needs. Since we need to maintain
