@@ -133,9 +133,9 @@ static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] =
 	{ ARC_REG_CONTROL1,         "control1",         0x101,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
 	{ ARC_REG_LIMIT1,           "limit1",           0x102,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
 	{ ARC_REG_AUX_RTC_CTRL,     "aux_rtc_ctrl",     0x103,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
-	{ ARC_REG_AUX_RTC_LOW,      "aux_rtc_low",      0x104,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
-	{ ARC_REG_AUX_RTC_HIGH,     "aux_rtc_high",     0x105,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
-	{ ARC_REG_IRQ_PRIORITY_PENDING, "irq_priority_pending", 0x200, REG_TYPE_UINT32, false, 71, },
+	{ ARC_REG_AUX_RTC_LOW,      "aux_rtc_low",      0x104,  REG_TYPE_UINT32,  true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_RTC_HIGH,     "aux_rtc_high",     0x105,  REG_TYPE_UINT32,  true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IRQ_PRIORITY_PENDING, "irq_priority_pending", 0x200, REG_TYPE_UINT32,  true, 71, },
 	{ ARC_REG_AUX_IRQ_HINT,     "irq_hint",         0x201,  REG_TYPE_UINT32, false, 72, },
 	{ ARC_REG_IRQ_PRIORITY,     "irq_priority",     0x206,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
 	{ ARC_REG_AUX_ICCM,         "aux_iccm",         0x208,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
@@ -152,17 +152,17 @@ static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] =
 	{ ARC_REG_ECR,              "ecr",              0x403,  REG_TYPE_UINT32, false, 76, },
 	{ ARC_REG_EFA,              "efa",              0x404,  REG_TYPE_CODE_PTR, false, 77, },
 	{ ARC_REG_MPU_EN,           "mpu_en",           0x409,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
-	{ ARC_REG_ICAUSE,           "icause",           0x40A,  REG_TYPE_UINT32, false, 78, }, /* aka icause1 */
+	{ ARC_REG_ICAUSE,           "icause",           0x40A,  REG_TYPE_UINT32,  true, 78, }, /* aka icause1 */
 	{ ARC_REG_IRQ_SELECT,       "irq_select",       0x40B,  REG_TYPE_UINT32, false, 79, }, /* aka icause2 */
 	{ ARC_REG_IRQ_ENABLE,       "irq_enable",       0x40C,  REG_TYPE_UINT32, false, 80, },
 	{ ARC_REG_IRQ_TRIGGER,      "irq_trigger",      0x40D,  REG_TYPE_UINT32, false, 81, },
-	{ ARC_REG_IRQ_STATUS,       "irq_status",       0x40F,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IRQ_STATUS,       "irq_status",       0x40F,  REG_TYPE_UINT32,  true, ARC_INVALID_REGNUM, },
 	{ ARC_REG_BTA,              "bta",              0x412,  REG_TYPE_CODE_PTR, false, 82, },
 	{ ARC_REG_BTA_L1,           "bta_l1",           0x413,  REG_TYPE_CODE_PTR, false, 83, },
 	{ ARC_REG_BTA_L2,           "bta_l2",           0x414,  REG_TYPE_CODE_PTR, false, 84, },
 	{ ARC_REG_IRQ_PULSE_CANCEL, "irq_pulse_cancel", 0x415,  REG_TYPE_UINT32, false, 85, },
-	{ ARC_REG_IRQ_PENDING,      "irq_pending",      0x416,  REG_TYPE_UINT32, false, 86, },
-	{ ARC_REG_MPU_ECR,          "mpu_ecr",          0x420,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IRQ_PENDING,      "irq_pending",      0x416,  REG_TYPE_UINT32, true, 86, },
+	{ ARC_REG_MPU_ECR,          "mpu_ecr",          0x420,  REG_TYPE_UINT32, true, ARC_INVALID_REGNUM, },
 	{ ARC_REG_MPU_RDB0,         "mpu_rdb0",         0x422,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
 	{ ARC_REG_MPU_RDP0,         "mpu_rdp0",         0x423,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
 	{ ARC_REG_MPU_RDB1,         "mpu_rdb1",         0x424,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
@@ -196,7 +196,7 @@ static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] =
 	{ ARC_REG_MPU_RDB15,        "mpu_rdb15",        0x440,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
 	{ ARC_REG_MPU_RDP15,        "mpu_rdp15",        0x441,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
 	{ ARC_REG_SMART_CONTROL,    "smart_control",    0x700,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
-	{ ARC_REG_SMART_DATA,       "smart_data",       0x701,  REG_TYPE_UINT32, false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_SMART_DATA,       "smart_data",       0x701,  REG_TYPE_UINT32,  true, ARC_INVALID_REGNUM, },
 	/* BCR */
 	{ ARC_REG_BCR_VER,          "bcr_ver",          0x60, REG_TYPE_UINT32, true, ARC_INVALID_REGNUM, },
 	{ ARC_REG_BTA_LINK_BUILD,   "bta_link_build",   0x63, REG_TYPE_UINT32, true, ARC_INVALID_REGNUM, },
@@ -290,6 +290,11 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 	if (!arc32->bcr_init)
 		arc_regs_read_bcrs(target);
 
+	if (arc_reg->desc->readonly) {
+		LOG_ERROR("Cannot set value to a read-only register %s.", arc_reg->desc->name);
+		return ERROR_FAIL;
+	}
+
 	buf_set_u32(reg->value, 0, 32, value);
 
 	arc_reg->value = value;
@@ -322,8 +327,10 @@ int arc_regs_read_bcrs(struct target *target)
 		return retval;
 
 	/* Don't read BCR's in compatibility mode. */
-	if (arc32->gdb_compatibility_mode)
+	if (arc32->gdb_compatibility_mode) {
+		arc32->bcr_init = true;
 		return retval;
+	}
 
 	uint32_t numregs = ARC_REG_AFTER_BCR - ARC_REG_FIRST_BCR;
 	uint32_t *addrs = calloc(numregs, sizeof(uint32_t));
@@ -631,8 +638,9 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 		if (!arc32->gdb_compatibility_mode) {
 			reg_list[i].number = arc32_regs_descriptions[i].regnum;
 			/* By default only core regs and BCRs are enabled. */
-			reg_list[i].exist = ( i < ARC_REG_AFTER_CORE ||
+			reg_list[i].exist = ( i < ARC_REG_AFTER_CORE || i == ARC_REG_PCL ||
 					(i >= ARC_REG_FIRST_BCR && i < ARC_REG_AFTER_BCR));
+
 		} else {
 			reg_list[i].number = arch_info[i].desc->old_regnum;
 			reg_list[i].exist = (arch_info[i].desc->old_regnum != ARC_INVALID_REGNUM);
