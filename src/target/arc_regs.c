@@ -30,193 +30,196 @@
 
 /* Describe all possible registers. */
 static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] = {
-	/* regnum, name, address, readonly */
-	{ ARC_REG_R0,  "r0",  0,  false },
-	{ ARC_REG_R1,  "r1",  1,  false },
-	{ ARC_REG_R2,  "r2",  2,  false },
-	{ ARC_REG_R3,  "r3",  3,  false },
-	{ ARC_REG_R4,  "r4",  4,  false },
-	{ ARC_REG_R5,  "r5",  5,  false },
-	{ ARC_REG_R6,  "r6",  6,  false },
-	{ ARC_REG_R7,  "r7",  7,  false },
-	{ ARC_REG_R8,  "r8",  8,  false },
-	{ ARC_REG_R9,  "r9",  9,  false },
-	{ ARC_REG_R10, "r10", 10, false },
-	{ ARC_REG_R11, "r11", 11, false },
-	{ ARC_REG_R12, "r12", 12, false },
-	{ ARC_REG_R13, "r13", 13, false },
-	{ ARC_REG_R14, "r14", 14, false },
-	{ ARC_REG_R15, "r15", 15, false },
-	{ ARC_REG_R16, "r16", 16, false },
-	{ ARC_REG_R17, "r17", 17, false },
-	{ ARC_REG_R18, "r18", 18, false },
-	{ ARC_REG_R19, "r19", 19, false },
-	{ ARC_REG_R20, "r20", 20, false },
-	{ ARC_REG_R21, "r21", 21, false },
-	{ ARC_REG_R22, "r22", 22, false },
-	{ ARC_REG_R23, "r23", 23, false },
-	{ ARC_REG_R24, "r24", 24, false },
-	{ ARC_REG_R25, "r25", 25, false },
-	{ ARC_REG_GP,  "gp",  26, false },
-	{ ARC_REG_FP,  "fp",  27, false },
-	{ ARC_REG_SP,  "sp",  28, false },
-	{ ARC_REG_ILINK, "ilink", 29, false },
-	{ ARC_REG_R30, "r30", 30, false },
-	{ ARC_REG_BLINK, "blink", 31, false },
-	{ ARC_REG_R32, "r32", 32, false },
-	{ ARC_REG_R33, "r33", 33, false },
-	{ ARC_REG_R34, "r34", 34, false },
-	{ ARC_REG_R35, "r35", 35, false },
-	{ ARC_REG_R36, "r36", 36, false },
-	{ ARC_REG_R37, "r37", 37, false },
-	{ ARC_REG_R38, "r38", 38, false },
-	{ ARC_REG_R39, "r39", 39, false },
-	{ ARC_REG_R40, "r40", 40, false },
-	{ ARC_REG_R41, "r41", 41, false },
-	{ ARC_REG_R42, "r42", 42, false },
-	{ ARC_REG_R43, "r43", 43, false },
-	{ ARC_REG_R44, "r44", 44, false },
-	{ ARC_REG_R45, "r45", 45, false },
-	{ ARC_REG_R46, "r46", 46, false },
-	{ ARC_REG_R47, "r47", 47, false },
-	{ ARC_REG_R48, "r48", 48, false },
-	{ ARC_REG_R49, "r49", 49, false },
-	{ ARC_REG_R50, "r50", 50, false },
-	{ ARC_REG_R51, "r51", 51, false },
-	{ ARC_REG_R52, "r52", 52, false },
-	{ ARC_REG_R53, "r53", 53, false },
-	{ ARC_REG_R54, "r54", 54, false },
-	{ ARC_REG_R55, "r55", 55, false },
-	{ ARC_REG_R56, "r56", 56, false },
-	{ ARC_REG_R57, "r57", 57, false },
-	{ ARC_REG_R58, "r58", 58, false },
-	{ ARC_REG_R59, "r59", 59, false },
-	{ ARC_REG_LP_COUNT, "lp_count", 60, false },
-	{ ARC_REG_RESERVED, "reserved", 61, true },
-	{ ARC_REG_LIMM, "limm", 62, true },
-	{ ARC_REG_R63, "pcl", 63, true },
+	/* regnum, name, address, readonly, old_regnum */
+	{ ARC_REG_R0,  "r0",  0,  false,  0, },
+	{ ARC_REG_R1,  "r1",  1,  false,  1, },
+	{ ARC_REG_R2,  "r2",  2,  false,  2, },
+	{ ARC_REG_R3,  "r3",  3,  false,  3, },
+	{ ARC_REG_R4,  "r4",  4,  false,  4, },
+	{ ARC_REG_R5,  "r5",  5,  false,  5, },
+	{ ARC_REG_R6,  "r6",  6,  false,  6, },
+	{ ARC_REG_R7,  "r7",  7,  false,  7, },
+	{ ARC_REG_R8,  "r8",  8,  false,  8, },
+	{ ARC_REG_R9,  "r9",  9,  false,  9, },
+	{ ARC_REG_R10, "r10", 10, false, 10, },
+	{ ARC_REG_R11, "r11", 11, false, 11, },
+	{ ARC_REG_R12, "r12", 12, false, 12, },
+	{ ARC_REG_R13, "r13", 13, false, 13, },
+	{ ARC_REG_R14, "r14", 14, false, 14, },
+	{ ARC_REG_R15, "r15", 15, false, 15, },
+	{ ARC_REG_R16, "r16", 16, false, 16, },
+	{ ARC_REG_R17, "r17", 17, false, 17, },
+	{ ARC_REG_R18, "r18", 18, false, 18, },
+	{ ARC_REG_R19, "r19", 19, false, 19, },
+	{ ARC_REG_R20, "r20", 20, false, 20, },
+	{ ARC_REG_R21, "r21", 21, false, 21, },
+	{ ARC_REG_R22, "r22", 22, false, 22, },
+	{ ARC_REG_R23, "r23", 23, false, 23, },
+	{ ARC_REG_R24, "r24", 24, false, 24, },
+	{ ARC_REG_R25, "r25", 25, false, 25, },
+	{ ARC_REG_GP,  "gp",  26, false, 26, },
+	{ ARC_REG_FP,  "fp",  27, false, 27, },
+	{ ARC_REG_SP,  "sp",  28, false, 28, },
+	{ ARC_REG_ILINK, "ilink", 29, false, 29, },
+	{ ARC_REG_R30, "r30", 30, false, 30, },
+	{ ARC_REG_BLINK, "blink", 31, false, 31, },
+	{ ARC_REG_R32, "r32", 32, false, 32, },
+	{ ARC_REG_R33, "r33", 33, false, 33, },
+	{ ARC_REG_R34, "r34", 34, false, 34, },
+	{ ARC_REG_R35, "r35", 35, false, 35, },
+	{ ARC_REG_R36, "r36", 36, false, 36, },
+	{ ARC_REG_R37, "r37", 37, false, 37, },
+	{ ARC_REG_R38, "r38", 38, false, 38, },
+	{ ARC_REG_R39, "r39", 39, false, 39, },
+	{ ARC_REG_R40, "r40", 40, false, 40, },
+	{ ARC_REG_R41, "r41", 41, false, 41, },
+	{ ARC_REG_R42, "r42", 42, false, 42, },
+	{ ARC_REG_R43, "r43", 43, false, 43, },
+	{ ARC_REG_R44, "r44", 44, false, 44, },
+	{ ARC_REG_R45, "r45", 45, false, 45, },
+	{ ARC_REG_R46, "r46", 46, false, 46, },
+	{ ARC_REG_R47, "r47", 47, false, 47, },
+	{ ARC_REG_R48, "r48", 48, false, 48, },
+	{ ARC_REG_R49, "r49", 49, false, 49, },
+	{ ARC_REG_R50, "r50", 50, false, 50, },
+	{ ARC_REG_R51, "r51", 51, false, 51, },
+	{ ARC_REG_R52, "r52", 52, false, 52, },
+	{ ARC_REG_R53, "r53", 53, false, 53, },
+	{ ARC_REG_R54, "r54", 54, false, 54, },
+	{ ARC_REG_R55, "r55", 55, false, 55, },
+	{ ARC_REG_R56, "r56", 56, false, 56, },
+	{ ARC_REG_R57, "r57", 57, false, 57, },
+	{ ARC_REG_R58, "r58", 58, false, 58, },
+	{ ARC_REG_R59, "r59", 59, false, 59, },
+	{ ARC_REG_LP_COUNT, "lp_count", 60, false, 60, },
+	{ ARC_REG_RESERVED, "reserved", 61, true, 61 },
+	{ ARC_REG_LIMM,"limm",62, true,  62, },
+	{ ARC_REG_R63, "pcl", 63, true,  63, },
 	/* AUX */
-	{ ARC_REG_PC,               "pc",         PC_REG_ADDR, false },
-	{ ARC_REG_LP_START,         "lp_start", LP_START_REG_ADDR, false },
-	{ ARC_REG_LP_END,           "lp_end",   LP_END_REG_ADDR,   false },
-	{ ARC_REG_STATUS32,         "status32", STATUS32_REG_ADDR, false },
-	{ ARC_REG_IDENTITY,         "idenity",          0x4,    true  },
-	{ ARC_REG_DEBUG,            "debug",            0x5,    false },
-	{ ARC_REG_STATUS32_P0,      "status32_p0",      0xB,    false },
-	{ ARC_REG_AUX_USER_SP,      "aux_user_sp",      0xD,    false },
-	{ ARC_REG_AUX_IRQ_CTRL,     "aux_irq_ctrl",     0xE,    false },
-	{ ARC_REG_IC_IVIC,          "ic_ivic",          0x10,   false },
-	{ ARC_REG_IC_CTRL,          "ic_ctrl",          0x11,   false },
-	{ ARC_REG_IC_LIL,           "ic_lil",           0x13,   false },
-	{ ARC_REG_AUX_DCCM,         "aux_dccm",         0x18,   false },
-	{ ARC_REG_IC_IVIL,          "ic_ivil",          0x19,   false },
-	{ ARC_REG_IC_RAM_ADDR,      "ic_ram_addr",      0x1A,   false },
-	{ ARC_REG_IC_TAG,           "ic_tag",           0x1B,   false },
-	{ ARC_REG_IC_DATA,          "ic_data",          0x1D,   false },
-	{ ARC_REG_DEBUGI,           "debugi",           0x1F,   false },
-	{ ARC_REG_COUNT0,           "count0",           0x21,   false },
-	{ ARC_REG_CONTROL0,         "control0",         0x22,   false },
-	{ ARC_REG_LIMIT0,           "limit0",           0x23,   false },
-	{ ARC_REG_INT_VECTOR_BASE,  "int_vector_base",  0x25,   false },
-	{ ARC_REG_AUX_IRQ_ACT,      "aux_irq_act",      0x43,   false },
-	{ ARC_REG_DC_IVDC,          "dc_ivdc",          0x47,   false },
-	{ ARC_REG_DC_CTRL,          "dc_ctrl",          0x48,   false },
-	{ ARC_REG_DC_LDL,           "dc_ldl",           0x49,   false },
-	{ ARC_REG_DC_IVDL,          "dc_ivdl",          0x4A,   false },
-	{ ARC_REG_DC_FLSH,          "dc_flsh",          0x4B,   false },
-	{ ARC_REG_DC_FLDL,          "dc_fldl",          0x4C,   false },
-	{ ARC_REG_DC_RAM_ADDR,      "dc_ram_addr",      0x58,   false },
-	{ ARC_REG_DC_TAG,           "dc_tag",           0x59,   false },
-	{ ARC_REG_DC_DATA,          "dc_data",          0x5B,   false },
-	{ ARC_REG_COUNT1,           "count1",           0x100,  false },
-	{ ARC_REG_CONTROL1,         "control1",         0x101,  false },
-	{ ARC_REG_LIMIT1,           "limit1",           0x102,  false },
-	{ ARC_REG_AUX_RTC_CTRL,     "aux_rtc_ctrl",     0x103,  false },
-	{ ARC_REG_AUX_RTC_LOW,      "aux_rtc_low",      0x104,  false },
-	{ ARC_REG_AUX_RTC_HIGH,     "aux_rtc_high",     0x105,  false },
-	{ ARC_REG_IRQ_PRIORITY_PENDING, "irq_priority_pending", 0x200, false },
-	{ ARC_REG_AUX_IRQ_HINT,     "irq_hint",         0x201,  false },
-	{ ARC_REG_IRQ_PRIORITY,     "irq_priority",     0x206,  false },
-	{ ARC_REG_AUX_ICCM,         "aux_iccm",         0x208,  false },
-	{ ARC_REG_USTACK_TOP,       "ustack_top",       0x260,  false },
-	{ ARC_REG_USTACK_BASE,      "ustack_base",      0x261,  false },
-	{ ARC_REG_KSTACK_TOP,       "kstack_top",       0x264,  false },
-	{ ARC_REG_KSTACK_BASE,      "kstack_base",      0x265,  false },
-	{ ARC_REG_JLI_BASE,         "jli_base",         0x290,  false },
-	{ ARC_REG_LDI_BASE,         "ldi_base",         0x291,  false },
-	{ ARC_REG_EI_BASE,          "ei_base",          0x292,  false },
-	{ ARC_REG_ERET,             "eret",             0x400,  false },
-	{ ARC_REG_ERBTA,            "erbta",            0x401,  false },
-	{ ARC_REG_ERSTATUS,         "erstatus",         0x402,  false },
-	{ ARC_REG_ECR,              "ecr",              0x403,  false },
-	{ ARC_REG_EFA,              "efa",              0x404,  false },
-	{ ARC_REG_MPU_EN,           "mpu_en",           0x409,  false },
-	{ ARC_REG_ICAUSE,           "icause",           0x40A,  false },
-	{ ARC_REG_IRQ_SELECT,       "irq_select",       0x40B,  false },
-	{ ARC_REG_IRQ_ENABLE,       "irq_enable",       0x40C,  false },
-	{ ARC_REG_IRQ_TRIGGER,      "irq_trigger",      0x40D,  false },
-	{ ARC_REG_IRQ_STATUS,       "irq_status",       0x40F,  false },
-	{ ARC_REG_BTA,              "bta",              0x412,  false },
-	{ ARC_REG_IRQ_PULSE_CANCEL, "irq_pulse_cancel", 0x415,  false },
-	{ ARC_REG_IRQ_PENDING,      "irq_pending",      0x416,  false },
-	{ ARC_REG_MPU_ECR,          "mpu_ecr",          0x420,  false },
-	{ ARC_REG_MPU_RDB0,         "mpu_rdb0",         0x422,  false },
-	{ ARC_REG_MPU_RDP0,         "mpu_rdp0",         0x423,  false },
-	{ ARC_REG_MPU_RDB1,         "mpu_rdb1",         0x424,  false },
-	{ ARC_REG_MPU_RDP1,         "mpu_rdp1",         0x425,  false },
-	{ ARC_REG_MPU_RDB2,         "mpu_rdb2",         0x426,  false },
-	{ ARC_REG_MPU_RDP2,         "mpu_rdp2",         0x427,  false },
-	{ ARC_REG_MPU_RDB3,         "mpu_rdb3",         0x428,  false },
-	{ ARC_REG_MPU_RDP3,         "mpu_rdp3",         0x429,  false },
-	{ ARC_REG_MPU_RDB4,         "mpu_rdb4",         0x42A,  false },
-	{ ARC_REG_MPU_RDP4,         "mpu_rdp4",         0x42B,  false },
-	{ ARC_REG_MPU_RDB5,         "mpu_rdb5",         0x42C,  false },
-	{ ARC_REG_MPU_RDP5,         "mpu_rdp5",         0x42D,  false },
-	{ ARC_REG_MPU_RDB6,         "mpu_rdb6",         0x42E,  false },
-	{ ARC_REG_MPU_RDP6,         "mpu_rdp6",         0x42F,  false },
-	{ ARC_REG_MPU_RDB7,         "mpu_rdb7",         0x430,  false },
-	{ ARC_REG_MPU_RDP7,         "mpu_rdp7",         0x431,  false },
-	{ ARC_REG_MPU_RDB8,         "mpu_rdb8",         0x432,  false },
-	{ ARC_REG_MPU_RDP8,         "mpu_rdp8",         0x433,  false },
-	{ ARC_REG_MPU_RDB9,         "mpu_rdb9",         0x434,  false },
-	{ ARC_REG_MPU_RDP9,         "mpu_rdp9",         0x435,  false },
-	{ ARC_REG_MPU_RDB10,        "mpu_rdb10",        0x436,  false },
-	{ ARC_REG_MPU_RDP10,        "mpu_rdp10",        0x437,  false },
-	{ ARC_REG_MPU_RDB11,        "mpu_rdb11",        0x438,  false },
-	{ ARC_REG_MPU_RDP11,        "mpu_rdp11",        0x439,  false },
-	{ ARC_REG_MPU_RDB12,        "mpu_rdb12",        0x43A,  false },
-	{ ARC_REG_MPU_RDP12,        "mpu_rdp12",        0x43B,  false },
-	{ ARC_REG_MPU_RDB13,        "mpu_rdb13",        0x43C,  false },
-	{ ARC_REG_MPU_RDP13,        "mpu_rdp13",        0x43D,  false },
-	{ ARC_REG_MPU_RDB14,        "mpu_rdb14",        0x43E,  false },
-	{ ARC_REG_MPU_RDP14,        "mpu_rdp14",        0x43F,  false },
-	{ ARC_REG_MPU_RDB15,        "mpu_rdb15",        0x440,  false },
-	{ ARC_REG_MPU_RDP15,        "mpu_rdp15",        0x441,  false },
-	{ ARC_REG_SMART_CONTROL,    "smart_control",    0x700,  false },
-	{ ARC_REG_SMART_DATA,       "smart_data",       0x701,  false },
+	{ ARC_REG_PC,               "pc",       PC_REG_ADDR,       false, 64, },
+	{ ARC_REG_LP_START,         "lp_start", LP_START_REG_ADDR, false, 65, },
+	{ ARC_REG_LP_END,           "lp_end",   LP_END_REG_ADDR,   false, 66, },
+	{ ARC_REG_STATUS32,         "status32", STATUS32_REG_ADDR, false, 67, },
+	{ ARC_REG_IDENTITY,         "idenity",          0x4,    true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DEBUG,            "debug",            0x5,    false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_STATUS32_P0,      "status32_p0",      0xB,    false, 68, },
+	{ ARC_REG_STATUS32_L2,		"status32_l2",		0xC,     true, 69, },
+	{ ARC_REG_AUX_USER_SP,      "aux_user_sp",      0xD,    false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_IRQ_CTRL,     "aux_irq_ctrl",     0xE,    false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IC_IVIC,          "ic_ivic",          0x10,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IC_CTRL,          "ic_ctrl",          0x11,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IC_LIL,           "ic_lil",           0x13,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_DCCM,         "aux_dccm",         0x18,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IC_IVIL,          "ic_ivil",          0x19,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IC_RAM_ADDR,      "ic_ram_addr",      0x1A,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IC_TAG,           "ic_tag",           0x1B,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IC_DATA,          "ic_data",          0x1D,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DEBUGI,           "debugi",           0x1F,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_COUNT0,           "count0",           0x21,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_CONTROL0,         "control0",         0x22,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_LIMIT0,           "limit0",           0x23,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_INT_VECTOR_BASE,  "int_vector_base",  0x25,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_IRQ_ACT,      "aux_irq_act",      0x43,   false, 70 },
+	{ ARC_REG_DC_IVDC,          "dc_ivdc",          0x47,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_CTRL,          "dc_ctrl",          0x48,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_LDL,           "dc_ldl",           0x49,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_IVDL,          "dc_ivdl",          0x4A,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_FLSH,          "dc_flsh",          0x4B,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_FLDL,          "dc_fldl",          0x4C,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_RAM_ADDR,      "dc_ram_addr",      0x58,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_TAG,           "dc_tag",           0x59,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DC_DATA,          "dc_data",          0x5B,   false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_COUNT1,           "count1",           0x100,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_CONTROL1,         "control1",         0x101,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_LIMIT1,           "limit1",           0x102,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_RTC_CTRL,     "aux_rtc_ctrl",     0x103,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_RTC_LOW,      "aux_rtc_low",      0x104,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_RTC_HIGH,     "aux_rtc_high",     0x105,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IRQ_PRIORITY_PENDING, "irq_priority_pending", 0x200, false, 71, },
+	{ ARC_REG_AUX_IRQ_HINT,     "irq_hint",         0x201,  false, 72, },
+	{ ARC_REG_IRQ_PRIORITY,     "irq_priority",     0x206,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AUX_ICCM,         "aux_iccm",         0x208,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_USTACK_TOP,       "ustack_top",       0x260,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_USTACK_BASE,      "ustack_base",      0x261,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_KSTACK_TOP,       "kstack_top",       0x264,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_KSTACK_BASE,      "kstack_base",      0x265,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_JLI_BASE,         "jli_base",         0x290,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_LDI_BASE,         "ldi_base",         0x291,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_EI_BASE,          "ei_base",          0x292,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_ERET,             "eret",             0x400,  false, 73, },
+	{ ARC_REG_ERBTA,            "erbta",            0x401,  false, 74, },
+	{ ARC_REG_ERSTATUS,         "erstatus",         0x402,  false, 75, },
+	{ ARC_REG_ECR,              "ecr",              0x403,  false, 76, },
+	{ ARC_REG_EFA,              "efa",              0x404,  false, 77, },
+	{ ARC_REG_MPU_EN,           "mpu_en",           0x409,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_ICAUSE,           "icause",           0x40A,  false, 78, }, /* aka icause1 */
+	{ ARC_REG_IRQ_SELECT,       "irq_select",       0x40B,  false, 79, }, /* aka icause2 */
+	{ ARC_REG_IRQ_ENABLE,       "irq_enable",       0x40C,  false, 80, },
+	{ ARC_REG_IRQ_TRIGGER,      "irq_trigger",      0x40D,  false, 81, },
+	{ ARC_REG_IRQ_STATUS,       "irq_status",       0x40F,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_BTA,              "bta",              0x412,  false, 82, },
+	{ ARC_REG_BTA_L1,           "bta_l1",           0x413,  false, 83, },
+	{ ARC_REG_BTA_L2,           "bta_l2",           0x414,  false, 84, },
+	{ ARC_REG_IRQ_PULSE_CANCEL, "irq_pulse_cancel", 0x415,  false, 85, },
+	{ ARC_REG_IRQ_PENDING,      "irq_pending",      0x416,  false, 86, },
+	{ ARC_REG_MPU_ECR,          "mpu_ecr",          0x420,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB0,         "mpu_rdb0",         0x422,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP0,         "mpu_rdp0",         0x423,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB1,         "mpu_rdb1",         0x424,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP1,         "mpu_rdp1",         0x425,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB2,         "mpu_rdb2",         0x426,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP2,         "mpu_rdp2",         0x427,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB3,         "mpu_rdb3",         0x428,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP3,         "mpu_rdp3",         0x429,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB4,         "mpu_rdb4",         0x42A,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP4,         "mpu_rdp4",         0x42B,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB5,         "mpu_rdb5",         0x42C,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP5,         "mpu_rdp5",         0x42D,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB6,         "mpu_rdb6",         0x42E,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP6,         "mpu_rdp6",         0x42F,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB7,         "mpu_rdb7",         0x430,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP7,         "mpu_rdp7",         0x431,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB8,         "mpu_rdb8",         0x432,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP8,         "mpu_rdp8",         0x433,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB9,         "mpu_rdb9",         0x434,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP9,         "mpu_rdp9",         0x435,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB10,        "mpu_rdb10",        0x436,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP10,        "mpu_rdp10",        0x437,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB11,        "mpu_rdb11",        0x438,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP11,        "mpu_rdp11",        0x439,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB12,        "mpu_rdb12",        0x43A,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP12,        "mpu_rdp12",        0x43B,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB13,        "mpu_rdb13",        0x43C,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP13,        "mpu_rdp13",        0x43D,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB14,        "mpu_rdb14",        0x43E,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP14,        "mpu_rdp14",        0x43F,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDB15,        "mpu_rdb15",        0x440,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_RDP15,        "mpu_rdp15",        0x441,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_SMART_CONTROL,    "smart_control",    0x700,  false, ARC_INVALID_REGNUM, },
+	{ ARC_REG_SMART_DATA,       "smart_data",       0x701,  false, ARC_INVALID_REGNUM, },
 	/* BCR */
-	{ ARC_REG_BCR_VER,          "bcr_ver",          0x60, true },
-	{ ARC_REG_BTA_LINK_BUILD,   "bta_link_build",   0x63, true },
-	{ ARC_REG_VECBASE_AC_BUILD, "vecbase_ac_build", 0x68, true },
-	{ ARC_REG_MPU_BUILD,        "mpu_build",        0x6D, true },
-	{ ARC_REG_RF_BUILD,         "rf_build",         0x6E, true },
-	{ ARC_REG_D_CACHE_BUILD,    "d_cache_build",    0x72, true },
-	{ ARC_REG_DCCM_BUILD,       "dccm_build",       0x74, true },
-	{ ARC_REG_TIMER_BUILD,      "timer_build",      0x75, true },
-	{ ARC_REG_AP_BUILD,         "ap_build",         0x76, true },
-	{ ARC_REG_I_CACHE_BUILD,    "i_cache_build",    0x77, true },
-	{ ARC_REG_ICCM_BUILD,       "iccm_build",       0x78, true },
-	{ ARC_REG_MULTIPLY_BUILD,   "multiply_build",   0x7B, true },
-	{ ARC_REG_SWAP_BUILD,       "swap_build",       0x7C, true },
-	{ ARC_REG_NORM_BUILD,       "norm_build",       0x7D, true },
-	{ ARC_REG_MINMAX_BUILD,     "minmax_build",     0x7E, true },
-	{ ARC_REG_BARREL_BUILD,     "barrel_build",     0x7F, true },
-	{ ARC_REG_ISA_CONFIG,       "isa_config",       0xC1, true },
-	{ ARC_REG_STACK_REGION_BUILD, "stack_region_build", 0xC5, true },
-	{ ARC_REG_CPROT_BUILD,      "cprot_build",      0xC9, true },
-	{ ARC_REG_IRQ_BUILD,        "irq_build",        0xF3, true },
-	{ ARC_REG_IFQUEUE_BUILD,    "ifqueue_build",    0xFE, true },
-	{ ARC_REG_SMART_BUILD,      "smart_build",      0xFF, true },
+	{ ARC_REG_BCR_VER,          "bcr_ver",          0x60, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_BTA_LINK_BUILD,   "bta_link_build",   0x63, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_VECBASE_AC_BUILD, "vecbase_ac_build", 0x68, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MPU_BUILD,        "mpu_build",        0x6D, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_RF_BUILD,         "rf_build",         0x6E, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_D_CACHE_BUILD,    "d_cache_build",    0x72, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_DCCM_BUILD,       "dccm_build",       0x74, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_TIMER_BUILD,      "timer_build",      0x75, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_AP_BUILD,         "ap_build",         0x76, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_I_CACHE_BUILD,    "i_cache_build",    0x77, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_ICCM_BUILD,       "iccm_build",       0x78, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MULTIPLY_BUILD,   "multiply_build",   0x7B, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_SWAP_BUILD,       "swap_build",       0x7C, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_NORM_BUILD,       "norm_build",       0x7D, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_MINMAX_BUILD,     "minmax_build",     0x7E, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_BARREL_BUILD,     "barrel_build",     0x7F, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_ISA_CONFIG,       "isa_config",       0xC1, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_STACK_REGION_BUILD, "stack_region_build", 0xC5, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_CPROT_BUILD,      "cprot_build",      0xC9, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IRQ_BUILD,        "irq_build",        0xF3, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_IFQUEUE_BUILD,    "ifqueue_build",    0xFE, true, ARC_INVALID_REGNUM, },
+	{ ARC_REG_SMART_BUILD,      "smart_build",      0xFF, true, ARC_INVALID_REGNUM, },
 };
 
 static int arc_regs_get_core_reg(struct reg *reg) {
@@ -246,7 +249,7 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 
 	if (regnum == ARC_REG_LIMM || regnum == ARC_REG_RESERVED) {
 		arc_reg->value = 0;
-	} else	if (regnum < ARC_REG_AFTER_CORE_EXT) {
+	} else	if (regnum < ARC_REG_FIRST_AUX) {
 		arc_jtag_read_core_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
 	} else {
 		arc_jtag_read_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
@@ -308,13 +311,18 @@ static const struct reg_arch_type arc32_reg_type = {
  */
 int arc_regs_read_bcrs(struct target *target)
 {
-	int retval = ERROR_OK;
 	LOG_DEBUG("-");
 
+	int retval = ERROR_OK;
 	struct arc32_common *arc32 = target_to_arc32(target);
+	struct reg *reg_list = arc32->core_cache->reg_list;
 
 	/* BCRs never change. No need to execute this function multiple times. */
 	if (arc32->bcr_init)
+		return retval;
+
+	/* Don't read BCR's in compatibility mode. */
+	if (arc32->gdb_compatibility_mode)
 		return retval;
 
 	uint32_t numregs = ARC_REG_AFTER_BCR - ARC_REG_FIRST_BCR;
@@ -374,7 +382,6 @@ int arc_regs_read_bcrs(struct target *target)
 
 	/* AUX registers are disabled by default, enable them depending on BCR
 	 * contents. */
-	struct reg *reg_list = arc32->core_cache->reg_list;
 	/* Enable baseline registers which are always present. */
 	reg_list[ARC_REG_IDENTITY].exist = true;
 	reg_list[ARC_REG_PC].exist = true;
@@ -598,6 +605,7 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 		arch_info[i].desc = arc32_regs_descriptions + i;
 		arch_info[i].target = target;
 		arch_info[i].arc32_common = arc32;
+		arch_info[i].dummy = false;
 		reg_list[i].name = arc32_regs_descriptions[i].name;
 		reg_list[i].size = 32;
 		reg_list[i].value = calloc(1, 4);
@@ -605,9 +613,23 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 		reg_list[i].valid = 0;
 		reg_list[i].type = &arc32_reg_type;
 		reg_list[i].arch_info = &arch_info[i];
-		// XML
-		reg_list[i].number = arc32_regs_descriptions[i].regnum;
-		reg_list[i].exist = 1;
+
+		if (!arc32->gdb_compatibility_mode) {
+			reg_list[i].number = arc32_regs_descriptions[i].regnum;
+			/* By default only core regs and BCRs are enabled. */
+			reg_list[i].exist = ( i < ARC_REG_AFTER_CORE ||
+					(i >= ARC_REG_FIRST_BCR && i < ARC_REG_AFTER_BCR));
+		} else {
+			reg_list[i].number = arch_info[i].desc->old_regnum;
+			reg_list[i].exist = (arch_info[i].desc->old_regnum != ARC_INVALID_REGNUM);
+			if ((i >= ARC_REG_FIRST_CORE_EXT && i < ARC_REG_AFTER_CORE_EXT) ||
+				i == ARC_REG_LIMM || i == ARC_REG_RESERVED ||
+				i == ARC_REG_STATUS32_L2 || i == ARC_REG_BTA_L1 ||
+				i == ARC_REG_BTA_L2 ) {
+				arch_info[i].dummy = true;
+			}
+		}
+
 		reg_list[i].group = general_group_name;
 		reg_list[i].caller_save = true;
 
@@ -619,7 +641,6 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 			reg_list[i].feature = core_link;
 		else if ((ARC_REG_FIRST_CORE_EXT <= i && i < ARC_REG_AFTER_CORE_EXT) || i == ARC_REG_LIMM || i == ARC_REG_RESERVED) {
 			reg_list[i].feature = core_extension;
-			reg_list[i].exist = false;
 		} else if (ARC_REG_AFTER_CORE_EXT <= i && i < ARC_REG_FIRST_AUX)
 			reg_list[i].feature = core_other;
 		else if (ARC_REG_PC <= i)
@@ -629,15 +650,9 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 			reg_list[i].feature = NULL;
 		}
 
-		/* Disable optional registers by default, except for BCRs. */
-		if ( i >= ARC_REG_AFTER_GDB_GENERAL && i < ARC_REG_AFTER_AUX)
-			reg_list[i].exist = false;
-
 		LOG_DEBUG("reg n=%3i name=%3s group=%s feature=%s", i,
 			reg_list[i].name, reg_list[i].group,
 			reg_list[i].feature->name);
-
-		// end XML
 	}
 
 	return cache;
@@ -670,7 +685,10 @@ int arc_regs_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	} else {
 		int cur_index = 0;
 		for (i = 0; i < ARC_TOTAL_NUM_REGS; i++) {
-			if (i < ARC_REG_AFTER_GDB_GENERAL && arc32->core_cache->reg_list[i].exist){
+			/* In compatibility mode we pass all existing regs. In normal mode
+			 * we pass only a core registers. */
+			if ((i < ARC_REG_AFTER_GDB_GENERAL || arc32->gdb_compatibility_mode) &&
+					arc32->core_cache->reg_list[i].exist) {
 				(*reg_list)[cur_index] = &arc32->core_cache->reg_list[i];
 				cur_index += 1;
 			}

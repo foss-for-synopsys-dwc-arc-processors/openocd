@@ -60,6 +60,9 @@ int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
 	arc32->has_dcache = true;
 	arc32_reset_caches_states(target);
 
+	arc32->bcr_init = false;
+	arc32->gdb_compatibility_mode = true;
+
 	return retval;
 }
 
@@ -83,8 +86,10 @@ int arc32_save_context(struct target *target)
 		arc_regs_read_bcrs(target);
 
 	/* We assume that there is at least one AUX register in the list. */
-	const uint32_t core_regs_size = ARC_REG_AFTER_CORE_EXT * sizeof(uint32_t);
-	const uint32_t aux_regs_size = (ARC_REG_AFTER_GDB_GENERAL - ARC_REG_FIRST_AUX) *
+	const uint32_t core_regs_size = ARC_REG_FIRST_AUX * sizeof(uint32_t);
+	const uint32_t regs_to_scan = (arc32->gdb_compatibility_mode ?
+			ARC_TOTAL_NUM_REGS : ARC_REG_AFTER_GDB_GENERAL);
+	const uint32_t aux_regs_size = (regs_to_scan - ARC_REG_FIRST_AUX) *
 		sizeof(uint32_t);
 	uint32_t *core_values = malloc(core_regs_size);
 	uint32_t *aux_values = malloc(aux_regs_size);
@@ -104,11 +109,11 @@ int arc32_save_context(struct target *target)
 	memset(aux_values, 0xdeadbeef, aux_regs_size);
 	memset(aux_addrs, 0xdeadbeef, aux_regs_size);
 
-	for (i = 0; i < ARC_REG_AFTER_GDB_GENERAL; i++) {
+	for (i = 0; i < regs_to_scan; i++) {
 		struct reg *reg = &(reg_list[i]);
 		struct arc_reg_t *arc_reg = reg->arch_info;
 		/* Don't bother with valid and unexisting regs. */
-		if (!reg->valid && reg->exist) {
+		if (!reg->valid && reg->exist && !arc_reg->dummy) {
 			if (arc_reg->desc->regnum < ARC_REG_FIRST_AUX) {
 				/* core reg */
 				core_addrs[core_cnt] = arc_reg->desc->addr;
@@ -139,29 +144,37 @@ int arc32_save_context(struct target *target)
 		struct reg *reg = &(reg_list[i]);
 		struct arc_reg_t *arc_reg = reg->arch_info;
 		if (!reg->valid && reg->exist) {
-			arc_reg->value = core_values[core_cnt];
+			if (!arc_reg->dummy) {
+				arc_reg->value = core_values[core_cnt];
+				core_cnt += 1;
+			} else {
+				arc_reg->value = 0;
+			}
 			buf_set_u32(reg->value, 0, 32, arc_reg->value);
 			reg->valid = true;
 			reg->dirty = false;
 			LOG_DEBUG("Get core register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
 				i , arc_reg->desc->name, arc_reg->value);
-			core_cnt += 1;
 		}
 	}
 
 	/* Parse aux regs */
 	aux_cnt = 0;
-	for (i = ARC_REG_FIRST_AUX; i < ARC_REG_AFTER_GDB_GENERAL; i++) {
+	for (i = ARC_REG_FIRST_AUX; i < regs_to_scan; i++) {
 		struct reg *reg = &(reg_list[i]);
 		struct arc_reg_t *arc_reg = reg->arch_info;
 		if (!reg->valid && reg->exist) {
-			arc_reg->value = aux_values[aux_cnt];
+			if (!arc_reg->dummy) {
+				arc_reg->value = aux_values[aux_cnt];
+				aux_cnt += 1;
+			} else {
+				arc_reg->value = 0;
+			}
 			buf_set_u32(reg->value, 0, 32, arc_reg->value);
 			reg->valid = true;
 			reg->dirty = false;
 			LOG_DEBUG("Get aux register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
 				i , arc_reg->desc->name, arc_reg->value);
-			aux_cnt += 1;
 		}
 	}
 

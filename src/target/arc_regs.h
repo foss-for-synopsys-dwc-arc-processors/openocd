@@ -152,13 +152,22 @@ struct arc32_reg_desc {
 	char * const name;
 	uint32_t addr;
 	bool readonly;
+	/* Previously GDB for ARC didn't supported XML target descriptions and used
+	 * one format of g/G-packet to fit all needs. Since we need to maintain
+	 * compatibility (at least for some time) this regnum will be used if
+	 * compatibility mode is on. Value ARC_INVALID_REGNUM means that register is
+	 * not present in old packet. */
+	uint32_t old_regnum;
 };
+
+#define ARC_INVALID_REGNUM (0xFFFFFFFF)
 
 struct arc_reg_t {
 	const struct arc32_reg_desc *desc;
 	struct target *target;
 	struct arc32_common *arc32_common;
 	uint32_t value;
+	bool dummy;
 };
 
 enum arc32_reg_number {
@@ -264,6 +273,7 @@ enum arc32_reg_number {
 	ARC_REG_IDENTITY = ARC_REG_AFTER_GDB_GENERAL,
 	ARC_REG_DEBUG,
 	ARC_REG_STATUS32_P0,
+	ARC_REG_STATUS32_L2,
 	ARC_REG_AUX_USER_SP,
 	ARC_REG_AUX_IRQ_CTRL,
 	ARC_REG_IC_IVIC,
@@ -327,10 +337,12 @@ enum arc32_reg_number {
 	 */
 	/* ARC_REG_XPU, */
 	ARC_REG_BTA,
+	ARC_REG_BTA_L1,
+	ARC_REG_BTA_L2,
 	ARC_REG_IRQ_PULSE_CANCEL,
 	ARC_REG_IRQ_PENDING,
 	ARC_REG_MPU_ECR,
-	/* Registers to describe MPU regions: RDB and RDP */ 
+	/* Registers to describe MPU regions: RDB and RDP */
 	ARC_REG_MPU_RDB0,
 	ARC_REG_MPU_RDP0,
 	ARC_REG_MPU_RDB1,
@@ -396,6 +408,7 @@ enum arc32_reg_number {
 	ARC_REG_SMART_BUILD,
 
 	ARC_REG_AFTER_BCR,
+
 	ARC_TOTAL_NUM_REGS = ARC_REG_AFTER_BCR,
 };
 

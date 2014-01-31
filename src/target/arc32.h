@@ -91,6 +91,7 @@ struct arc32_common {
 	bool cache_invalidated;
 
 	bool bcr_init;
+	bool gdb_compatibility_mode;
 	struct bcr_set_t bcr_set;
 };
 
