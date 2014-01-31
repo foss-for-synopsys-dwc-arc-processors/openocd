@@ -25,6 +25,8 @@
 
 #include "target.h"
 
+/* Would be great to replace usage of constants with usage of arc32_reg_desc.
+ * But that's quite a lot of code. */
 /* --------------------------------------------------------------------------
  * ARC core Auxiliary register set
  *      name:					id:		bitfield:	comment:
@@ -377,11 +379,6 @@ enum arc32_reg_number {
 	ARC_TOTAL_NUM_REGS = ARC_REG_AFTER_BCR,
 };
 
-#define PC_REG_ADDR 0x6
-#define STATUS32_REG_ADDR 0xA
-#define LP_START_REG_ADDR 0x2
-#define LP_END_REG_ADDR 0x3
-
 struct bcr_set_t {
 	union {
 		uint32_t raw;
@@ -584,8 +581,6 @@ struct bcr_set_t {
 	} smart_build;
 };
 
-
-/* ----- Exported functions ------------------------------------------------ */
 
 /* ----- Exported functions ------------------------------------------------ */
 
