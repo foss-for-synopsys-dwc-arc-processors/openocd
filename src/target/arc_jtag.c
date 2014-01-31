@@ -180,7 +180,7 @@ static int arc_jtag_write_registers(struct arc_jtag *jtag_info, reg_type_t type,
 
 	LOG_DEBUG("Writing to %s registers: addr[0]=0x%" PRIu32 ";count=%" PRIu32
 			  ";buffer[0]=0x%08" PRIx32,
-		(type == ARC_JTAG_CORE_REG ? "core" : "aux" ), *addr, count, *buffer);
+		(type == ARC_JTAG_CORE_REG ? "core" : "aux"), *addr, count, *buffer);
 
 	if (count == 0)
 		return retval;
@@ -262,7 +262,7 @@ static int arc_jtag_read_registers(struct arc_jtag *jtag_info, reg_type_t type,
 		if (i == 0 || (addr[i] != addr[i-1] + 1)) {
 			/* Set address of register */
 			arc_jtag_write_ir(jtag_info, ARC_ADDRESS_REG);
-			arc_jtag_write_dr(jtag_info, addr[i], TAP_IDLE); // TAP_IDLE or TAP_DRPAUSE?..
+			arc_jtag_write_dr(jtag_info, addr[i], TAP_IDLE);  // TAP_IDLE or TAP_DRPAUSE?
 			arc_jtag_write_ir(jtag_info, ARC_DATA_REG);
 		}
 
@@ -511,7 +511,8 @@ int arc_jtag_write_core_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
 int arc_jtag_write_core_reg(struct arc_jtag *jtag_info, uint32_t* addr,
 	uint32_t count, const uint32_t* buffer)
 {
-	return arc_jtag_write_registers(jtag_info, ARC_JTAG_CORE_REG, addr, count, buffer);
+	return arc_jtag_write_registers(jtag_info, ARC_JTAG_CORE_REG, addr, count,
+			buffer);
 }
 
 /** Wrapper function to ease reading of one core register. */
@@ -558,7 +559,8 @@ int arc_jtag_write_aux_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
 int arc_jtag_write_aux_reg(struct arc_jtag *jtag_info, uint32_t* addr,
 	uint32_t count, const uint32_t* buffer)
 {
-	return arc_jtag_write_registers(jtag_info, ARC_JTAG_AUX_REG, addr, count, buffer);
+	return arc_jtag_write_registers(jtag_info, ARC_JTAG_AUX_REG, addr, count,
+			buffer);
 }
 
 /** Wrapper function to ease reading of one AUX register. */

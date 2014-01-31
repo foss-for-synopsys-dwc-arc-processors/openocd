@@ -383,7 +383,6 @@ enum arc32_reg_number {
 #define LP_END_REG_ADDR 0x3
 
 struct bcr_set_t {
-
 	union {
 		uint32_t raw;
 		struct {
@@ -416,7 +415,6 @@ struct bcr_set_t {
 	} mpu_build;
 
 	union {
-
 		uint32_t raw;
 		struct {
 			uint8_t version : 8;

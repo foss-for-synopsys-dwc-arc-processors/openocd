@@ -400,6 +400,7 @@ int arc_dbg_debug_entry(struct target *target)
 		return retval;
 
 	arc32->jtag_info.dpc = dpc;
+
 	arc32_save_context(target);
 
 	/* We must reset internal indicators of caches states, otherwise D$/I$

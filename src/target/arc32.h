@@ -89,7 +89,7 @@ struct arc32_common {
 	struct bcr_set_t bcr_set;
 };
 
-//#define ARC32_FASTDATA_HANDLER_SIZE	0x8000 /* haps51 */
+/*#define ARC32_FASTDATA_HANDLER_SIZE	0x8000*/ /* haps51 */
 #define ARC32_FASTDATA_HANDLER_SIZE	0x10000  /* 64Kb */
 
 /* ARC 32bits Compact v2 opcodes */
