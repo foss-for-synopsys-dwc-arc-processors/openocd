@@ -84,12 +84,17 @@ struct arc32_common {
 	 * halted. */
 	bool cache_invalidated;
 
+	/* If BCRs have been read and and optioanl registers have been proeprly
+	 * assigned whether they exist or not. */
 	bool bcr_init;
+	/* Whether to support old ARC GDB that doesn't understand XML target
+	 * descriptions. */
 	bool gdb_compatibility_mode;
+	/* Store values of BCR permanently. */
 	struct bcr_set_t bcr_set;
 };
 
-/*#define ARC32_FASTDATA_HANDLER_SIZE	0x8000*/ /* haps51 */
+//#define ARC32_FASTDATA_HANDLER_SIZE	0x8000 /* haps51 */
 #define ARC32_FASTDATA_HANDLER_SIZE	0x10000  /* 64Kb */
 
 /* ARC 32bits Compact v2 opcodes */

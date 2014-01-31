@@ -235,9 +235,9 @@ static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] =
 	{ ARC_REG_SMART_BUILD,      "smart_build",      0xFF, REG_TYPE_UINT32, true, ARC_INVALID_REGNUM, },
 };
 
-static int arc_regs_get_core_reg(struct reg *reg) {
+static int arc_regs_get_core_reg(struct reg *reg)
+{
 	int retval = ERROR_OK;
-	LOG_DEBUG("Getting register");
 	assert(reg != NULL);
 
 	struct arc_reg_t *arc_reg = reg->arch_info;
@@ -255,7 +255,7 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 		arc_regs_read_bcrs(target);
 
 	if (reg->valid) {
-		LOG_DEBUG("Get register (cached) regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+		LOG_DEBUG("Get register (cached) regnum=%" PRIu32 ", name=%s, value=0x%" PRIx32,
 				regnum, arc_reg->desc->name, arc_reg->value);
 		return ERROR_OK;
 	}
@@ -271,7 +271,7 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 	buf_set_u32(arc32->core_cache->reg_list[regnum].value, 0, 32, arc_reg->value);
 	arc32->core_cache->reg_list[regnum].valid = true;
 	arc32->core_cache->reg_list[regnum].dirty = false;
-	LOG_DEBUG("Get register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+	LOG_DEBUG("Get register regnum=%" PRIu32 ", name=%s, value=0x%" PRIx32,
 			regnum , arc_reg->desc->name, arc_reg->value);
 
 	return retval;
@@ -281,7 +281,7 @@ static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
 {
 	int retval = ERROR_OK;
 
-	LOG_DEBUG("Entering set core reg...");
+	LOG_DEBUG("-");
 	struct arc_reg_t *arc_reg = reg->arch_info;
 	struct target *target = arc_reg->target;
 	struct arc32_common *arc32 = target_to_arc32(target);
@@ -355,18 +355,6 @@ int arc_regs_read_bcrs(struct target *target)
 		return retval;
 	}
 
-	for (unsigned i = ARC_REG_FIRST_BCR; i < ARC_REG_AFTER_BCR; i++) {
-		LOG_DEBUG("0x%" PRIx32 " %s = 0x%08" PRIx32,
-				arc32_regs_descriptions[i].addr,
-				arc32_regs_descriptions[i].name,
-			values[i - ARC_REG_FIRST_BCR]);
-	}
-
-		LOG_DEBUG("0x%" PRIx32 " %s = 0x%08" PRIx32,
-				arc32_regs_descriptions[ARC_REG_I_CACHE_BUILD].addr,
-				arc32_regs_descriptions[ARC_REG_I_CACHE_BUILD].name,
-			values[ARC_REG_I_CACHE_BUILD - ARC_REG_FIRST_BCR]);
-	/* Parse RF_BUILD */
 	struct bcr_set_t *bcrs = &(arc32->bcr_set);
 	bcrs->bcr_ver.raw = values[ARC_REG_BCR_VER - ARC_REG_FIRST_BCR];
 	bcrs->bta_link_build.raw = values[ARC_REG_BTA_LINK_BUILD - ARC_REG_FIRST_BCR];
@@ -395,8 +383,6 @@ int arc_regs_read_bcrs(struct target *target)
 	free(addrs);
 	free(values);
 
-	/* AUX registers are disabled by default, enable them depending on BCR
-	 * contents. */
 	/* Enable baseline registers which are always present. */
 	reg_list[ARC_REG_IDENTITY].exist = true;
 	reg_list[ARC_REG_PC].exist = true;
@@ -416,9 +402,10 @@ int arc_regs_read_bcrs(struct target *target)
 	reg_list[ARC_REG_DEBUG].exist = true;
 	reg_list[ARC_REG_DEBUGI].exist = true;
 
-	/* Now that values are parsed we can disable nonexistent registers. */
+	/* AUX registers are disabled by default, enable them depending on BCR
+	 * contents. */
 	for (unsigned regnum = 0; regnum < ARC_TOTAL_NUM_REGS; regnum++) {
-		/* Core regs missing from RF16 builds */
+		/* Some core regs are missing from cores with reduced register banks. */
 		if (bcrs->rf_build.e &&
 		   ((regnum > ARC_REG_R3 && regnum < ARC_REG_R10) ||
 			(regnum > ARC_REG_R15 && regnum < ARC_REG_R26))) {
@@ -592,7 +579,7 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 	(*cache_p) = cache;
 	arc32->core_cache = cache;
 
-	// XML feature
+	// XML features
 	struct reg_feature *core_basecase = calloc(1, sizeof(struct reg_feature));
 	core_basecase->name = feature_core_basecase_name;
 	struct reg_feature *core_extension = calloc(1, sizeof(struct reg_feature));
@@ -616,7 +603,7 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 	code_ptr_data_type->id = "code_ptr";
 	data_ptr_data_type->type = REG_TYPE_DATA_PTR;
 	data_ptr_data_type->id = "data_ptr";
-	/* Only three data types are used */
+	/* Only three data types are used by ARC */
 	struct reg_data_type *data_types[13] = { NULL, NULL, NULL, NULL, NULL,
 		NULL, NULL, NULL, uint32_data_type, NULL, NULL, code_ptr_data_type,
 		data_ptr_data_type };
@@ -639,7 +626,6 @@ struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 			/* By default only core regs and BCRs are enabled. */
 			reg_list[i].exist = (i < ARC_REG_AFTER_CORE || i == ARC_REG_PCL ||
 					(i >= ARC_REG_FIRST_BCR && i < ARC_REG_AFTER_BCR));
-
 		} else {
 			reg_list[i].number = arch_info[i].desc->old_regnum;
 			reg_list[i].exist = (arch_info[i].desc->old_regnum != ARC_INVALID_REGNUM);

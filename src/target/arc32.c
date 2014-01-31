@@ -66,8 +66,8 @@ int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
 /**
  * Read register that are used in GDB g-packet. We don't read them one-by-one,
  * but do that in one batch operation to improve speed. Calls to JTAG layer are
- * expensive so it is better to make on big call for every register, instead of
- * many calls, one for each register.
+ * expensive so it is better to make one big call that reads all necessary
+ * registers, instead of many calls, one for one register.
  */
 int arc32_save_context(struct target *target)
 {
@@ -82,7 +82,8 @@ int arc32_save_context(struct target *target)
 	if (!arc32->bcr_init)
 		arc_regs_read_bcrs(target);
 
-	/* It is assumed that there is at least one AUX register in the list. */
+	/* It is assumed that there is at least one AUX register in the list, for
+	 * example PC. */
 	const uint32_t core_regs_size = ARC_REG_FIRST_AUX * sizeof(uint32_t);
 	const uint32_t regs_to_scan = (arc32->gdb_compatibility_mode ?
 			ARC_TOTAL_NUM_REGS : ARC_REG_AFTER_GDB_GENERAL);
@@ -109,7 +110,6 @@ int arc32_save_context(struct target *target)
 	for (i = 0; i < regs_to_scan; i++) {
 		struct reg *reg = &(reg_list[i]);
 		struct arc_reg_t *arc_reg = reg->arch_info;
-		/* Don't bother with valid and unexisting regs. */
 		if (!reg->valid && reg->exist && !arc_reg->dummy) {
 			if (arc_reg->desc->regnum < ARC_REG_FIRST_AUX) {
 				/* core reg */
@@ -127,11 +127,13 @@ int arc32_save_context(struct target *target)
 	retval = arc_jtag_read_core_reg(&arc32->jtag_info, core_addrs, core_cnt, core_values);
 	if (ERROR_OK != retval) {
 		LOG_ERROR("Attempt to read core registers failed.");
+		retval = ERROR_FAIL;
 		goto exit;
 	}
 	retval = arc_jtag_read_aux_reg(&arc32->jtag_info, aux_addrs, aux_cnt, aux_values);
 	if (ERROR_OK != retval) {
 		LOG_ERROR("Attempt to read aux registers failed.");
+		retval = ERROR_FAIL;
 		goto exit;
 	}
 
@@ -170,7 +172,7 @@ int arc32_save_context(struct target *target)
 			buf_set_u32(reg->value, 0, 32, arc_reg->value);
 			reg->valid = true;
 			reg->dirty = false;
-			LOG_DEBUG("Get aux register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+			LOG_DEBUG("Get aux register regnum=%" PRIu32 ", name=%s, value=0x%" PRIx32,
 				i , arc_reg->desc->name, arc_reg->value);
 		}
 	}
@@ -186,6 +188,8 @@ exit:
 
 /**
  * See arc32_save_context() for reason why we want to dump all regs at once.
+ * This however means that if there are dependencies between registers they
+ * will not be observable until target will be resumed.
  */
 int arc32_restore_context(struct target *target)
 {
@@ -248,11 +252,13 @@ int arc32_restore_context(struct target *target)
 	retval = arc_jtag_write_core_reg(&arc32->jtag_info, core_addrs, core_cnt, core_values);
 	if (ERROR_OK != retval) {
 		LOG_ERROR("Attempt to write to core registers failed.");
+		retval = ERROR_FAIL;
 		goto exit;
 	}
 	retval = arc_jtag_write_aux_reg(&arc32->jtag_info, aux_addrs, aux_cnt, aux_values);
 	if (ERROR_OK != retval) {
 		LOG_ERROR("Attempt to write to aux registers failed.");
+		retval = ERROR_FAIL;
 		goto exit;
 	}
 
