@@ -24,28 +24,6 @@
 #define ARC_REGS_H
 
 #include "target.h"
-#if 0
-/* ARCompatISA-v2 register set definition */
-#define ARC32_NUM_CORE_REGS			32
-#define ARC32_NUM_EXTENSION_REGS	59 - 32 + 1	/* R59 - R32 + 1 */
-#define ARC32_LAST_EXTENSION_REG	59			/* R59 */
-
-/* Particular ARCompatISA-v2 core registers */
-#define LP_COUNT_REG				60	/* loop count */
-#define LIDI_REG					62	/* long imediate data indicator */
-#define PCL_REG						63	/* loaded instruction PC */
-
-/*
- * OpenOCD register cache registers
- *   check the arc32-read/write_registers functions
- */
-#define PC_REG						65	/* program counter */
-
-/* GNU GDB register set (expected to receive) */
-#define ARC32_NUM_AUX_REGS			47	/* expected by GDB */
-#define ARC32_NUM_GDB_REGS			97
-#endif
-
 
 /* --------------------------------------------------------------------------
  * ARC core Auxiliary register set
@@ -133,20 +111,6 @@
 
 #define AUX_ICCM_BUILD_REG		0x78
 
-#if 0
-/* OpenOCD ARC core & aux registers hook structure */
-struct arc32_core_reg {
-	uint32_t num;
-	struct target *target;
-	struct arc32_common *arc32_common;
-};
-
-struct arc32_aux_reg {
-	uint32_t num;
-	struct target *target;
-	struct arc32_common *arc32_common;
-};
-#endif
 struct arc32_reg_desc {
 	uint32_t regnum;
 	char * const name;

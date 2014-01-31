@@ -26,7 +26,20 @@
 
 #include "arc.h"
 
-/* ----- Supporting functions ---------------------------------------------- */
+/* TODO: Register definitions are a bit inconsistent in that some properties
+ * are set statically in a description table, while some properties are set at
+ * runtime with `if` and `switch`. Would be good to rething this when time will
+ * allow. */
+
+/* XML feature names */
+static const char * const general_group_name = "general";
+static const char * const float_group_name = "float";
+static const char * const feature_core_basecase_name = "org.gnu.gdb.arc.core-basecase";
+static const char * const feature_core_extension_name = "org.gnu.gdb.arc.core-extension";
+static const char * const feature_core_pointers_name = "org.gnu.gdb.arc.core-pointers";
+static const char * const feature_core_link_name = "org.gnu.gdb.arc.core-linkregs.v2";
+static const char * const feature_core_other_name = "org.gnu.gdb.arc.core-other";
+static const char * const feature_aux_baseline_name = "org.gnu.gdb.arc.aux-baseline.v2";
 
 /* Describe all possible registers. */
 static const struct arc32_reg_desc arc32_regs_descriptions[ARC_TOTAL_NUM_REGS] = {
@@ -249,18 +262,12 @@ static int arc_regs_get_core_reg(struct reg *reg) {
 
 	if (regnum == ARC_REG_LIMM || regnum == ARC_REG_RESERVED) {
 		arc_reg->value = 0;
-	} else	if (regnum < ARC_REG_FIRST_AUX) {
+	} else if (regnum < ARC_REG_FIRST_AUX) {
 		arc_jtag_read_core_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
 	} else {
 		arc_jtag_read_aux_reg_one(&arc32->jtag_info, arc_reg->desc->addr, &arc_reg->value);
 	}
 
-	// retval = arc32_target->read_core_reg(target, arc32_reg->desc->regnum);
-	//uint32_t reg_value;
-	/* get pointers to arch-specific information */
-	//struct arc32_common *arc32 = target_to_arc32(target);
-
-	//reg_value = arc32->core_regs[regnum];
 	buf_set_u32(arc32->core_cache->reg_list[regnum].value, 0, 32, arc_reg->value);
 	arc32->core_cache->reg_list[regnum].valid = true;
 	arc32->core_cache->reg_list[regnum].dirty = false;
@@ -565,15 +572,6 @@ int arc_regs_read_bcrs(struct target *target)
 
 	return retval;
 }
-
-static const char * const general_group_name = "general";
-static const char * const float_group_name = "float";
-static const char * const feature_core_basecase_name = "org.gnu.gdb.arc.core-basecase";
-static const char * const feature_core_extension_name = "org.gnu.gdb.arc.core-extension";
-static const char * const feature_core_pointers_name = "org.gnu.gdb.arc.core-pointers";
-static const char * const feature_core_link_name = "org.gnu.gdb.arc.core-linkregs.v2";
-static const char * const feature_core_other_name = "org.gnu.gdb.arc.core-other";
-static const char * const feature_aux_baseline_name = "org.gnu.gdb.arc.aux-baseline.v2";
 
 struct reg_cache *arc_regs_build_reg_cache(struct target *target)
 {

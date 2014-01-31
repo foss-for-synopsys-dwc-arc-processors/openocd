@@ -51,9 +51,6 @@ int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
 	arc32->bp_scanned = 0;
 	arc32->data_break_list = NULL;
 
-	//arc32->read_core_reg = arc_regs_read_core_reg;
-	//arc32->write_core_reg = arc_regs_write_core_reg;
-
 	/* Flush D$ by default. It is safe to assume that D$ is present,
 	 * because if it isn't, there will be no error, just a slight
 	 * performance penalty from unnecessary JTAG operations. */
@@ -85,7 +82,7 @@ int arc32_save_context(struct target *target)
 	if (!arc32->bcr_init)
 		arc_regs_read_bcrs(target);
 
-	/* We assume that there is at least one AUX register in the list. */
+	/* It is assumed that there is at least one AUX register in the list. */
 	const uint32_t core_regs_size = ARC_REG_FIRST_AUX * sizeof(uint32_t);
 	const uint32_t regs_to_scan = (arc32->gdb_compatibility_mode ?
 			ARC_TOTAL_NUM_REGS : ARC_REG_AFTER_GDB_GENERAL);
@@ -205,7 +202,7 @@ int arc32_restore_context(struct target *target)
 		return ERROR_FAIL;
 	}
 
-	/* We assume that there is at least one AUX register in the list. */
+	/* It is assumed that there is at least one AUX register in the list. */
 	const uint32_t core_regs_size = ARC_REG_AFTER_CORE_EXT * sizeof(uint32_t);
 	const uint32_t aux_regs_size = (ARC_REG_AFTER_AUX - ARC_REG_FIRST_AUX) *
 		sizeof(uint32_t);
