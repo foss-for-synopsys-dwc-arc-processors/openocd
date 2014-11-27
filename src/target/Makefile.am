@@ -134,7 +134,6 @@ INTEL_IA32_SRC = \
 ARC32_SRC = \
 	arc.c \
 	arc32.c \
-	arc_core.c \
 	arc_dbg.c \
 	arc_jtag.c \
 	arc_mem.c \
@@ -213,7 +212,6 @@ noinst_HEADERS = \
 	x86_32_common.h \
 	arc.h \
 	arc32.h \
-	arc_core.h \
 	arc_dbg.h \
 	arc_jtag.h \
 	arc_mem.h \
