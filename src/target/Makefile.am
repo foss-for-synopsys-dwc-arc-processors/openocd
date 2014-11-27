@@ -132,7 +132,6 @@ INTEL_IA32_SRC = \
 	x86_32_common.c
 
 ARC32_SRC = \
-	arc.c \
 	arc32.c \
 	arc_dbg.c \
 	arc_jtag.c \
@@ -210,7 +209,6 @@ noinst_HEADERS = \
 	nds32_aice.h \
 	lakemont.h \
 	x86_32_common.h \
-	arc.h \
 	arc32.h \
 	arc_dbg.h \
 	arc_jtag.h \
