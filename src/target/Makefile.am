@@ -140,8 +140,7 @@ ARC32_SRC = \
 	arc_mem.c \
 	arc_mntr.c \
 	arc_ocd.c \
-	arc_regs.c \
-	arc_trgt.c
+	arc_regs.c
 
 noinst_HEADERS = \
 	algorithm.h \
@@ -220,8 +219,7 @@ noinst_HEADERS = \
 	arc_mem.h \
 	arc_mntr.h \
 	arc_ocd.h \
-	arc_regs.h \
-	arc_trgt.h
+	arc_regs.h
 
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA =
