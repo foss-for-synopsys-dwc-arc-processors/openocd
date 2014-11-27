@@ -122,7 +122,6 @@ INTEL_IA32_SRC = \
 ARC32_SRC = \
 	%D%/arc.c \
 	%D%/arc32.c \
-	%D%/arc_core.c \
 	%D%/arc_dbg.c \
 	%D%/arc_jtag.c \
 	%D%/arc_mem.c \
