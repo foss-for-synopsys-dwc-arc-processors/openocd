@@ -60,8 +60,10 @@ int arc_ocd_poll(struct target *target)
 
 	/* check for processor halted */
 	if (status & ARC_JTAG_STAT_RU) {
-		LOG_WARNING("target is still running!");
-		target->state = TARGET_RUNNING;
+		if (target->state != TARGET_RUNNING){
+			LOG_WARNING("target is still running!");
+			target->state = TARGET_RUNNING;
+		}
 	} else {
 		if ((target->state == TARGET_RUNNING) ||
 			(target->state == TARGET_RESET)) {
@@ -97,7 +99,7 @@ int arc_ocd_assert_reset(struct target *target)
 	int retval = ERROR_OK;
 	struct arc32_common *arc32 = target_to_arc32(target);
 
-	LOG_DEBUG("target->state: %s", target_state_name(target));
+	LOG_DEBUG("%s target->state: %s", __func__, target_state_name(target));
 
 	enum reset_types jtag_reset_config = jtag_get_reset_config();
 
@@ -135,7 +137,7 @@ int arc_ocd_deassert_reset(struct target *target)
 {
 	int retval = ERROR_OK;
 
-	LOG_DEBUG("target->state: %s", target_state_name(target));
+	LOG_DEBUG("%s target->state: %s", __func__, target_state_name(target));
 
 	/* deassert reset lines */
 	jtag_add_reset(0, 0);

@@ -113,6 +113,21 @@
 
 #define AUX_ICCM_BUILD_REG		0x78
 
+ /* Action Point */
+#define AP_AMV_BASE				0x220
+#define AP_AMM_BASE				0x221
+#define AP_AC_BASE				0x222
+#define AP_STRUCT_LEN			0x3
+
+#define AP_AC_AT_INST_ADDR		0x0
+#define AP_AC_AT_MEMORY_ADDR	0x2
+#define AP_AC_AT_AUXREG_ADDR	0x4
+
+#define AP_AC_TT_DISABLE		0x00
+#define AP_AC_TT_WRITE			0x10
+#define AP_AC_TT_READ			0x20
+#define AP_AC_TT_READWRITE		0x30
+
 struct arc32_reg_desc {
 	uint32_t regnum;
 	char * const name;

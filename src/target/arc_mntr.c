@@ -321,6 +321,82 @@ COMMAND_HANDLER(arc_handle_gdb_compatibility_mode)
 	return CALL_COMMAND_HANDLER(handle_command_parse_bool,
 		&arc32->gdb_compatibility_mode, "GDB compatibility mode");
 }
+COMMAND_HANDLER(set_action_point_auxreg_addr)
+{
+	int retval = ERROR_OK;
+
+	struct target *target = get_current_target(CMD_CTX);
+	struct target_list *head;
+	head = target->head;
+
+	if (target->state != TARGET_HALTED) {
+		command_print(CMD_CTX, "NOTE: target must be HALTED for \"%s\" command",
+			CMD_NAME);
+		return ERROR_OK;
+	}
+
+	if (head == (struct target_list *)NULL) {
+		if (CMD_ARGC == 2) {
+			uint32_t auxreg_addr = 0;
+			uint32_t transaction = AP_AC_TT_DISABLE;
+
+			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], auxreg_addr);
+
+			switch (CMD_ARGV[1][0]) {
+				case 'r':
+					transaction = AP_AC_TT_READ;
+					break;
+				case 'w':
+					transaction = AP_AC_TT_WRITE;
+					break;
+				case 'a':
+					transaction = AP_AC_TT_READWRITE;
+					break;
+				default:
+					LOG_ERROR("invalid watchpoint mode ('%c')", CMD_ARGV[2][0]);
+					return ERROR_COMMAND_SYNTAX_ERROR;
+			}
+
+			return arc_dbg_add_auxreg_actionpoint(target, auxreg_addr, transaction);
+
+		} else {
+			return ERROR_COMMAND_SYNTAX_ERROR;
+		}
+	} else
+		LOG_ERROR(" > head list is not NULL !");
+
+	return retval;
+}
+
+COMMAND_HANDLER(remove_action_point_auxreg_addr)
+{
+	int retval = ERROR_OK;
+
+	struct target *target = get_current_target(CMD_CTX);
+	struct target_list *head;
+	head = target->head;
+
+	if (target->state != TARGET_HALTED) {
+		command_print(CMD_CTX, "NOTE: target must be HALTED for \"%s\" command",
+			CMD_NAME);
+		return ERROR_OK;
+	}
+
+	if (head == (struct target_list *)NULL) {
+		if (CMD_ARGC == 1) {
+			uint32_t auxreg_addr = 0;
+			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], auxreg_addr);
+
+			return arc_dbg_remove_auxreg_actionpoint(target, auxreg_addr);
+
+		} else {
+			return ERROR_COMMAND_SYNTAX_ERROR;
+		}
+	} else
+		LOG_ERROR(" > head list is not NULL !");
+
+	return retval;
+}
 
 /* ----- Exported target commands ------------------------------------------ */
 
@@ -403,6 +479,20 @@ static const struct command_registration arc_core_command_handlers[] = {
 		.help = "GDB compatibility mode: if true OpenOCD will use register "\
 			"specification compatible with old GDB for ARC that doesn't support "\
 			"XML target descriptions.",
+	},
+	{
+		.name = "ap-auxreg-addr",
+		.handler = set_action_point_auxreg_addr,
+		.mode = COMMAND_EXEC,
+		.usage = "has two argument: <auxreg-addr> <r|w|a>",
+		.help = "sets break when aux register is accessed",
+	},
+	{
+		.name = "rap-auxreg-addr",
+		.handler = remove_action_point_auxreg_addr,
+		.mode = COMMAND_EXEC,
+		.usage = "has only one argument: <auxreg-addr>",
+		.help = "removes break when aux register is accessed",
 	},
 	COMMAND_REGISTRATION_DONE
 };

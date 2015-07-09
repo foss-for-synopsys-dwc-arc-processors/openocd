@@ -178,6 +178,17 @@ static int arc_jtag_write_registers(struct arc_jtag *jtag_info, reg_type_t type,
 	int retval = ERROR_OK;
 	unsigned int i;
 
+	/*
+	 * TODO: hacky hack, look for a proper way and logic (if there's) in setting
+	 *       DEBUG bits, here the code completely ignored the clock gating one
+	 *       and cleared it all the time... how could actionpoints have ever
+	 *       worked in real silicon?!?!?
+	 */
+	if((*addr == 0x5) && (type == ARC_JTAG_AUX_REG)) {
+		*((uint32_t*)buffer) |= 0x00100000;
+		LOG_DEBUG(" ### forcing ED bit in DEBUG aux register");
+	}
+
 	LOG_DEBUG("Writing to %s registers: addr[0]=0x%" PRIu32 ";count=%" PRIu32
 			  ";buffer[0]=0x%08" PRIx32,
 		(type == ARC_JTAG_CORE_REG ? "core" : "aux"), *addr, count, *buffer);
