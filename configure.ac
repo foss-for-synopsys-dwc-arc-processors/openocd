@@ -307,6 +307,10 @@ AC_ARG_ENABLE([werror],
   AS_HELP_STRING([--disable-werror], [Do not treat warnings as errors]),
   [gcc_werror=$enableval], [gcc_werror=$gcc_warnings])
 
+AC_ARG_ENABLE([libusb0],
+  AS_HELP_STRING([--disable-libusb0], [Disable usage of libusb0]),
+  [use_libusb0=$enableval], [use_libusb0=auto])
+
 # set default verbose options, overridden by following options
 debug_jtag_io=no
 debug_usb_io=no
@@ -1125,7 +1129,9 @@ PKG_CHECK_MODULES([LIBUSB1], [libusb-1.0], [
 	AC_MSG_WARN([libusb-1.x not found, trying legacy libusb-0.1 as a fallback; consider installing libusb-1.x instead])
 ])
 
+if test $use_libusb0 = auto ; then
 PKG_CHECK_MODULES([LIBUSB0], [libusb], [use_libusb0=yes], [use_libusb0=no])
+fi
 
 for hidapi_lib in hidapi hidapi-hidraw hidapi-libusb; do
 	PKG_CHECK_MODULES([HIDAPI],[$hidapi_lib],[
