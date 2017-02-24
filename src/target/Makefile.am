@@ -20,6 +20,7 @@ noinst_LTLIBRARIES += %D%/libtarget.la
 	$(MIPS32_SRC) \
 	$(NDS32_SRC) \
 	$(INTEL_IA32_SRC) \
+	$(ARC32_SRC) \
 	%D%/avrt.c \
 	%D%/dsp563xx.c \
 	%D%/dsp563xx_once.c \
@@ -118,6 +119,15 @@ INTEL_IA32_SRC = \
 	%D%/lakemont.c \
 	%D%/x86_32_common.c
 
+ARC32_SRC = \
+	%D%/arc32.c \
+	%D%/arc_dbg.c \
+	%D%/arc_jtag.c \
+	%D%/arc_mem.c \
+	%D%/arc_mntr.c \
+	%D%/arc_ocd.c \
+	%D%/arc_regs.c
+
 %C%_libtarget_la_SOURCES += \
 	%D%/algorithm.h \
 	%D%/arm.h \
@@ -189,6 +199,13 @@ INTEL_IA32_SRC = \
 	%D%/nds32_v3m.h \
 	%D%/nds32_aice.h \
 	%D%/lakemont.h \
-	%D%/x86_32_common.h
+	%D%/x86_32_common.h \
+	%D%/arc32.h \
+	%D%/arc_dbg.h \
+	%D%/arc_jtag.h \
+	%D%/arc_mem.h \
+	%D%/arc_mntr.h \
+	%D%/arc_ocd.h \
+	%D%/arc_regs.h
 
 include %D%/openrisc/Makefile.am
