@@ -19,13 +19,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the
- * Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ARM_H
-#define ARM_H
+#ifndef OPENOCD_TARGET_ARM_H
+#define OPENOCD_TARGET_ARM_H
 
 #include <helper/command.h>
 #include "target.h"
@@ -61,6 +59,7 @@ enum arm_mode {
 	ARM_MODE_MON = 22,
 	ARM_MODE_ABT = 23,
 	ARM_MODE_UND = 27,
+	ARM_MODE_1176_MON = 28,
 	ARM_MODE_SYS = 31,
 
 	ARM_MODE_THREAD = 0,
@@ -131,6 +130,18 @@ struct arm {
 	/** Flag reporting whether semihosting is active. */
 	bool is_semihosting;
 
+	/** Flag reporting whether semihosting fileio is active. */
+	bool is_semihosting_fileio;
+
+	/** Flag reporting whether semihosting fileio operation is active. */
+	bool semihosting_hit_fileio;
+
+	/** Current semihosting operation. */
+	int semihosting_op;
+
+	/** Current semihosting result. */
+	int semihosting_result;
+
 	/** Value to be returned by semihosting SYS_ERRNO request. */
 	int semihosting_errno;
 
@@ -154,7 +165,7 @@ struct arm {
 	int (*read_core_reg)(struct target *target, struct reg *reg,
 			int num, enum arm_mode mode);
 	int (*write_core_reg)(struct target *target, struct reg *reg,
-			int num, enum arm_mode mode, uint32_t value);
+			int num, enum arm_mode mode, uint8_t *value);
 
 	/** Read coprocessor register.  */
 	int (*mrc)(struct target *target, int cpnum,
@@ -202,7 +213,7 @@ struct arm_reg {
 	enum arm_mode mode;
 	struct target *target;
 	struct arm *arm;
-	uint32_t value;
+	uint8_t value[4];
 };
 
 struct reg_cache *arm_build_reg_cache(struct target *target, struct arm *arm);
@@ -233,7 +244,7 @@ int armv4_5_run_algorithm_inner(struct target *target,
 int arm_checksum_memory(struct target *target,
 		uint32_t address, uint32_t count, uint32_t *checksum);
 int arm_blank_check_memory(struct target *target,
-		uint32_t address, uint32_t count, uint32_t *blank);
+		uint32_t address, uint32_t count, uint32_t *blank, uint8_t erased_value);
 
 void arm_set_cpsr(struct arm *arm, uint32_t cpsr);
 struct reg *arm_reg_current(struct arm *arm, unsigned regnum);
@@ -241,4 +252,4 @@ struct reg *arm_reg_current(struct arm *arm, unsigned regnum);
 extern struct reg arm_gdb_dummy_fp_reg;
 extern struct reg arm_gdb_dummy_fps_reg;
 
-#endif /* ARM_H */
+#endif /* OPENOCD_TARGET_ARM_H */

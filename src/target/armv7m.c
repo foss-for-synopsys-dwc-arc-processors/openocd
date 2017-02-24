@@ -22,9 +22,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  *                                                                         *
  *   ARMv7-M Architecture, Application Level Reference Manual              *
  *              ARM DDI 0405C (September 2008)                             *
@@ -110,6 +108,25 @@ static const struct {
 	{ ARMV7M_BASEPRI, "basepri", 8, REG_TYPE_INT8, "system", "org.gnu.gdb.arm.m-system" },
 	{ ARMV7M_FAULTMASK, "faultmask", 1, REG_TYPE_INT8, "system", "org.gnu.gdb.arm.m-system" },
 	{ ARMV7M_CONTROL, "control", 2, REG_TYPE_INT8, "system", "org.gnu.gdb.arm.m-system" },
+
+	{ ARMV7M_D0, "d0", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D1, "d1", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D2, "d2", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D3, "d3", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D4, "d4", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D5, "d5", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D6, "d6", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D7, "d7", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D8, "d8", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D9, "d9", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D10, "d10", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D11, "d11", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D12, "d12", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D13, "d13", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D14, "d14", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+	{ ARMV7M_D15, "d15", 64, REG_TYPE_IEEE_DOUBLE, "float", "org.gnu.gdb.arm.vfp" },
+
+	{ ARMV7M_FPSCR, "fpscr", 32, REG_TYPE_INT, "float", "org.gnu.gdb.arm.vfp" },
 };
 
 #define ARMV7M_NUM_REGS ARRAY_SIZE(armv7m_regs)
@@ -129,10 +146,10 @@ int armv7m_restore_context(struct target *target)
 	if (armv7m->pre_restore_context)
 		armv7m->pre_restore_context(target);
 
-	for (i = ARMV7M_NUM_REGS - 1; i >= 0; i--) {
+	for (i = cache->num_regs - 1; i >= 0; i--) {
 		if (cache->reg_list[i].dirty) {
-			uint32_t value = buf_get_u32(cache->reg_list[i].value, 0, 32);
-			armv7m->arm.write_core_reg(target, &cache->reg_list[i], i, ARM_MODE_ANY, value);
+			armv7m->arm.write_core_reg(target, &cache->reg_list[i], i,
+						   ARM_MODE_ANY, cache->reg_list[i].value);
 		}
 	}
 
@@ -179,12 +196,11 @@ static int armv7m_set_core_reg(struct reg *reg, uint8_t *buf)
 {
 	struct arm_reg *armv7m_reg = reg->arch_info;
 	struct target *target = armv7m_reg->target;
-	uint32_t value = buf_get_u32(buf, 0, 32);
 
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
 
-	buf_set_u32(reg->value, 0, 32, value);
+	buf_cpy(buf, reg->value, reg->size);
 	reg->dirty = 1;
 	reg->valid = 1;
 
@@ -202,10 +218,28 @@ static int armv7m_read_core_reg(struct target *target, struct reg *r,
 	assert(num < (int)armv7m->arm.core_cache->num_regs);
 
 	armv7m_core_reg = armv7m->arm.core_cache->reg_list[num].arch_info;
-	retval = armv7m->load_core_reg_u32(target,
-			armv7m_core_reg->num, &reg_value);
 
-	buf_set_u32(armv7m->arm.core_cache->reg_list[num].value, 0, 32, reg_value);
+	if ((armv7m_core_reg->num >= ARMV7M_D0) && (armv7m_core_reg->num <= ARMV7M_D15)) {
+		/* map D0..D15 to S0..S31 */
+		size_t regidx = ARMV7M_S0 + 2 * (armv7m_core_reg->num - ARMV7M_D0);
+		retval = armv7m->load_core_reg_u32(target, regidx, &reg_value);
+		if (retval != ERROR_OK)
+			return retval;
+		buf_set_u32(armv7m->arm.core_cache->reg_list[num].value,
+			    0, 32, reg_value);
+		retval = armv7m->load_core_reg_u32(target, regidx + 1, &reg_value);
+		if (retval != ERROR_OK)
+			return retval;
+		buf_set_u32(armv7m->arm.core_cache->reg_list[num].value + 4,
+			    0, 32, reg_value);
+	} else {
+		retval = armv7m->load_core_reg_u32(target,
+						   armv7m_core_reg->num, &reg_value);
+		if (retval != ERROR_OK)
+			return retval;
+		buf_set_u32(armv7m->arm.core_cache->reg_list[num].value, 0, 32, reg_value);
+	}
+
 	armv7m->arm.core_cache->reg_list[num].valid = 1;
 	armv7m->arm.core_cache->reg_list[num].dirty = 0;
 
@@ -213,7 +247,7 @@ static int armv7m_read_core_reg(struct target *target, struct reg *r,
 }
 
 static int armv7m_write_core_reg(struct target *target, struct reg *r,
-	int num, enum arm_mode mode, uint32_t value)
+	int num, enum arm_mode mode, uint8_t *value)
 {
 	int retval;
 	struct arm_reg *armv7m_core_reg;
@@ -222,20 +256,38 @@ static int armv7m_write_core_reg(struct target *target, struct reg *r,
 	assert(num < (int)armv7m->arm.core_cache->num_regs);
 
 	armv7m_core_reg = armv7m->arm.core_cache->reg_list[num].arch_info;
-	retval = armv7m->store_core_reg_u32(target,
-					    armv7m_core_reg->num,
-					    value);
-	if (retval != ERROR_OK) {
-		LOG_ERROR("JTAG failure");
-		armv7m->arm.core_cache->reg_list[num].dirty = armv7m->arm.core_cache->reg_list[num].valid;
-		return ERROR_JTAG_DEVICE_ERROR;
+
+	if ((armv7m_core_reg->num >= ARMV7M_D0) && (armv7m_core_reg->num <= ARMV7M_D15)) {
+		/* map D0..D15 to S0..S31 */
+		size_t regidx = ARMV7M_S0 + 2 * (armv7m_core_reg->num - ARMV7M_D0);
+
+		uint32_t t = buf_get_u32(value, 0, 32);
+		retval = armv7m->store_core_reg_u32(target, regidx, t);
+		if (retval != ERROR_OK)
+			goto out_error;
+
+		t = buf_get_u32(value + 4, 0, 32);
+		retval = armv7m->store_core_reg_u32(target, regidx + 1, t);
+		if (retval != ERROR_OK)
+			goto out_error;
+	} else {
+		uint32_t t = buf_get_u32(value, 0, 32);
+
+		LOG_DEBUG("write core reg %i value 0x%" PRIx32 "", num, t);
+		retval = armv7m->store_core_reg_u32(target, armv7m_core_reg->num, t);
+		if (retval != ERROR_OK)
+			goto out_error;
 	}
 
-	LOG_DEBUG("write core reg %i value 0x%" PRIx32 "", num, value);
 	armv7m->arm.core_cache->reg_list[num].valid = 1;
 	armv7m->arm.core_cache->reg_list[num].dirty = 0;
 
 	return ERROR_OK;
+
+out_error:
+	LOG_ERROR("Error setting register");
+	armv7m->arm.core_cache->reg_list[num].dirty = armv7m->arm.core_cache->reg_list[num].valid;
+	return ERROR_JTAG_DEVICE_ERROR;
 }
 
 /**
@@ -248,7 +300,7 @@ int armv7m_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	int i;
 
 	if (reg_class == REG_CLASS_ALL)
-		*reg_list_size = ARMV7M_NUM_REGS;
+		*reg_list_size = armv7m->arm.core_cache->num_regs;
 	else
 		*reg_list_size = ARMV7M_NUM_CORE_REGS;
 
@@ -314,7 +366,7 @@ int armv7m_start_algorithm(struct target *target,
 
 	/* refresh core register cache
 	 * Not needed if core register cache is always consistent with target process state */
-	for (unsigned i = 0; i < ARMV7M_NUM_REGS; i++) {
+	for (unsigned i = 0; i < armv7m->arm.core_cache->num_regs; i++) {
 
 		armv7m_algorithm_info->context[i] = buf_get_u32(
 				armv7m->arm.core_cache->reg_list[i].value,
@@ -449,7 +501,7 @@ int armv7m_wait_algorithm(struct target *target,
 		}
 	}
 
-	for (int i = ARMV7M_NUM_REGS - 1; i >= 0; i--) {
+	for (int i = armv7m->arm.core_cache->num_regs - 1; i >= 0; i--) {
 		uint32_t regvalue;
 		regvalue = buf_get_u32(armv7m->arm.core_cache->reg_list[i].value, 0, 32);
 		if (regvalue != armv7m_algorithm_info->context[i]) {
@@ -484,11 +536,15 @@ int armv7m_arch_state(struct target *target)
 	struct arm *arm = &armv7m->arm;
 	uint32_t ctrl, sp;
 
+	/* avoid filling log waiting for fileio reply */
+	if (arm->semihosting_hit_fileio)
+		return ERROR_OK;
+
 	ctrl = buf_get_u32(arm->core_cache->reg_list[ARMV7M_CONTROL].value, 0, 32);
 	sp = buf_get_u32(arm->core_cache->reg_list[ARMV7M_R13].value, 0, 32);
 
 	LOG_USER("target halted due to %s, current mode: %s %s\n"
-		"xPSR: %#8.8" PRIx32 " pc: %#8.8" PRIx32 " %csp: %#8.8" PRIx32 "%s",
+		"xPSR: %#8.8" PRIx32 " pc: %#8.8" PRIx32 " %csp: %#8.8" PRIx32 "%s%s",
 		debug_reason_name(target),
 		arm_mode_name(arm->core_mode),
 		armv7m_exception_string(armv7m->exception_number),
@@ -496,7 +552,8 @@ int armv7m_arch_state(struct target *target)
 		buf_get_u32(arm->pc->value, 0, 32),
 		(ctrl & 0x02) ? 'p' : 'm',
 		sp,
-		arm->is_semihosting ? ", semihosting" : "");
+		arm->is_semihosting ? ", semihosting" : "",
+		arm->is_semihosting_fileio ? " fileio" : "");
 
 	return ERROR_OK;
 }
@@ -533,7 +590,10 @@ struct reg_cache *armv7m_build_reg_cache(struct target *target)
 
 		reg_list[i].name = armv7m_regs[i].name;
 		reg_list[i].size = armv7m_regs[i].bits;
-		reg_list[i].value = calloc(1, 4);
+		size_t storage_size = DIV_ROUND_UP(armv7m_regs[i].bits, 8);
+		if (storage_size < 4)
+			storage_size = 4;
+		reg_list[i].value = calloc(1, storage_size);
 		reg_list[i].dirty = 0;
 		reg_list[i].valid = 0;
 		reg_list[i].type = &armv7m_reg_type;
@@ -565,6 +625,34 @@ struct reg_cache *armv7m_build_reg_cache(struct target *target)
 	return cache;
 }
 
+void armv7m_free_reg_cache(struct target *target)
+{
+	struct armv7m_common *armv7m = target_to_armv7m(target);
+	struct arm *arm = &armv7m->arm;
+	struct reg_cache *cache;
+	struct reg *reg;
+	unsigned int i;
+
+	cache = arm->core_cache;
+
+	if (!cache)
+		return;
+
+	for (i = 0; i < cache->num_regs; i++) {
+		reg = &cache->reg_list[i];
+
+		free(reg->feature);
+		free(reg->reg_data_type);
+		free(reg->value);
+	}
+
+	free(cache->reg_list[0].arch_info);
+	free(cache->reg_list);
+	free(cache);
+
+	arm->core_cache = NULL;
+}
+
 static int armv7m_setup_semihosting(struct target *target, int enable)
 {
 	/* nothing todo for armv7m */
@@ -578,6 +666,9 @@ int armv7m_init_arch_info(struct target *target, struct armv7m_common *armv7m)
 
 	armv7m->common_magic = ARMV7M_COMMON_MAGIC;
 	armv7m->fp_feature = FP_NONE;
+	armv7m->trace_config.trace_bus_id = 1;
+	/* Enable stimulus port #0 by default */
+	armv7m->trace_config.itm_ter[0] = 1;
 
 	arm->core_type = ARM_MODE_THREAD;
 	arm->arch_info = armv7m;
@@ -598,40 +689,8 @@ int armv7m_checksum_memory(struct target *target,
 	struct reg_param reg_params[2];
 	int retval;
 
-	/* see contrib/loaders/checksum/armv7m_crc.s for src */
-
 	static const uint8_t cortex_m_crc_code[] = {
-		/* main: */
-		0x02, 0x46,			/* mov		r2, r0 */
-		0x00, 0x20,			/* movs		r0, #0 */
-		0xC0, 0x43,			/* mvns		r0, r0 */
-		0x0A, 0x4E,			/* ldr		r6, CRC32XOR */
-		0x0B, 0x46,			/* mov		r3, r1 */
-		0x00, 0x24,			/* movs		r4, #0 */
-		0x0D, 0xE0,			/* b		ncomp */
-		/* nbyte: */
-		0x11, 0x5D,			/* ldrb		r1, [r2, r4] */
-		0x09, 0x06,			/* lsls		r1, r1, #24 */
-		0x48, 0x40,			/* eors		r0, r0, r1 */
-		0x00, 0x25,			/* movs		r5, #0 */
-		/* loop: */
-		0x00, 0x28,			/* cmp		r0, #0 */
-		0x02, 0xDA,			/* bge		notset */
-		0x40, 0x00,			/* lsls		r0, r0, #1 */
-		0x70, 0x40,			/* eors		r0, r0, r6 */
-		0x00, 0xE0,			/* b		cont */
-		/* notset: */
-		0x40, 0x00,			/* lsls		r0, r0, #1 */
-		/* cont: */
-		0x01, 0x35,			/* adds		r5, r5, #1 */
-		0x08, 0x2D,			/* cmp		r5, #8 */
-		0xF6, 0xD1,			/* bne		loop */
-		0x01, 0x34,			/* adds		r4, r4, #1 */
-		/* ncomp: */
-		0x9C, 0x42,			/* cmp		r4, r3 */
-		0xEF, 0xD1,			/* bne		nbyte */
-		0x00, 0xBE,			/* bkpt		#0 */
-		0xB7, 0x1D, 0xC1, 0x04	/* CRC32XOR:	.word	0x04c11db7 */
+#include "../../contrib/loaders/checksum/armv7m_crc.inc"
 	};
 
 	retval = target_alloc_working_area(target, sizeof(cortex_m_crc_code), &crc_algorithm);
@@ -672,36 +731,44 @@ cleanup:
 	return retval;
 }
 
-/** Checks whether a memory region is zeroed. */
+/** Checks whether a memory region is erased. */
 int armv7m_blank_check_memory(struct target *target,
-	uint32_t address, uint32_t count, uint32_t *blank)
+	uint32_t address, uint32_t count, uint32_t *blank, uint8_t erased_value)
 {
 	struct working_area *erase_check_algorithm;
 	struct reg_param reg_params[3];
 	struct armv7m_algorithm armv7m_info;
+	const uint8_t *code;
+	uint32_t code_size;
 	int retval;
 
-	/* see contrib/loaders/erase_check/armv7m_erase_check.s for src */
-
 	static const uint8_t erase_check_code[] = {
-		/* loop: */
-		0x03, 0x78,		/* ldrb	r3, [r0] */
-		0x01, 0x30,		/* adds	r0, #1 */
-		0x1A, 0x40,		/* ands	r2, r2, r3 */
-		0x01, 0x39,		/* subs	r1, r1, #1 */
-		0xFA, 0xD1,		/* bne	loop */
-		0x00, 0xBE		/* bkpt	#0 */
+#include "../../contrib/loaders/erase_check/armv7m_erase_check.inc"
+	};
+	static const uint8_t zero_erase_check_code[] = {
+#include "../../contrib/loaders/erase_check/armv7m_0_erase_check.inc"
 	};
 
+	switch (erased_value) {
+	case 0x00:
+		code = zero_erase_check_code;
+		code_size = sizeof(zero_erase_check_code);
+		break;
+	case 0xff:
+	default:
+		code = erase_check_code;
+		code_size = sizeof(erase_check_code);
+	}
+
 	/* make sure we have a working area */
-	if (target_alloc_working_area(target, sizeof(erase_check_code),
+	if (target_alloc_working_area(target, code_size,
 		&erase_check_algorithm) != ERROR_OK)
 		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
 
 	retval = target_write_buffer(target, erase_check_algorithm->address,
-			sizeof(erase_check_code), (uint8_t *)erase_check_code);
+			code_size, code);
 	if (retval != ERROR_OK)
-		return retval;
+		goto cleanup;
 
 	armv7m_info.common_magic = ARMV7M_COMMON_MAGIC;
 	armv7m_info.core_mode = ARM_MODE_THREAD;
@@ -713,7 +780,7 @@ int armv7m_blank_check_memory(struct target *target,
 	buf_set_u32(reg_params[1].value, 0, 32, count);
 
 	init_reg_param(&reg_params[2], "r2", 32, PARAM_IN_OUT);
-	buf_set_u32(reg_params[2].value, 0, 32, 0xff);
+	buf_set_u32(reg_params[2].value, 0, 32, erased_value);
 
 	retval = target_run_algorithm(target,
 			0,
@@ -721,7 +788,7 @@ int armv7m_blank_check_memory(struct target *target,
 			3,
 			reg_params,
 			erase_check_algorithm->address,
-			erase_check_algorithm->address + (sizeof(erase_check_code) - 2),
+			erase_check_algorithm->address + (code_size - 2),
 			10000,
 			&armv7m_info);
 
@@ -732,6 +799,7 @@ int armv7m_blank_check_memory(struct target *target,
 	destroy_reg_param(&reg_params[1]);
 	destroy_reg_param(&reg_params[2]);
 
+cleanup:
 	target_free_working_area(target, erase_check_algorithm);
 
 	return retval;

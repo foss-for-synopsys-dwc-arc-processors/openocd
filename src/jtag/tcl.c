@@ -23,9 +23,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -434,20 +432,15 @@ static int jim_newtap_expected_id(Jim_Nvp *n, Jim_GetOptInfo *goi,
 		return e;
 	}
 
-	unsigned expected_len = sizeof(uint32_t) * pTap->expected_ids_cnt;
-	uint32_t *new_expected_ids = malloc(expected_len + sizeof(uint32_t));
-	if (new_expected_ids == NULL) {
+	uint32_t *p = realloc(pTap->expected_ids,
+			      (pTap->expected_ids_cnt + 1) * sizeof(uint32_t));
+	if (!p) {
 		Jim_SetResultFormatted(goi->interp, "no memory");
 		return JIM_ERR;
 	}
 
-	memcpy(new_expected_ids, pTap->expected_ids, expected_len);
-
-	new_expected_ids[pTap->expected_ids_cnt] = w;
-
-	free(pTap->expected_ids);
-	pTap->expected_ids = new_expected_ids;
-	pTap->expected_ids_cnt++;
+	pTap->expected_ids = p;
+	pTap->expected_ids[pTap->expected_ids_cnt++] = w;
 
 	return JIM_OK;
 }
@@ -538,11 +531,13 @@ static int jim_newtap_cmd(Jim_GetOptInfo *goi)
 		free(pTap);
 		return JIM_ERR;
 	}
-	Jim_GetOpt_String(goi, &cp, NULL);
-	pTap->chip = strdup(cp);
 
-	Jim_GetOpt_String(goi, &cp, NULL);
-	pTap->tapname = strdup(cp);
+	const char *tmp;
+	Jim_GetOpt_String(goi, &tmp, NULL);
+	pTap->chip = strdup(tmp);
+
+	Jim_GetOpt_String(goi, &tmp, NULL);
+	pTap->tapname = strdup(tmp);
 
 	/* name + dot + name + null */
 	x = strlen(pTap->chip) + 1 + strlen(pTap->tapname) + 1;
@@ -554,8 +549,7 @@ static int jim_newtap_cmd(Jim_GetOptInfo *goi)
 		pTap->chip, pTap->tapname, pTap->dotted_name, goi->argc);
 
 	if (!transport_is_jtag()) {
-		/* SWD or CMSIS-DAP (which is currently SWD-only) doesn't
-		   require any JTAG tap parameters */
+		/* SWD doesn't require any JTAG tap parameters */
 		pTap->enabled = true;
 		jtag_tap_init(pTap);
 		return JIM_OK;
@@ -1253,7 +1247,7 @@ COMMAND_HANDLER(handle_wait_srst_deassert)
 
 	LOG_USER("Waiting for srst assert + deassert for at most %dms", timeout_ms);
 	int asserted_yet;
-	long long then = timeval_ms();
+	int64_t then = timeval_ms();
 	while (jtag_srst_asserted(&asserted_yet) == ERROR_OK) {
 		if ((timeval_ms() - then) > timeout_ms) {
 			LOG_ERROR("Timed out");

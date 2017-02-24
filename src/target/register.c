@@ -16,9 +16,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -70,6 +68,14 @@ struct reg_cache **register_get_last_cache_p(struct reg_cache **first)
 		return first;
 
 	return cache_p;
+}
+
+void register_unlink_cache(struct reg_cache **cache_p, const struct reg_cache *cache)
+{
+	while (*cache_p && *cache_p != cache)
+		cache_p = &((*cache_p)->next);
+	if (*cache_p)
+		*cache_p = cache->next;
 }
 
 /** Marks the contents of the register cache as invalid (and clean). */

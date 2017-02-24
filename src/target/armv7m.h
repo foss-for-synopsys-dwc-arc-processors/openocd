@@ -19,16 +19,15 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
-#ifndef ARMV7M_COMMON_H
-#define ARMV7M_COMMON_H
+#ifndef OPENOCD_TARGET_ARMV7M_H
+#define OPENOCD_TARGET_ARMV7M_H
 
 #include "arm_adi_v5.h"
 #include "arm.h"
+#include "armv7m_trace.h"
 
 extern const int armv7m_psp_reg_map[];
 extern const int armv7m_msp_reg_map[];
@@ -133,9 +132,12 @@ enum {
 enum {
 	FP_NONE = 0,
 	FPv4_SP,
+	FPv5_SP,
+	FPv5_DP,
 };
 
 #define ARMV7M_NUM_CORE_REGS (ARMV7M_xPSR + 1)
+#define ARMV7M_NUM_CORE_REGS_NOFP (ARMV7M_NUM_CORE_REGS + 6)
 
 #define ARMV7M_COMMON_MAGIC 0x2A452A45
 
@@ -144,13 +146,17 @@ struct armv7m_common {
 
 	int common_magic;
 	int exception_number;
-	struct adiv5_dap dap;
+
+	/* AP this processor is connected to in the DAP */
+	struct adiv5_ap *debug_ap;
 
 	int fp_feature;
 	uint32_t demcr;
 
 	/* stlink is a high level adapter, does not support all functions */
 	bool stlink;
+
+	struct armv7m_trace_config trace_config;
 
 	/* Direct processor core register read and writes */
 	int (*load_core_reg_u32)(struct target *target, uint32_t num, uint32_t *value);
@@ -182,6 +188,8 @@ struct armv7m_algorithm {
 };
 
 struct reg_cache *armv7m_build_reg_cache(struct target *target);
+void armv7m_free_reg_cache(struct target *target);
+
 enum armv7m_mode armv7m_number_to_mode(int number);
 int armv7m_mode_to_number(enum armv7m_mode mode);
 
@@ -217,10 +225,10 @@ int armv7m_restore_context(struct target *target);
 int armv7m_checksum_memory(struct target *target,
 		uint32_t address, uint32_t count, uint32_t *checksum);
 int armv7m_blank_check_memory(struct target *target,
-		uint32_t address, uint32_t count, uint32_t *blank);
+		uint32_t address, uint32_t count, uint32_t *blank, uint8_t erased_value);
 
 int armv7m_maybe_skip_bkpt_inst(struct target *target, bool *inst_found);
 
 extern const struct command_registration armv7m_command_handlers[];
 
-#endif /* ARMV7M_H */
+#endif /* OPENOCD_TARGET_ARMV7M_H */

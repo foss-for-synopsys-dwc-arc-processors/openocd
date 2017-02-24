@@ -13,6 +13,9 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU General Public License for more details.
  *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -73,9 +76,6 @@ static int ublast2_write_firmware_section(struct jtag_libusb_device_handle *libu
 
 	LOG_DEBUG("section %02i at addr 0x%04x (size 0x%04x)", section_index, addr,
 		size);
-
-	if (data == NULL)
-		return ERROR_FAIL;
 
 	/* Copy section contents to local buffer */
 	int ret = image_read_section(firmware_image, section_index, 0, size, data,

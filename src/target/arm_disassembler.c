@@ -15,9 +15,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -278,7 +276,7 @@ static int evaluate_ldc_stc_mcrr_mrrc(uint32_t opcode,
 	uint8_t cp_num = (opcode & 0xf00) >> 8;
 
 	/* MCRR or MRRC */
-	if (((opcode & 0x0ff00000) == 0x0c400000) || ((opcode & 0x0ff00000) == 0x0c400000)) {
+	if (((opcode & 0x0ff00000) == 0x0c400000) || ((opcode & 0x0ff00000) == 0x0c500000)) {
 		uint8_t cp_opcode, Rd, Rn, CRm;
 		char *mnemonic;
 
@@ -1403,17 +1401,46 @@ static int evaluate_misc_instr(uint32_t opcode,
 				Rn);
 	}
 
-	/* Software breakpoints */
+	/* exception return */
+	if ((opcode & 0x0000000f0) == 0x00000060) {
+		if (((opcode & 0x600000) >> 21) == 3)
+			instruction->type = ARM_ERET;
+		snprintf(instruction->text,
+				128,
+				"0x%8.8" PRIx32 "\t0x%8.8" PRIx32 "\tERET",
+				address,
+				opcode);
+	}
+
+	/* exception generate instructions */
 	if ((opcode & 0x0000000f0) == 0x00000070) {
-		uint32_t immediate;
-		instruction->type = ARM_BKPT;
-		immediate = ((opcode & 0x000fff00) >> 4) | (opcode & 0xf);
+		uint32_t immediate = 0;
+		char *mnemonic = NULL;
+
+		switch ((opcode & 0x600000) >> 21) {
+			case 0x1:
+				instruction->type = ARM_BKPT;
+				mnemonic = "BRKT";
+				immediate = ((opcode & 0x000fff00) >> 4) | (opcode & 0xf);
+				break;
+			case 0x2:
+				instruction->type = ARM_HVC;
+				mnemonic = "HVC";
+				immediate = ((opcode & 0x000fff00) >> 4) | (opcode & 0xf);
+				break;
+			case 0x3:
+				instruction->type = ARM_SMC;
+				mnemonic = "SMC";
+				immediate = (opcode & 0xf);
+				break;
+		}
 
 		snprintf(instruction->text,
 				128,
-				"0x%8.8" PRIx32 "\t0x%8.8" PRIx32 "\tBKPT 0x%4.4" PRIx32 "",
+				"0x%8.8" PRIx32 "\t0x%8.8" PRIx32 "\t%s 0x%4.4" PRIx32 "",
 				address,
 				opcode,
+				mnemonic,
 				immediate);
 	}
 

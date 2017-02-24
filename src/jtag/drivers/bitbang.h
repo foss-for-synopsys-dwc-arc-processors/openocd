@@ -16,13 +16,13 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
-#ifndef BITBANG_H
-#define BITBANG_H
+#ifndef OPENOCD_JTAG_DRIVERS_BITBANG_H
+#define OPENOCD_JTAG_DRIVERS_BITBANG_H
+
+#include <jtag/swd.h>
 
 struct bitbang_interface {
 	/* low level callbacks (for bitbang)
@@ -31,10 +31,18 @@ struct bitbang_interface {
 	void (*write)(int tck, int tms, int tdi);
 	void (*reset)(int trst, int srst);
 	void (*blink)(int on);
+	int (*swdio_read)(void);
+	void (*swdio_drive)(bool on);
 };
+
+const struct swd_driver bitbang_swd;
+
+extern bool swd_mode;
 
 int bitbang_execute_queue(void);
 
 extern struct bitbang_interface *bitbang_interface;
+void bitbang_switch_to_swd(void);
+int bitbang_swd_switch_seq(enum swd_special_seq seq);
 
-#endif /* BITBANG_H */
+#endif /* OPENOCD_JTAG_DRIVERS_BITBANG_H */

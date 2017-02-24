@@ -13,13 +13,11 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
-#ifndef _OR1K_TAP_H_
-#define _OR1K_TAP_H_
+#ifndef OPENOCD_TARGET_OPENRISC_OR1K_TAP_H
+#define OPENOCD_TARGET_OPENRISC_OR1K_TAP_H
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -41,4 +39,4 @@ struct or1k_tap_ip {
 	const char *name;
 };
 
-#endif
+#endif /* OPENOCD_TARGET_OPENRISC_OR1K_TAP_H */

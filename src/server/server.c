@@ -19,9 +19,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -38,17 +36,28 @@
 
 #include <signal.h>
 
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+
 #ifndef _WIN32
 #include <netinet/tcp.h>
 #endif
 
 static struct service *services;
 
-/* shutdown_openocd == 1: exit the main event loop, and quit the debugger */
+/* shutdown_openocd == 1: exit the main event loop, and quit the
+ * debugger; 2: quit with non-zero return code */
 static int shutdown_openocd;
+
+/* store received signal to exit application by killing ourselves */
+static int last_signal;
 
 /* set the polling period to 100ms */
 static int polling_period = 100;
+
+/* address by name on which to listen for incoming TCP/IP connections */
+static char *bindto_name;
 
 static int add_connection(struct service *service, struct command_context *cmd_ctx)
 {
@@ -141,7 +150,8 @@ static int add_connection(struct service *service, struct command_context *cmd_c
 		;
 	*p = c;
 
-	service->max_connections--;
+	if (service->max_connections != CONNECTION_LIMIT_UNLIMITED)
+		service->max_connections--;
 
 	return ERROR_OK;
 }
@@ -168,7 +178,9 @@ static int remove_connection(struct service *service, struct connection *connect
 			*p = c->next;
 			free(c);
 
-			service->max_connections++;
+			if (service->max_connections != CONNECTION_LIMIT_UNLIMITED)
+				service->max_connections++;
+
 			break;
 		}
 
@@ -189,6 +201,7 @@ int add_service(char *name,
 	void *priv)
 {
 	struct service *c, **p;
+	struct hostent *hp;
 	int so_reuseaddr_option = 1;
 
 	c = malloc(sizeof(struct service));
@@ -235,11 +248,21 @@ int add_service(char *name,
 
 		memset(&c->sin, 0, sizeof(c->sin));
 		c->sin.sin_family = AF_INET;
-		c->sin.sin_addr.s_addr = INADDR_ANY;
+
+		if (bindto_name == NULL)
+			c->sin.sin_addr.s_addr = INADDR_ANY;
+		else {
+			hp = gethostbyname(bindto_name);
+			if (hp == NULL) {
+				LOG_ERROR("couldn't resolve bindto address: %s", bindto_name);
+				exit(-1);
+			}
+			memcpy(&c->sin.sin_addr, hp->h_addr_list[0], hp->h_length);
+		}
 		c->sin.sin_port = htons(c->portnumber);
 
 		if (bind(c->fd, (struct sockaddr *)&c->sin, sizeof(c->sin)) == -1) {
-			LOG_ERROR("couldn't bind to socket: %s", strerror(errno));
+			LOG_ERROR("couldn't bind %s to socket: %s", name, strerror(errno));
 			exit(-1);
 		}
 
@@ -442,7 +465,7 @@ int server_loop(struct command_context *command_context)
 			/* handle new connections on listeners */
 			if ((service->fd != -1)
 			    && (FD_ISSET(service->fd, &read_fds))) {
-				if (service->max_connections > 0)
+				if (service->max_connections != 0)
 					add_connection(service, command_context);
 				else {
 					if (service->type == CONNECTION_TCP) {
@@ -496,7 +519,7 @@ int server_loop(struct command_context *command_context)
 #endif
 	}
 
-	return ERROR_OK;
+	return shutdown_openocd != 2 ? ERROR_OK : ERROR_FAIL;
 }
 
 #ifdef _WIN32
@@ -505,12 +528,15 @@ BOOL WINAPI ControlHandler(DWORD dwCtrlType)
 	shutdown_openocd = 1;
 	return TRUE;
 }
+#endif
 
 void sig_handler(int sig)
 {
+	/* store only first signal that hits us */
+	if (!last_signal)
+		last_signal = sig;
 	shutdown_openocd = 1;
 }
-#endif
 
 int server_preinit(void)
 {
@@ -532,11 +558,11 @@ int server_preinit(void)
 	/* register ctrl-c handler */
 	SetConsoleCtrlHandler(ControlHandler, TRUE);
 
+	signal(SIGBREAK, sig_handler);
+#endif
 	signal(SIGINT, sig_handler);
 	signal(SIGTERM, sig_handler);
-	signal(SIGBREAK, sig_handler);
 	signal(SIGABRT, sig_handler);
-#endif
 
 	return ERROR_OK;
 }
@@ -553,13 +579,26 @@ int server_init(struct command_context *cmd_ctx)
 int server_quit(void)
 {
 	remove_services();
+	target_quit();
 
 #ifdef _WIN32
 	WSACleanup();
 	SetConsoleCtrlHandler(ControlHandler, FALSE);
-#endif
 
 	return ERROR_OK;
+#endif
+
+	/* return signal number so we can kill ourselves */
+	return last_signal;
+}
+
+void exit_on_signal(int sig)
+{
+#ifndef _WIN32
+	/* bring back default system handler and kill yourself */
+	signal(sig, SIG_DFL);
+	kill(getpid(), sig);
+#endif
 }
 
 int connection_write(struct connection *connection, const void *data, int len)
@@ -589,7 +628,14 @@ COMMAND_HANDLER(handle_shutdown_command)
 
 	shutdown_openocd = 1;
 
-	return ERROR_OK;
+	if (CMD_ARGC == 1) {
+		if (!strcmp(CMD_ARGV[0], "error")) {
+			shutdown_openocd = 2;
+			return ERROR_FAIL;
+		}
+	}
+
+	return ERROR_COMMAND_CLOSE_CONNECTION;
 }
 
 COMMAND_HANDLER(handle_poll_period_command)
@@ -601,6 +647,22 @@ COMMAND_HANDLER(handle_poll_period_command)
 
 	LOG_INFO("set servers polling period to %ums", polling_period);
 
+	return ERROR_OK;
+}
+
+COMMAND_HANDLER(handle_bindto_command)
+{
+	switch (CMD_ARGC) {
+		case 0:
+			command_print(CMD_CTX, "bindto name: %s", bindto_name);
+			break;
+		case 1:
+			free(bindto_name);
+			bindto_name = strdup(CMD_ARGV[0]);
+			break;
+		default:
+			return ERROR_COMMAND_SYNTAX_ERROR;
+	}
 	return ERROR_OK;
 }
 
@@ -618,6 +680,14 @@ static const struct command_registration server_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.usage = "",
 		.help = "set the servers polling period",
+	},
+	{
+		.name = "bindto",
+		.handler = &handle_bindto_command,
+		.mode = COMMAND_ANY,
+		.usage = "[name]",
+		.help = "Specify address by name on which to listen for "
+		    "incoming TCP/IP connections",
 	},
 	COMMAND_REGISTRATION_DONE
 };

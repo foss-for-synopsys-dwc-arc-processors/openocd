@@ -16,9 +16,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 /***************************************************************************
@@ -507,16 +505,16 @@ static int get_stellaris_info(struct flash_bank *bank, char *buf, int buf_size)
 	printed = snprintf(buf,
 			   buf_size,
 			   "did1: 0x%8.8" PRIx32 ", arch: 0x%4.4" PRIx32
-			   ", eproc: %s, ramsize: %ik, flashsize: %ik\n",
+			   ", eproc: %s, ramsize: %" PRIu32 "k, flashsize: %" PRIu32 "k\n",
 			   stellaris_info->did1,
 			   stellaris_info->did1,
 			   "ARMv7M",
 			   stellaris_info->sramsiz,
-			   stellaris_info->num_pages * stellaris_info->pagesize / 1024);
+			   (uint32_t)(stellaris_info->num_pages * stellaris_info->pagesize / 1024));
 	buf += printed;
 	buf_size -= printed;
 
-	printed = snprintf(buf,
+	snprintf(buf,
 			   buf_size,
 			   "master clock: %ikHz%s, "
 			   "rcc is 0x%" PRIx32 ", rcc2 is 0x%" PRIx32 ", "
@@ -602,7 +600,7 @@ static void stellaris_read_clock_info(struct flash_bank *bank)
 	LOG_DEBUG("Stellaris PLLCFG %" PRIx32 "", pllcfg);
 
 	stellaris_info->rcc = rcc;
-	stellaris_info->rcc = rcc2;
+	stellaris_info->rcc2 = rcc2;
 
 	sysdiv = (rcc >> 23) & 0xF;
 	usesysdiv = (rcc >> 22) & 0x1;
@@ -1065,7 +1063,7 @@ static int stellaris_write_block(struct flash_bank *bank,
 			&write_algorithm) != ERROR_OK) {
 		LOG_DEBUG("no working area for block memory writes");
 		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
-	};
+	}
 
 	/* plus a buffer big enough for this data */
 	if (wcount * 4 < buffer_size)
@@ -1080,7 +1078,7 @@ static int stellaris_write_block(struct flash_bank *bank,
 		}
 		LOG_DEBUG("retry target_alloc_working_area(%s, size=%u)",
 				target_name(target), (unsigned) buffer_size);
-	};
+	}
 
 	target_write_buffer(target, write_algorithm->address,
 			sizeof(stellaris_write_code),
@@ -1359,12 +1357,12 @@ COMMAND_HANDLER(stellaris_handle_recover_command)
 	struct flash_bank *bank;
 	int retval;
 
-	if (CMD_ARGC < 1)
+	if (CMD_ARGC != 0)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
-	retval = CALL_COMMAND_HANDLER(flash_command_get_bank, 0, &bank);
-	if (retval != ERROR_OK)
-		return retval;
+	bank = get_flash_bank_by_num_noprobe(0);
+	if (!bank)
+		return ERROR_FAIL;
 
 	/* REVISIT ... it may be worth sanity checking that the AP is
 	 * inactive before we start.  ARM documents that switching a DP's
@@ -1425,7 +1423,7 @@ static const struct command_registration stellaris_exec_command_handlers[] = {
 		.name = "recover",
 		.handler = stellaris_handle_recover_command,
 		.mode = COMMAND_EXEC,
-		.usage = "bank_id",
+		.usage = "",
 		.help = "recover (and erase) locked device",
 	},
 	COMMAND_REGISTRATION_DONE

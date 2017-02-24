@@ -16,9 +16,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -91,7 +89,7 @@ struct ChibiOS_params {
 	const struct rtos_register_stacking *stacking_info;
 };
 
-static const struct ChibiOS_params ChibiOS_params_list[] = {
+static struct ChibiOS_params ChibiOS_params_list[] = {
 	{
 	"cortex_m",							/* target_name */
 	0,
@@ -121,18 +119,27 @@ struct rtos_type ChibiOS_rtos = {
 	.get_symbol_list_to_lookup = ChibiOS_get_symbol_list_to_lookup,
 };
 
+
+/* In ChibiOS/RT 3.0 the rlist structure has become part of a system
+ * data structure ch. We declare both symbols as optional and later
+ * use whatever is available.
+ */
+
 enum ChibiOS_symbol_values {
 	ChibiOS_VAL_rlist = 0,
-	ChibiOS_VAL_ch_debug = 1,
-	ChibiOS_VAL_chSysInit = 2
+	ChibiOS_VAL_ch = 1,
+	ChibiOS_VAL_ch_debug = 2
 };
 
-static const char * const ChibiOS_symbol_list[] = {
-	"rlist",		/* Thread ready list*/
-	"ch_debug",		/* Memory Signatur containing offsets of fields in rlist*/
-	"chSysInit",	/* Necessary part of API, used for ChibiOS detection*/
-	NULL
+static symbol_table_elem_t ChibiOS_symbol_list[] = {
+	{ "rlist", 0, true},		/* Thread ready list */
+	{ "ch", 0, true},			/* System data structure */
+	{ "ch_debug", 0, false},	/* Memory Signature containing offsets of fields in rlist */
+	{ NULL, 0, false}
 };
+
+/* Offset of the rlist structure within the system data structure (ch) */
+#define CH_RLIST_OFFSET 0x00
 
 static int ChibiOS_update_memory_signature(struct rtos *rtos)
 {
@@ -215,7 +222,7 @@ static int ChibiOS_update_stacking(struct rtos *rtos)
 	/* Sometimes the stacking can not be determined only by looking at the
 	 * target name but only a runtime.
 	 *
-	 * For example, this is the case for cortex-m4 targets and ChibiOS which
+	 * For example, this is the case for Cortex-M4 targets and ChibiOS which
 	 * only stack the FPU registers if it is enabled during ChibiOS build.
 	 *
 	 * Terminating which stacking is used is target depending.
@@ -237,7 +244,7 @@ static int ChibiOS_update_stacking(struct rtos *rtos)
 	struct ChibiOS_params *param;
 	param = (struct ChibiOS_params *) rtos->rtos_specific_params;
 
-	/* Check for armv7m with *enabled* FPU, i.e. a Cortex M4  */
+	/* Check for armv7m with *enabled* FPU, i.e. a Cortex-M4  */
 	struct armv7m_common *armv7m_target = target_to_armv7m(rtos->target);
 	if (is_armv7m(armv7m_target)) {
 		if (armv7m_target->fp_feature == FPv4_SP) {
@@ -253,11 +260,9 @@ static int ChibiOS_update_stacking(struct rtos *rtos)
 			/* Check if CP10 and CP11 are set to full access.
 			 * In ChibiOS this is done in ResetHandler() in crt0.c */
 			if (cpacr & 0x00F00000) {
-				/* Found target with enabled FPU */
-				/* FIXME: Need to figure out how to specify the FPU registers */
-				LOG_ERROR("ChibiOS ARM v7m targets with enabled FPU "
-						  " are NOT supported");
-				return -1;
+				LOG_DEBUG("Enabled FPU detected.");
+				param->stacking_info = &rtos_chibios_arm_v7m_stacking_w_fpu;
+				return 0;
 			}
 		}
 
@@ -300,7 +305,9 @@ static int ChibiOS_update_threads(struct rtos *rtos)
 	/* ChibiOS does not save the current thread count. We have to first
 	 * parse the double linked thread list to check for errors and the number of
 	 * threads. */
-	const uint32_t rlist = rtos->symbols[ChibiOS_VAL_rlist].address;
+	const uint32_t rlist = rtos->symbols[ChibiOS_VAL_rlist].address ?
+		rtos->symbols[ChibiOS_VAL_rlist].address :
+		rtos->symbols[ChibiOS_VAL_ch].address + CH_RLIST_OFFSET /* ChibiOS3 */;
 	const struct ChibiOS_chdebug *signature = param->signature;
 	uint32_t current;
 	uint32_t previous;
@@ -350,7 +357,6 @@ static int ChibiOS_update_threads(struct rtos *rtos)
 				sizeof(struct thread_detail));
 		rtos->thread_details->threadid = 1;
 		rtos->thread_details->exists = true;
-		rtos->thread_details->display_str = NULL;
 
 		rtos->thread_details->extra_info_str = malloc(
 				sizeof(tmp_thread_extra_info));
@@ -434,14 +440,13 @@ static int ChibiOS_update_threads(struct rtos *rtos)
 		if (threadState < CHIBIOS_NUM_STATES)
 			state_desc = ChibiOS_thread_states[threadState];
 		else
-			state_desc = "Unknown state";
+			state_desc = "Unknown";
 
 		curr_thrd_details->extra_info_str = malloc(strlen(
-					state_desc)+1);
-		strcpy(curr_thrd_details->extra_info_str, state_desc);
+					state_desc)+8);
+		sprintf(curr_thrd_details->extra_info_str, "State: %s", state_desc);
 
 		curr_thrd_details->exists = true;
-		curr_thrd_details->display_str = NULL;
 
 		curr_thrd_details++;
 	}
@@ -496,25 +501,24 @@ static int ChibiOS_get_thread_reg_list(struct rtos *rtos, int64_t thread_id, cha
 
 static int ChibiOS_get_symbol_list_to_lookup(symbol_table_elem_t *symbol_list[])
 {
-	unsigned int i;
-	*symbol_list = malloc(
-			sizeof(symbol_table_elem_t) * ARRAY_SIZE(ChibiOS_symbol_list));
+	*symbol_list = malloc(sizeof(ChibiOS_symbol_list));
 
-	for (i = 0; i < ARRAY_SIZE(ChibiOS_symbol_list); i++)
-		(*symbol_list)[i].symbol_name = ChibiOS_symbol_list[i];
+	if (*symbol_list == NULL)
+		return ERROR_FAIL;
 
+	memcpy(*symbol_list, ChibiOS_symbol_list, sizeof(ChibiOS_symbol_list));
 	return 0;
 }
 
 static int ChibiOS_detect_rtos(struct target *target)
 {
 	if ((target->rtos->symbols != NULL) &&
-			(target->rtos->symbols[ChibiOS_VAL_rlist].address != 0) &&
-			(target->rtos->symbols[ChibiOS_VAL_chSysInit].address != 0)) {
+			((target->rtos->symbols[ChibiOS_VAL_rlist].address != 0) ||
+			 (target->rtos->symbols[ChibiOS_VAL_ch].address != 0))) {
 
 		if (target->rtos->symbols[ChibiOS_VAL_ch_debug].address == 0) {
-			LOG_INFO("It looks like the target is running ChibiOS without "
-					"ch_debug.");
+			LOG_INFO("It looks like the target may be running ChibiOS "
+					"without ch_debug.");
 			return 0;
 		}
 

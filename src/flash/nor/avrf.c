@@ -13,9 +13,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -69,6 +67,7 @@ static const struct avrf_type avft_chips_info[] = {
  */
 	{"atmega128", 0x9702, 256, 512, 8, 512},
 	{"at90can128", 0x9781, 256, 512, 8, 512},
+	{"at90usb128", 0x9782, 256, 512, 8, 512},
 	{"atmega164p", 0x940a, 128, 128, 4, 128},
 	{"atmega324p", 0x9508, 128, 256, 4, 256},
 	{"atmega324pa", 0x9511, 128, 256, 4, 256},

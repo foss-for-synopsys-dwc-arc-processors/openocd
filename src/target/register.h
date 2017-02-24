@@ -16,13 +16,11 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
-#ifndef REGISTER_H
-#define REGISTER_H
+#ifndef OPENOCD_TARGET_REGISTER_H
+#define OPENOCD_TARGET_REGISTER_H
 
 struct target;
 
@@ -146,8 +144,9 @@ struct reg_arch_type {
 struct reg *register_get_by_name(struct reg_cache *first,
 		const char *name, bool search_all);
 struct reg_cache **register_get_last_cache_p(struct reg_cache **first);
+void register_unlink_cache(struct reg_cache **cache_p, const struct reg_cache *cache);
 void register_cache_invalidate(struct reg_cache *cache);
 
 void register_init_dummy(struct reg *reg);
 
-#endif /* REGISTER_H */
+#endif /* OPENOCD_TARGET_REGISTER_H */

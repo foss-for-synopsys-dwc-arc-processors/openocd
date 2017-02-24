@@ -17,9 +17,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -352,9 +350,9 @@ static void ejtag_v20_print_imp(struct mips_ejtag *ejtag_info)
 		EJTAG_IMP_HAS(EJTAG_V20_IMP_NOPB) ? " noPB" : " PB",
 		EJTAG_IMP_HAS(EJTAG_V20_IMP_NODB) ? " noDB" : " DB",
 		EJTAG_IMP_HAS(EJTAG_V20_IMP_NOIB) ? " noIB" : " IB");
-	LOG_DEBUG("EJTAG v2.0: Break Channels: %i",
-		(ejtag_info->impcode >> EJTAG_V20_IMP_BCHANNELS_SHIFT) &
-		EJTAG_V20_IMP_BCHANNELS_MASK);
+	LOG_DEBUG("EJTAG v2.0: Break Channels: %" PRIu8,
+		(uint8_t)((ejtag_info->impcode >> EJTAG_V20_IMP_BCHANNELS_SHIFT) &
+		EJTAG_V20_IMP_BCHANNELS_MASK));
 }
 
 static void ejtag_v26_print_imp(struct mips_ejtag *ejtag_info)
