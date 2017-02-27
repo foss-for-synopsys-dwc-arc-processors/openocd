@@ -58,8 +58,8 @@ LTLIBRARIES = $(noinst_LTLIBRARIES)
 libhelper_la_LIBADD =
 am__libhelper_la_SOURCES_DIST = binarybuffer.c options.c \
 	time_support_common.c configuration.c log.c command.c \
-	time_support.c replacements.c fileio.c util.c jim-nvp.c \
-	ioutil.c ioutil_stubs.c
+	time_support.c replacements.c fileio.c util.c jep106.c \
+	jim-nvp.c ioutil.c ioutil_stubs.c
 am__objects_1 = libhelper_la-options.lo \
 	libhelper_la-time_support_common.lo
 @IOUTIL_TRUE@am__objects_2 = libhelper_la-ioutil.lo
@@ -69,7 +69,8 @@ am_libhelper_la_OBJECTS = libhelper_la-binarybuffer.lo \
 	libhelper_la-log.lo libhelper_la-command.lo \
 	libhelper_la-time_support.lo libhelper_la-replacements.lo \
 	libhelper_la-fileio.lo libhelper_la-util.lo \
-	libhelper_la-jim-nvp.lo $(am__objects_2) $(am__objects_3)
+	libhelper_la-jep106.lo libhelper_la-jim-nvp.lo \
+	$(am__objects_2) $(am__objects_3)
 libhelper_la_OBJECTS = $(am_libhelper_la_OBJECTS)
 libhelper_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libhelper_la_CFLAGS) \
@@ -116,9 +117,11 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GCC_WARNINGS = @GCC_WARNINGS@
 GREP = @GREP@
 HIDAPI_CFLAGS = @HIDAPI_CFLAGS@
 HIDAPI_LIBS = @HIDAPI_LIBS@
+HOST_CPPFLAGS = @HOST_CPPFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -128,6 +131,8 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFTDI_CFLAGS = @LIBFTDI_CFLAGS@
 LIBFTDI_LIBS = @LIBFTDI_LIBS@
+LIBJAYLINK_CFLAGS = @LIBJAYLINK_CFLAGS@
+LIBJAYLINK_LIBS = @LIBJAYLINK_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -219,16 +224,18 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # common flags used in openocd build
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src \
-	-I$(top_srcdir)/src/helper -DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DBINDIR=\"$(bindir)\" $(am__append_1)
+AM_CFLAGS = $(GCC_WARNINGS)
+AM_CPPFLAGS = $(HOST_CPPFLAGS) -I$(top_srcdir)/src \
+	-I$(top_builddir)/src -I$(top_srcdir)/src/helper \
+	-DPKGDATADIR=\"$(pkgdatadir)\" -DBINDIR=\"$(bindir)\" \
+	$(am__append_1)
 METASOURCES = AUTO
 noinst_LTLIBRARIES = libhelper.la
 CONFIGFILES = options.c time_support_common.c
 libhelper_la_CPPFLAGS = $(AM_CPPFLAGS) $(LIBUSB1_CFLAGS)
 libhelper_la_SOURCES = binarybuffer.c $(CONFIGFILES) configuration.c \
 	log.c command.c time_support.c replacements.c fileio.c util.c \
-	jim-nvp.c $(am__append_2) $(am__append_3)
+	jep106.c jim-nvp.c $(am__append_2) $(am__append_3)
 libhelper_la_CFLAGS = $(am__append_4)
 noinst_HEADERS = \
 	binarybuffer.h \
@@ -244,6 +251,9 @@ noinst_HEADERS = \
 	fileio.h \
 	system.h \
 	bin2char.sh \
+	jep106.h \
+	jep106.inc \
+	update_jep106.pl \
 	jim-nvp.h
 
 EXTRA_DIST = startup.tcl
@@ -306,6 +316,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhelper_la-fileio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhelper_la-ioutil.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhelper_la-ioutil_stubs.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhelper_la-jep106.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhelper_la-jim-nvp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhelper_la-log.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libhelper_la-options.Plo@am__quote@
@@ -407,6 +418,13 @@ libhelper_la-util.lo: util.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='util.c' object='libhelper_la-util.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libhelper_la_CPPFLAGS) $(CPPFLAGS) $(libhelper_la_CFLAGS) $(CFLAGS) -c -o libhelper_la-util.lo `test -f 'util.c' || echo '$(srcdir)/'`util.c
+
+libhelper_la-jep106.lo: jep106.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libhelper_la_CPPFLAGS) $(CPPFLAGS) $(libhelper_la_CFLAGS) $(CFLAGS) -MT libhelper_la-jep106.lo -MD -MP -MF $(DEPDIR)/libhelper_la-jep106.Tpo -c -o libhelper_la-jep106.lo `test -f 'jep106.c' || echo '$(srcdir)/'`jep106.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libhelper_la-jep106.Tpo $(DEPDIR)/libhelper_la-jep106.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='jep106.c' object='libhelper_la-jep106.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libhelper_la_CPPFLAGS) $(CPPFLAGS) $(libhelper_la_CFLAGS) $(CFLAGS) -c -o libhelper_la-jep106.lo `test -f 'jep106.c' || echo '$(srcdir)/'`jep106.c
 
 libhelper_la-jim-nvp.lo: jim-nvp.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libhelper_la_CPPFLAGS) $(CPPFLAGS) $(libhelper_la_CFLAGS) $(CFLAGS) -MT libhelper_la-jim-nvp.lo -MD -MP -MF $(DEPDIR)/libhelper_la-jim-nvp.Tpo -c -o libhelper_la-jim-nvp.lo `test -f 'jim-nvp.c' || echo '$(srcdir)/'`jim-nvp.c

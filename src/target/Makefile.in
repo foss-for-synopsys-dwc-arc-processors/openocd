@@ -58,17 +58,18 @@ libtarget_la_DEPENDENCIES =  \
 am__libtarget_la_SOURCES_DIST = algorithm.c register.c image.c \
 	breakpoints.c target.c target_request.c testee.c smp.c \
 	arm_dpm.c arm_jtag.c arm_disassembler.c arm_simulator.c \
-	arm_semihosting.c arm_adi_v5.c adi_v5_jtag.c adi_v5_swd.c \
-	adi_v5_cmsis_dap.c embeddedice.c trace.c etb.c etm.c \
-	oocd_trace.c etm_dummy.c armv4_5.c armv4_5_mmu.c \
-	armv4_5_cache.c arm7_9_common.c arm7tdmi.c arm720t.c \
-	arm9tdmi.c arm920t.c arm966e.c arm946e.c arm926ejs.c \
-	feroceon.c arm11.c arm11_dbgtap.c armv7m.c cortex_m.c armv7a.c \
-	cortex_a.c fa526.c xscale.c avr32_ap7k.c avr32_jtag.c \
-	avr32_mem.c avr32_regs.c mips32.c mips_m4k.c mips32_pracc.c \
-	mips32_dmaacc.c mips_ejtag.c nds32.c nds32_reg.c nds32_cmd.c \
-	nds32_disassembler.c nds32_tlb.c nds32_v2.c nds32_v3_common.c \
-	nds32_v3.c nds32_v3m.c nds32_aice.c quark_x10xx.c lakemont.c \
+	arm_semihosting.c arm_adi_v5.c armv7a_cache.c \
+	armv7a_cache_l2x.c adi_v5_jtag.c adi_v5_swd.c embeddedice.c \
+	trace.c etb.c etm.c oocd_trace.c etm_dummy.c armv4_5.c \
+	armv4_5_mmu.c armv4_5_cache.c arm7_9_common.c arm7tdmi.c \
+	arm720t.c arm9tdmi.c arm920t.c arm966e.c arm946e.c arm926ejs.c \
+	feroceon.c arm11.c arm11_dbgtap.c armv7m.c armv7m_trace.c \
+	cortex_m.c armv7a.c cortex_a.c ls1_sap.c fa526.c xscale.c \
+	avr32_ap7k.c avr32_jtag.c avr32_mem.c avr32_regs.c mips32.c \
+	mips_m4k.c mips32_pracc.c mips32_dmaacc.c mips_ejtag.c nds32.c \
+	nds32_reg.c nds32_cmd.c nds32_disassembler.c nds32_tlb.c \
+	nds32_v2.c nds32_v3_common.c nds32_v3.c nds32_v3m.c \
+	nds32_aice.c quark_x10xx.c quark_d20xx.c lakemont.c \
 	x86_32_common.c arc32.c arc_dbg.c arc_jtag.c arc_mem.c \
 	arc_mntr.c arc_ocd.c arc_regs.c avrt.c dsp563xx.c \
 	dsp563xx_once.c dsp5680xx.c hla_target.c
@@ -77,15 +78,16 @@ am__objects_1 = algorithm.lo register.lo image.lo breakpoints.lo \
 @OOCD_TRACE_TRUE@am__objects_2 = oocd_trace.lo
 am__objects_3 = arm_dpm.lo arm_jtag.lo arm_disassembler.lo \
 	arm_simulator.lo arm_semihosting.lo arm_adi_v5.lo \
-	adi_v5_jtag.lo adi_v5_swd.lo adi_v5_cmsis_dap.lo \
-	embeddedice.lo trace.lo etb.lo etm.lo $(am__objects_2) \
-	etm_dummy.lo
+	armv7a_cache.lo armv7a_cache_l2x.lo adi_v5_jtag.lo \
+	adi_v5_swd.lo embeddedice.lo trace.lo etb.lo etm.lo \
+	$(am__objects_2) etm_dummy.lo
 am__objects_4 = arm7_9_common.lo arm7tdmi.lo arm720t.lo arm9tdmi.lo \
 	arm920t.lo arm966e.lo arm946e.lo arm926ejs.lo feroceon.lo
 am__objects_5 = armv4_5.lo armv4_5_mmu.lo armv4_5_cache.lo \
 	$(am__objects_4)
 am__objects_6 = arm11.lo arm11_dbgtap.lo
-am__objects_7 = armv7m.lo cortex_m.lo armv7a.lo cortex_a.lo
+am__objects_7 = armv7m.lo armv7m_trace.lo cortex_m.lo armv7a.lo \
+	cortex_a.lo ls1_sap.lo
 am__objects_8 = fa526.lo xscale.lo
 am__objects_9 = avr32_ap7k.lo avr32_jtag.lo avr32_mem.lo avr32_regs.lo
 am__objects_10 = mips32.lo mips_m4k.lo mips32_pracc.lo \
@@ -93,7 +95,8 @@ am__objects_10 = mips32.lo mips_m4k.lo mips32_pracc.lo \
 am__objects_11 = nds32.lo nds32_reg.lo nds32_cmd.lo \
 	nds32_disassembler.lo nds32_tlb.lo nds32_v2.lo \
 	nds32_v3_common.lo nds32_v3.lo nds32_v3m.lo nds32_aice.lo
-am__objects_12 = quark_x10xx.lo lakemont.lo x86_32_common.lo
+am__objects_12 = quark_x10xx.lo quark_d20xx.lo lakemont.lo \
+	x86_32_common.lo
 am__objects_13 = arc32.lo arc_dbg.lo arc_jtag.lo arc_mem.lo \
 	arc_mntr.lo arc_ocd.lo arc_regs.lo
 am_libtarget_la_OBJECTS = $(am__objects_1) $(am__objects_3) \
@@ -205,9 +208,11 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GCC_WARNINGS = @GCC_WARNINGS@
 GREP = @GREP@
 HIDAPI_CFLAGS = @HIDAPI_CFLAGS@
 HIDAPI_LIBS = @HIDAPI_LIBS@
+HOST_CPPFLAGS = @HOST_CPPFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -217,6 +222,8 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFTDI_CFLAGS = @LIBFTDI_CFLAGS@
 LIBFTDI_LIBS = @LIBFTDI_LIBS@
+LIBJAYLINK_CFLAGS = @LIBJAYLINK_CFLAGS@
+LIBJAYLINK_LIBS = @LIBJAYLINK_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -308,22 +315,15 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # common flags used in openocd build
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src \
-	-I$(top_srcdir)/src/helper -DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DBINDIR=\"$(bindir)\" $(am__append_1)
+AM_CFLAGS = $(GCC_WARNINGS)
+AM_CPPFLAGS = $(HOST_CPPFLAGS) -I$(top_srcdir)/src \
+	-I$(top_builddir)/src -I$(top_srcdir)/src/helper \
+	-DPKGDATADIR=\"$(pkgdatadir)\" -DBINDIR=\"$(bindir)\" \
+	$(am__append_1)
 @OOCD_TRACE_FALSE@OOCD_TRACE_FILES = 
 @OOCD_TRACE_TRUE@OOCD_TRACE_FILES = oocd_trace.c
 SUBDIRS = openrisc
 libtarget_la_LIBADD = $(top_builddir)/src/target/openrisc/libopenrisc.la
-BIN2C = $(top_srcdir)/src/helper/bin2char.sh
-DEBUG_HANDLER = $(srcdir)/xscale/debug_handler.bin
-EXTRA_DIST = \
-	startup.tcl \
-	$(wildcard $(srcdir)/xscale/*)
-
-DEBUG_HEADER = xscale_debug.inc
-BUILT_SOURCES = $(DEBUG_HEADER)
-CLEANFILES = $(DEBUG_HEADER)
 METASOURCES = AUTO
 noinst_LTLIBRARIES = libtarget.la
 libtarget_la_SOURCES = \
@@ -381,9 +381,11 @@ ARMV6_SRC = \
 
 ARMV7_SRC = \
 	armv7m.c \
+	armv7m_trace.c \
 	cortex_m.c \
 	armv7a.c \
-	cortex_a.c
+	cortex_a.c \
+	ls1_sap.c
 
 ARM_DEBUG_SRC = \
 	arm_dpm.c \
@@ -392,9 +394,10 @@ ARM_DEBUG_SRC = \
 	arm_simulator.c \
 	arm_semihosting.c \
 	arm_adi_v5.c \
+	armv7a_cache.c \
+	armv7a_cache_l2x.c \
 	adi_v5_jtag.c \
 	adi_v5_swd.c \
-	adi_v5_cmsis_dap.c \
 	embeddedice.c \
 	trace.c \
 	etb.c \
@@ -429,6 +432,7 @@ NDS32_SRC = \
 
 INTEL_IA32_SRC = \
 	quark_x10xx.c \
+	quark_d20xx.c \
 	lakemont.c \
 	x86_32_common.c
 
@@ -447,6 +451,8 @@ noinst_HEADERS = \
 	arm_dpm.h \
 	arm_jtag.h \
 	arm_adi_v5.h \
+	armv7a_cache.h \
+	armv7a_cache_l2x.h \
 	arm_disassembler.h \
 	arm_opcodes.h \
 	arm_simulator.h \
@@ -466,6 +472,7 @@ noinst_HEADERS = \
 	armv4_5_cache.h \
 	armv7a.h \
 	armv7m.h \
+	armv7m_trace.h \
 	avrt.h \
 	dsp563xx.h \
 	dsp563xx_once.h \
@@ -521,8 +528,7 @@ noinst_HEADERS = \
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA = 
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
-all: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) all-recursive
+all: all-recursive
 
 .SUFFIXES:
 .SUFFIXES: .c .lo .o .obj
@@ -574,7 +580,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/adi_v5_cmsis_dap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/adi_v5_jtag.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/adi_v5_swd.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/algorithm.Plo@am__quote@
@@ -605,7 +610,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/armv4_5_cache.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/armv4_5_mmu.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/armv7a.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/armv7a_cache.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/armv7a_cache_l2x.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/armv7m.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/armv7m_trace.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/avr32_ap7k.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/avr32_jtag.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/avr32_mem.Plo@am__quote@
@@ -626,6 +634,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hla_target.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lakemont.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls1_sap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mips32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mips32_dmaacc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mips32_pracc.Plo@am__quote@
@@ -642,6 +651,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nds32_v3_common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nds32_v3m.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/oocd_trace.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/quark_d20xx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/quark_x10xx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/register.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smp.Plo@am__quote@
@@ -899,16 +909,14 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) check-recursive
+check: check-recursive
 all-am: Makefile $(LTLIBRARIES) $(DATA) $(HEADERS)
 installdirs: installdirs-recursive
 installdirs-am:
 	for dir in "$(DESTDIR)$(ocddatadir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) install-recursive
+install: install-recursive
 install-exec: install-exec-recursive
 install-data: install-data-recursive
 uninstall: uninstall-recursive
@@ -925,7 +933,6 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
-	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -934,7 +941,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 	-test -z "$(MAINTAINERCLEANFILES)" || rm -f $(MAINTAINERCLEANFILES)
 clean: clean-recursive
 
@@ -1007,9 +1013,8 @@ ps-am:
 
 uninstall-am: uninstall-nobase_dist_ocddataDATA
 
-.MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) all check \
-	ctags-recursive install install-am install-strip \
-	tags-recursive
+.MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) ctags-recursive \
+	install-am install-strip tags-recursive
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am check check-am clean clean-generic clean-libtool \
@@ -1027,9 +1032,6 @@ uninstall-am: uninstall-nobase_dist_ocddataDATA
 	tags tags-recursive uninstall uninstall-am \
 	uninstall-nobase_dist_ocddataDATA
 
-
-$(DEBUG_HEADER): $(DEBUG_HANDLER) $(BIN2C)
-	$(BIN2C) < $< > $@ || { rm -f $@; false; }
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

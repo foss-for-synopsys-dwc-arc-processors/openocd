@@ -40,9 +40,8 @@ DIST_COMMON = $(noinst_HEADERS) $(srcdir)/Makefile.am \
 @INTERNAL_JIMTCL_TRUE@am__append_1 = -I$(top_srcdir)/jimtcl \
 @INTERNAL_JIMTCL_TRUE@			   -I$(top_builddir)/jimtcl
 
-@USB_BLASTER_LIBFTDI_TRUE@am__append_2 = ublast_access_ftdi.c
-@USB_BLASTER_FTD2XX_TRUE@am__append_3 = ublast_access_ftd2xx.c
-@USB_BLASTER_2_TRUE@am__append_4 = ublast2_access_libusb.c
+@USB_BLASTER_TRUE@am__append_2 = ublast_access_ftdi.c
+@USB_BLASTER_2_TRUE@am__append_3 = ublast2_access_libusb.c
 subdir = src/jtag/drivers/usb_blaster
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config_subdir.m4 \
@@ -56,14 +55,11 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libocdusbblaster_la_LIBADD =
 am__libocdusbblaster_la_SOURCES_DIST = usb_blaster.c \
-	ublast_access_ftdi.c ublast_access_ftd2xx.c \
-	ublast2_access_libusb.c
-@USB_BLASTER_LIBFTDI_TRUE@am__objects_1 = ublast_access_ftdi.lo
-@USB_BLASTER_FTD2XX_TRUE@am__objects_2 = ublast_access_ftd2xx.lo
-@USB_BLASTER_2_TRUE@am__objects_3 = ublast2_access_libusb.lo
-am__objects_4 = usb_blaster.lo $(am__objects_1) $(am__objects_2) \
-	$(am__objects_3)
-am_libocdusbblaster_la_OBJECTS = $(am__objects_4)
+	ublast_access_ftdi.c ublast2_access_libusb.c
+@USB_BLASTER_TRUE@am__objects_1 = ublast_access_ftdi.lo
+@USB_BLASTER_2_TRUE@am__objects_2 = ublast2_access_libusb.lo
+am__objects_3 = usb_blaster.lo $(am__objects_1) $(am__objects_2)
+am_libocdusbblaster_la_OBJECTS = $(am__objects_3)
 libocdusbblaster_la_OBJECTS = $(am_libocdusbblaster_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -107,9 +103,11 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GCC_WARNINGS = @GCC_WARNINGS@
 GREP = @GREP@
 HIDAPI_CFLAGS = @HIDAPI_CFLAGS@
 HIDAPI_LIBS = @HIDAPI_LIBS@
+HOST_CPPFLAGS = @HOST_CPPFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -119,6 +117,8 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFTDI_CFLAGS = @LIBFTDI_CFLAGS@
 LIBFTDI_LIBS = @LIBFTDI_LIBS@
+LIBJAYLINK_CFLAGS = @LIBJAYLINK_CFLAGS@
+LIBJAYLINK_LIBS = @LIBJAYLINK_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -210,15 +210,15 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # common flags used in openocd build
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src \
-	-I$(top_srcdir)/src/helper -DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DBINDIR=\"$(bindir)\" $(am__append_1) \
-	-I$(top_srcdir)/src/jtag/drivers $(LIBUSB1_CFLAGS) \
-	$(LIBFTDI_CFLAGS)
+AM_CFLAGS = $(GCC_WARNINGS)
+AM_CPPFLAGS = $(HOST_CPPFLAGS) -I$(top_srcdir)/src \
+	-I$(top_builddir)/src -I$(top_srcdir)/src/helper \
+	-DPKGDATADIR=\"$(pkgdatadir)\" -DBINDIR=\"$(bindir)\" \
+	$(am__append_1) -I$(top_srcdir)/src/jtag/drivers \
+	$(LIBUSB1_CFLAGS) $(LIBFTDI_CFLAGS)
 noinst_LTLIBRARIES = libocdusbblaster.la
 libocdusbblaster_la_SOURCES = $(USB_BLASTER_SRC)
-USB_BLASTER_SRC = usb_blaster.c $(am__append_2) $(am__append_3) \
-	$(am__append_4)
+USB_BLASTER_SRC = usb_blaster.c $(am__append_2) $(am__append_3)
 noinst_HEADERS = ublast_access.h
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
 all: all-am
@@ -274,7 +274,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ublast2_access_libusb.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ublast_access_ftd2xx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ublast_access_ftdi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/usb_blaster.Plo@am__quote@
 

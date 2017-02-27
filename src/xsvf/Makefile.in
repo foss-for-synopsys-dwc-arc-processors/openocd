@@ -96,9 +96,11 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GCC_WARNINGS = @GCC_WARNINGS@
 GREP = @GREP@
 HIDAPI_CFLAGS = @HIDAPI_CFLAGS@
 HIDAPI_LIBS = @HIDAPI_LIBS@
+HOST_CPPFLAGS = @HOST_CPPFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -108,6 +110,8 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFTDI_CFLAGS = @LIBFTDI_CFLAGS@
 LIBFTDI_LIBS = @LIBFTDI_LIBS@
+LIBJAYLINK_CFLAGS = @LIBJAYLINK_CFLAGS@
+LIBJAYLINK_LIBS = @LIBJAYLINK_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -199,9 +203,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # common flags used in openocd build
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src \
-	-I$(top_srcdir)/src/helper -DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DBINDIR=\"$(bindir)\" $(am__append_1)
+AM_CFLAGS = $(GCC_WARNINGS)
+AM_CPPFLAGS = $(HOST_CPPFLAGS) -I$(top_srcdir)/src \
+	-I$(top_builddir)/src -I$(top_srcdir)/src/helper \
+	-DPKGDATADIR=\"$(pkgdatadir)\" -DBINDIR=\"$(bindir)\" \
+	$(am__append_1)
 METASOURCES = AUTO
 noinst_LTLIBRARIES = libxsvf.la
 noinst_HEADERS = xsvf.h

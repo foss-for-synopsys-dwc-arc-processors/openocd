@@ -18,12 +18,6 @@
 /* 0 if you don't want bcm2835gpio. */
 #undef BUILD_BCM2835GPIO
 
-/* 0 if you don't want a bitbang interface. */
-#undef BUILD_BITBANG
-
-/* 0 if you don't want a bitq interface. */
-#undef BUILD_BITQ
-
 /* 0 if you don't want the Buspirate JTAG driver. */
 #undef BUILD_BUSPIRATE
 
@@ -35,15 +29,6 @@
 
 /* 0 if you don't want ep93xx. */
 #undef BUILD_EP93XX
-
-/* 0 if you don't want ftd2xx ft2232. */
-#undef BUILD_FT2232_FTD2XX
-
-/* Support FT2232H/FT4232HS with FTD2XX or libftdi. */
-#undef BUILD_FT2232_HIGHSPEED
-
-/* 0 if you don't want libftdi ft2232. */
-#undef BUILD_FT2232_LIBFTDI
 
 /* 0 if you do not want the MPSSE mode of FTDI based devices. */
 #undef BUILD_FTDI
@@ -60,7 +45,7 @@
 /* 0 if you do not want the ST-Link JTAG Programmer. */
 #undef BUILD_HLADAPTER_STLINK
 
-/* 0 if you do not want the Segger J-Link JTAG Programmer. */
+/* 0 if you do not want the SEGGER J-Link Programmer. */
 #undef BUILD_JLINK
 
 /* 0 if you don't want JTAG VPI. */
@@ -75,14 +60,8 @@
 /* 0 if you do not want the eStick/opendous JTAG Programmer. */
 #undef BUILD_OPENDOUS
 
-/* 1 if you want the OpenJTAG drvier. */
+/* 0 if you do not want the OpenJTAG Adapter. */
 #undef BUILD_OPENJTAG
-
-/* 1 if you want the OpenJTAG driver with FTD2XX driver. */
-#undef BUILD_OPENJTAG_FTD2XX
-
-/* 1 if you want to build OpenJTAG with FTDI driver. */
-#undef BUILD_OPENJTAG_LIBFTDI
 
 /* 0 if you do not want the OSBDM (JTAG only) Programmer. */
 #undef BUILD_OSBDM
@@ -90,11 +69,8 @@
 /* 0 if you don't want parport. */
 #undef BUILD_PARPORT
 
-/* 0 if you don't want the ASIX PRESTO driver using FTD2XX. */
-#undef BUILD_PRESTO_FTD2XX
-
-/* 0 if you don't want the ASIX PRESTO driver using libftdi. */
-#undef BUILD_PRESTO_LIBFTDI
+/* 0 if you do not want the ASIX Presto Adapter. */
+#undef BUILD_PRESTO
 
 /* 0 if you don't want the Remote Bitbang JTAG driver. */
 #undef BUILD_REMOTE_BITBANG
@@ -111,14 +87,11 @@
 /* 0 if you do not want the USBProg JTAG Programmer. */
 #undef BUILD_USBPROG
 
+/* 0 if you do not want the Altera USB-Blaster Compatible. */
+#undef BUILD_USB_BLASTER
+
 /* 0 if you do not want the Altera USB-Blaster II Compatible. */
 #undef BUILD_USB_BLASTER_2
-
-/* 0 if you don't want ftd2xx usb_blaster. */
-#undef BUILD_USB_BLASTER_FTD2XX
-
-/* 0 if you don't want libftdi usb_blaster. */
-#undef BUILD_USB_BLASTER_LIBFTDI
 
 /* 0 if you do not want the Versaloon-Link JTAG Programmer. */
 #undef BUILD_VSLLINK
@@ -128,9 +101,6 @@
 
 /* 0 if you don't want ZY1000 JTAG master registers. */
 #undef BUILD_ZY1000_MASTER
-
-/* Support FT232H with FTD2XX or libftdi. */
-#undef HAS_ENUM_FT232H
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
@@ -165,6 +135,9 @@
 /* Define if your libusb has libusb_error_name() */
 #undef HAVE_LIBUSB_ERROR_NAME
 
+/* Define if your libusb has libusb_get_port_numbers() */
+#undef HAVE_LIBUSB_GET_PORT_NUMBERS
+
 /* Define to 1 if the system has the type `long long int'. */
 #undef HAVE_LONG_LONG_INT
 
@@ -185,6 +158,9 @@
 
 /* Define to 1 if you have the <net/if.h> header file. */
 #undef HAVE_NET_IF_H
+
+/* Define to 1 if you have the <poll.h> header file. */
+#undef HAVE_POLL_H
 
 /* Define to 1 if you have the <pthread.h> header file. */
 #undef HAVE_PTHREAD_H
@@ -219,9 +195,6 @@
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
 
-/* Define to 1 if you have the <sys/poll.h> header file. */
-#undef HAVE_SYS_POLL_H
-
 /* Define to 1 if you have the <sys/select.h> header file. */
 #undef HAVE_SYS_SELECT_H
 
@@ -255,7 +228,7 @@
 /* 0 if not building for Darwin. */
 #undef IS_DARWIN
 
-/* 1 if building for MinGW. */
+/* 0 if not building for Mingw. */
 #undef IS_MINGW
 
 /* 0 if not building for Win32. */

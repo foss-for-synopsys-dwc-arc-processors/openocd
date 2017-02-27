@@ -51,7 +51,9 @@ bin_PROGRAMS = openocd$(EXEEXT)
 @RELEASE_TRUE@am__append_5 = -DRELSTR=\"\" -DGITVERSION=\"\"
 @RELEASE_FALSE@am__append_6 = -DRELSTR=\"`$(top_srcdir)/guess-rev.sh \
 @RELEASE_FALSE@	$(top_srcdir)`\" -DGITVERSION=\"`cd \
-@RELEASE_FALSE@	$(top_srcdir) && git describe`\"
+@RELEASE_FALSE@	$(top_srcdir) && git describe`\" \
+@RELEASE_FALSE@	-DPKGBLDDATE=\"`date +%F-%R`\"
+@INTERNAL_LIBJAYLINK_FALSE@am__append_7 = $(LIBJAYLINK_LIBS)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config_subdir.m4 \
@@ -64,6 +66,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 am__DEPENDENCIES_1 =
+@INTERNAL_LIBJAYLINK_FALSE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 libopenocd_la_DEPENDENCIES = $(top_builddir)/src/xsvf/libxsvf.la \
 	$(top_builddir)/src/svf/libsvf.la \
 	$(top_builddir)/src/pld/libpld.la \
@@ -75,7 +78,8 @@ libopenocd_la_DEPENDENCIES = $(top_builddir)/src/xsvf/libxsvf.la \
 	$(top_builddir)/src/rtos/librtos.la \
 	$(top_builddir)/src/helper/libhelper.la $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_2)
 am_libopenocd_la_OBJECTS = libopenocd_la-hello.lo \
 	libopenocd_la-openocd.lo
 libopenocd_la_OBJECTS = $(am_libopenocd_la_OBJECTS)
@@ -169,9 +173,11 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GCC_WARNINGS = @GCC_WARNINGS@
 GREP = @GREP@
 HIDAPI_CFLAGS = @HIDAPI_CFLAGS@
 HIDAPI_LIBS = @HIDAPI_LIBS@
+HOST_CPPFLAGS = @HOST_CPPFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -181,6 +187,8 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFTDI_CFLAGS = @LIBFTDI_CFLAGS@
 LIBFTDI_LIBS = @LIBFTDI_LIBS@
+LIBJAYLINK_CFLAGS = @LIBJAYLINK_CFLAGS@
+LIBJAYLINK_LIBS = @LIBJAYLINK_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -272,9 +280,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # common flags used in openocd build
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src \
-	-I$(top_srcdir)/src/helper -DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DBINDIR=\"$(bindir)\" $(am__append_1)
+AM_CFLAGS = $(GCC_WARNINGS)
+AM_CPPFLAGS = $(HOST_CPPFLAGS) -I$(top_srcdir)/src \
+	-I$(top_builddir)/src -I$(top_srcdir)/src/helper \
+	-DPKGDATADIR=\"$(pkgdatadir)\" -DBINDIR=\"$(bindir)\" \
+	$(am__append_1)
 SUBDIRS = \
 	jtag \
 	helper \
@@ -302,15 +312,14 @@ noinst_HEADERS = \
 
 
 # add default CPPFLAGS
-libopenocd_la_CPPFLAGS = -DPKGBLDDATE=\"`date +%F-%R`\" \
-	$(am__append_5) $(am__append_6) $(AM_CPPFLAGS) $(CPPFLAGS)
+libopenocd_la_CPPFLAGS = $(am__append_5) $(am__append_6) \
+	$(AM_CPPFLAGS) $(CPPFLAGS)
 
 # the library search path.
 libopenocd_la_LDFLAGS = $(all_libraries)
 @IS_MINGW_FALSE@MINGWLDADD = 
 @IS_MINGW_TRUE@MINGWLDADD = -lws2_32
-libopenocd_la_LIBADD = \
-	$(top_builddir)/src/xsvf/libxsvf.la \
+libopenocd_la_LIBADD = $(top_builddir)/src/xsvf/libxsvf.la \
 	$(top_builddir)/src/svf/libsvf.la \
 	$(top_builddir)/src/pld/libpld.la \
 	$(top_builddir)/src/jtag/libjtag.la \
@@ -319,10 +328,9 @@ libopenocd_la_LIBADD = \
 	$(top_builddir)/src/target/libtarget.la \
 	$(top_builddir)/src/server/libserver.la \
 	$(top_builddir)/src/rtos/librtos.la \
-	$(top_builddir)/src/helper/libhelper.la \
-	$(LIBFTDI_LIBS) $(MINGWLDADD) \
-	$(HIDAPI_LIBS) $(LIBUSB1_LIBS) $(LIBUSB0_LIBS)
-
+	$(top_builddir)/src/helper/libhelper.la $(LIBFTDI_LIBS) \
+	$(MINGWLDADD) $(HIDAPI_LIBS) $(LIBUSB0_LIBS) $(LIBUSB1_LIBS) \
+	$(am__append_7)
 STARTUP_TCL_SRCS = \
 	$(srcdir)/helper/startup.tcl \
 	$(srcdir)/jtag/startup.tcl \

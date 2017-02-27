@@ -42,43 +42,47 @@ DIST_COMMON = $(am__dist_ulink_DATA_DIST) $(noinst_HEADERS) \
 @INTERNAL_JIMTCL_TRUE@am__append_1 = -I$(top_srcdir)/jimtcl \
 @INTERNAL_JIMTCL_TRUE@			   -I$(top_builddir)/jimtcl
 
-@USE_LIBUSB1_TRUE@am__append_2 = libusb1_common.c
-@USE_LIBUSB0_TRUE@am__append_3 = usb_common.c
-@USE_LIBUSB0_TRUE@@USE_LIBUSB1_FALSE@am__append_4 = libusb0_common.c
-@BITBANG_TRUE@am__append_5 = bitbang.c
-@PARPORT_TRUE@am__append_6 = parport.c
-@DUMMY_TRUE@am__append_7 = dummy.c
-@FT2232_DRIVER_TRUE@am__append_8 = ft2232.c
-@FTDI_TRUE@am__append_9 = ftdi.c mpsse.c
-@JTAG_VPI_TRUE@am__append_10 = jtag_vpi.c
-@USB_BLASTER_DRIVER_TRUE@am__append_11 = usb_blaster
-@USB_BLASTER_DRIVER_TRUE@am__append_12 = $(top_builddir)/src/jtag/drivers/usb_blaster/libocdusbblaster.la
-@AMTJTAGACCEL_TRUE@am__append_13 = amt_jtagaccel.c
-@EP93XX_TRUE@am__append_14 = ep93xx.c
-@AT91RM9200_TRUE@am__append_15 = at91rm9200.c
-@GW16012_TRUE@am__append_16 = gw16012.c
-@BITQ_TRUE@am__append_17 = bitq.c
-@PRESTO_DRIVER_TRUE@am__append_18 = presto.c
-@USBPROG_TRUE@am__append_19 = usbprog.c
-@JLINK_TRUE@am__append_20 = jlink.c
-@RLINK_TRUE@am__append_21 = rlink.c rlink_speed_table.c
-@ULINK_TRUE@am__append_22 = ulink.c
-@VSLLINK_TRUE@am__append_23 = versaloon/usbtoxxx/usbtogpio.c \
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@am__append_2 = libjaylink
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@am__append_3 = libjaylink_internal.la
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@am__append_4 = libjaylink_internal.la
+@INTERNAL_LIBJAYLINK_FALSE@@JLINK_TRUE@am__append_5 = jlink.c
+@INTERNAL_LIBJAYLINK_FALSE@@JLINK_TRUE@am__append_6 = $(LIBJAYLINK_CFLAGS)
+@USE_LIBUSB1_TRUE@am__append_7 = libusb1_common.c
+@USE_LIBUSB0_TRUE@am__append_8 = usb_common.c
+@USE_LIBUSB0_TRUE@@USE_LIBUSB1_FALSE@am__append_9 = libusb0_common.c
+@BITBANG_TRUE@am__append_10 = bitbang.c
+@PARPORT_TRUE@am__append_11 = parport.c
+@DUMMY_TRUE@am__append_12 = dummy.c
+@FTDI_TRUE@am__append_13 = ftdi.c mpsse.c
+@JTAG_VPI_TRUE@am__append_14 = jtag_vpi.c
+@USB_BLASTER_DRIVER_TRUE@am__append_15 = usb_blaster
+@USB_BLASTER_DRIVER_TRUE@am__append_16 = $(top_builddir)/src/jtag/drivers/usb_blaster/libocdusbblaster.la
+@AMTJTAGACCEL_TRUE@am__append_17 = amt_jtagaccel.c
+@EP93XX_TRUE@am__append_18 = ep93xx.c
+@AT91RM9200_TRUE@am__append_19 = at91rm9200.c
+@GW16012_TRUE@am__append_20 = gw16012.c
+@BITQ_TRUE@am__append_21 = bitq.c
+@PRESTO_TRUE@am__append_22 = presto.c
+@USBPROG_TRUE@am__append_23 = usbprog.c
+@RLINK_TRUE@am__append_24 = rlink.c rlink_speed_table.c
+@ULINK_TRUE@am__append_25 = ulink.c
+@VSLLINK_TRUE@am__append_26 = versaloon/usbtoxxx/usbtogpio.c \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/usbtojtagraw.c \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/usbtoswd.c \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/usbtopwr.c \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/usbtoxxx.c \
 @VSLLINK_TRUE@	versaloon/versaloon.c vsllink.c
-@ARMJTAGEW_TRUE@am__append_24 = arm-jtag-ew.c
-@BUSPIRATE_TRUE@am__append_25 = buspirate.c
-@REMOTE_BITBANG_TRUE@am__append_26 = remote_bitbang.c
-@HLADAPTER_TRUE@am__append_27 = stlink_usb.c ti_icdi_usb.c
-@OSBDM_TRUE@am__append_28 = osbdm.c
-@OPENDOUS_TRUE@am__append_29 = opendous.c
-@SYSFSGPIO_TRUE@am__append_30 = sysfsgpio.c
-@BCM2835GPIO_TRUE@am__append_31 = bcm2835gpio.c
-@OPENJTAG_TRUE@am__append_32 = openjtag.c
-@CMSIS_DAP_TRUE@am__append_33 = cmsis_dap_usb.c
+@ARMJTAGEW_TRUE@am__append_27 = arm-jtag-ew.c
+@BUSPIRATE_TRUE@am__append_28 = buspirate.c
+@REMOTE_BITBANG_TRUE@am__append_29 = remote_bitbang.c
+@HLADAPTER_TRUE@am__append_30 = stlink_usb.c ti_icdi_usb.c
+@OSBDM_TRUE@am__append_31 = osbdm.c
+@OPENDOUS_TRUE@am__append_32 = opendous.c
+@SYSFSGPIO_TRUE@am__append_33 = sysfsgpio.c
+@BCM2835GPIO_TRUE@am__append_34 = bcm2835gpio.c
+@OPENJTAG_TRUE@am__append_35 = openjtag.c
+@CMSIS_DAP_TRUE@am__append_36 = cmsis_dap_usb.c
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@am__append_37 = libjaylink
 subdir = src/jtag/drivers
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config_subdir.m4 \
@@ -90,11 +94,16 @@ CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
-libocdjtagdrivers_la_DEPENDENCIES = $(am__append_12)
-am__libocdjtagdrivers_la_SOURCES_DIST = driver.c libusb1_common.c \
-	usb_common.c libusb0_common.c bitbang.c parport.c dummy.c \
-	ft2232.c ftdi.c mpsse.c jtag_vpi.c amt_jtagaccel.c ep93xx.c \
-	at91rm9200.c gw16012.c bitq.c presto.c usbprog.c jlink.c \
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@libjaylink_internal_la_DEPENDENCIES = libjaylink/libjaylink/libjaylink.la
+am__libjaylink_internal_la_SOURCES_DIST = jlink.c
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@am_libjaylink_internal_la_OBJECTS = libjaylink_internal_la-jlink.lo
+libjaylink_internal_la_OBJECTS = $(am_libjaylink_internal_la_OBJECTS)
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@am_libjaylink_internal_la_rpath =
+libocdjtagdrivers_la_DEPENDENCIES = $(am__append_4) $(am__append_16)
+am__libocdjtagdrivers_la_SOURCES_DIST = jlink.c driver.c \
+	libusb1_common.c usb_common.c libusb0_common.c bitbang.c \
+	parport.c dummy.c ftdi.c mpsse.c jtag_vpi.c amt_jtagaccel.c \
+	ep93xx.c at91rm9200.c gw16012.c bitq.c presto.c usbprog.c \
 	rlink.c rlink_speed_table.c ulink.c \
 	versaloon/usbtoxxx/usbtogpio.c \
 	versaloon/usbtoxxx/usbtojtagraw.c \
@@ -103,14 +112,14 @@ am__libocdjtagdrivers_la_SOURCES_DIST = driver.c libusb1_common.c \
 	arm-jtag-ew.c buspirate.c remote_bitbang.c stlink_usb.c \
 	ti_icdi_usb.c osbdm.c opendous.c sysfsgpio.c bcm2835gpio.c \
 	openjtag.c cmsis_dap_usb.c
-@USE_LIBUSB1_TRUE@am__objects_1 =  \
+@INTERNAL_LIBJAYLINK_FALSE@@JLINK_TRUE@am__objects_1 = libocdjtagdrivers_la-jlink.lo
+@USE_LIBUSB1_TRUE@am__objects_2 =  \
 @USE_LIBUSB1_TRUE@	libocdjtagdrivers_la-libusb1_common.lo
-@USE_LIBUSB0_TRUE@am__objects_2 = libocdjtagdrivers_la-usb_common.lo
-@USE_LIBUSB0_TRUE@@USE_LIBUSB1_FALSE@am__objects_3 = libocdjtagdrivers_la-libusb0_common.lo
-@BITBANG_TRUE@am__objects_4 = libocdjtagdrivers_la-bitbang.lo
-@PARPORT_TRUE@am__objects_5 = libocdjtagdrivers_la-parport.lo
-@DUMMY_TRUE@am__objects_6 = libocdjtagdrivers_la-dummy.lo
-@FT2232_DRIVER_TRUE@am__objects_7 = libocdjtagdrivers_la-ft2232.lo
+@USE_LIBUSB0_TRUE@am__objects_3 = libocdjtagdrivers_la-usb_common.lo
+@USE_LIBUSB0_TRUE@@USE_LIBUSB1_FALSE@am__objects_4 = libocdjtagdrivers_la-libusb0_common.lo
+@BITBANG_TRUE@am__objects_5 = libocdjtagdrivers_la-bitbang.lo
+@PARPORT_TRUE@am__objects_6 = libocdjtagdrivers_la-parport.lo
+@DUMMY_TRUE@am__objects_7 = libocdjtagdrivers_la-dummy.lo
 @FTDI_TRUE@am__objects_8 = libocdjtagdrivers_la-ftdi.lo \
 @FTDI_TRUE@	libocdjtagdrivers_la-mpsse.lo
 @JTAG_VPI_TRUE@am__objects_9 = libocdjtagdrivers_la-jtag_vpi.lo
@@ -120,35 +129,34 @@ am__libocdjtagdrivers_la_SOURCES_DIST = driver.c libusb1_common.c \
 @AT91RM9200_TRUE@am__objects_12 = libocdjtagdrivers_la-at91rm9200.lo
 @GW16012_TRUE@am__objects_13 = libocdjtagdrivers_la-gw16012.lo
 @BITQ_TRUE@am__objects_14 = libocdjtagdrivers_la-bitq.lo
-@PRESTO_DRIVER_TRUE@am__objects_15 = libocdjtagdrivers_la-presto.lo
+@PRESTO_TRUE@am__objects_15 = libocdjtagdrivers_la-presto.lo
 @USBPROG_TRUE@am__objects_16 = libocdjtagdrivers_la-usbprog.lo
-@JLINK_TRUE@am__objects_17 = libocdjtagdrivers_la-jlink.lo
-@RLINK_TRUE@am__objects_18 = libocdjtagdrivers_la-rlink.lo \
+@RLINK_TRUE@am__objects_17 = libocdjtagdrivers_la-rlink.lo \
 @RLINK_TRUE@	libocdjtagdrivers_la-rlink_speed_table.lo
-@ULINK_TRUE@am__objects_19 = libocdjtagdrivers_la-ulink.lo
+@ULINK_TRUE@am__objects_18 = libocdjtagdrivers_la-ulink.lo
 am__dirstamp = $(am__leading_dot)dirstamp
-@VSLLINK_TRUE@am__objects_20 = versaloon/usbtoxxx/libocdjtagdrivers_la-usbtogpio.lo \
+@VSLLINK_TRUE@am__objects_19 = versaloon/usbtoxxx/libocdjtagdrivers_la-usbtogpio.lo \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/libocdjtagdrivers_la-usbtojtagraw.lo \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/libocdjtagdrivers_la-usbtoswd.lo \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/libocdjtagdrivers_la-usbtopwr.lo \
 @VSLLINK_TRUE@	versaloon/usbtoxxx/libocdjtagdrivers_la-usbtoxxx.lo \
 @VSLLINK_TRUE@	versaloon/libocdjtagdrivers_la-versaloon.lo \
 @VSLLINK_TRUE@	libocdjtagdrivers_la-vsllink.lo
-@ARMJTAGEW_TRUE@am__objects_21 = libocdjtagdrivers_la-arm-jtag-ew.lo
-@BUSPIRATE_TRUE@am__objects_22 = libocdjtagdrivers_la-buspirate.lo
-@REMOTE_BITBANG_TRUE@am__objects_23 =  \
+@ARMJTAGEW_TRUE@am__objects_20 = libocdjtagdrivers_la-arm-jtag-ew.lo
+@BUSPIRATE_TRUE@am__objects_21 = libocdjtagdrivers_la-buspirate.lo
+@REMOTE_BITBANG_TRUE@am__objects_22 =  \
 @REMOTE_BITBANG_TRUE@	libocdjtagdrivers_la-remote_bitbang.lo
-@HLADAPTER_TRUE@am__objects_24 = libocdjtagdrivers_la-stlink_usb.lo \
+@HLADAPTER_TRUE@am__objects_23 = libocdjtagdrivers_la-stlink_usb.lo \
 @HLADAPTER_TRUE@	libocdjtagdrivers_la-ti_icdi_usb.lo
-@OSBDM_TRUE@am__objects_25 = libocdjtagdrivers_la-osbdm.lo
-@OPENDOUS_TRUE@am__objects_26 = libocdjtagdrivers_la-opendous.lo
-@SYSFSGPIO_TRUE@am__objects_27 = libocdjtagdrivers_la-sysfsgpio.lo
-@BCM2835GPIO_TRUE@am__objects_28 =  \
+@OSBDM_TRUE@am__objects_24 = libocdjtagdrivers_la-osbdm.lo
+@OPENDOUS_TRUE@am__objects_25 = libocdjtagdrivers_la-opendous.lo
+@SYSFSGPIO_TRUE@am__objects_26 = libocdjtagdrivers_la-sysfsgpio.lo
+@BCM2835GPIO_TRUE@am__objects_27 =  \
 @BCM2835GPIO_TRUE@	libocdjtagdrivers_la-bcm2835gpio.lo
-@OPENJTAG_TRUE@am__objects_29 = libocdjtagdrivers_la-openjtag.lo
-@CMSIS_DAP_TRUE@am__objects_30 =  \
+@OPENJTAG_TRUE@am__objects_28 = libocdjtagdrivers_la-openjtag.lo
+@CMSIS_DAP_TRUE@am__objects_29 =  \
 @CMSIS_DAP_TRUE@	libocdjtagdrivers_la-cmsis_dap_usb.lo
-am__objects_31 = libocdjtagdrivers_la-driver.lo $(am__objects_1) \
+am__objects_30 = $(am__objects_1) libocdjtagdrivers_la-driver.lo \
 	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
 	$(am__objects_5) $(am__objects_6) $(am__objects_7) \
 	$(am__objects_8) $(am__objects_9) $(am__objects_10) \
@@ -158,8 +166,8 @@ am__objects_31 = libocdjtagdrivers_la-driver.lo $(am__objects_1) \
 	$(am__objects_20) $(am__objects_21) $(am__objects_22) \
 	$(am__objects_23) $(am__objects_24) $(am__objects_25) \
 	$(am__objects_26) $(am__objects_27) $(am__objects_28) \
-	$(am__objects_29) $(am__objects_30)
-am_libocdjtagdrivers_la_OBJECTS = $(am__objects_31)
+	$(am__objects_29)
+am_libocdjtagdrivers_la_OBJECTS = $(am__objects_30)
 libocdjtagdrivers_la_OBJECTS = $(am_libocdjtagdrivers_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -174,8 +182,10 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libocdjtagdrivers_la_SOURCES)
-DIST_SOURCES = $(am__libocdjtagdrivers_la_SOURCES_DIST)
+SOURCES = $(libjaylink_internal_la_SOURCES) \
+	$(libocdjtagdrivers_la_SOURCES)
+DIST_SOURCES = $(am__libjaylink_internal_la_SOURCES_DIST) \
+	$(am__libocdjtagdrivers_la_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -215,7 +225,6 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = usb_blaster
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -265,9 +274,11 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GCC_WARNINGS = @GCC_WARNINGS@
 GREP = @GREP@
 HIDAPI_CFLAGS = @HIDAPI_CFLAGS@
 HIDAPI_LIBS = @HIDAPI_LIBS@
+HOST_CPPFLAGS = @HOST_CPPFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -277,6 +288,8 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFTDI_CFLAGS = @LIBFTDI_CFLAGS@
 LIBFTDI_LIBS = @LIBFTDI_LIBS@
+LIBJAYLINK_CFLAGS = @LIBJAYLINK_CFLAGS@
+LIBJAYLINK_LIBS = @LIBJAYLINK_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -368,17 +381,19 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # common flags used in openocd build
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src \
-	-I$(top_srcdir)/src/helper -DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DBINDIR=\"$(bindir)\" $(am__append_1)
-noinst_LTLIBRARIES = libocdjtagdrivers.la
-libocdjtagdrivers_la_LIBADD = $(am__append_12)
+AM_CFLAGS = $(GCC_WARNINGS)
+AM_CPPFLAGS = $(HOST_CPPFLAGS) -I$(top_srcdir)/src \
+	-I$(top_builddir)/src -I$(top_srcdir)/src/helper \
+	-DPKGDATADIR=\"$(pkgdatadir)\" -DBINDIR=\"$(bindir)\" \
+	$(am__append_1)
+noinst_LTLIBRARIES = libocdjtagdrivers.la $(am__append_3)
+libocdjtagdrivers_la_LIBADD = $(am__append_4) $(am__append_16)
 libocdjtagdrivers_la_SOURCES = \
 	$(DRIVERFILES)
 
 libocdjtagdrivers_la_CPPFLAGS = $(AM_CPPFLAGS) $(LIBUSB1_CFLAGS) \
-	$(LIBUSB0_CFLAGS) $(HIDAPI_CFLAGS) $(LIBFTDI_CFLAGS)
-
+	$(LIBUSB0_CFLAGS) $(HIDAPI_CFLAGS) $(LIBFTDI_CFLAGS) \
+	$(am__append_6)
 ULINK_FIRMWARE = $(srcdir)/OpenULINK
 EXTRA_DIST = $(ULINK_FIRMWARE) \
 	usb_blaster/README.CheapClone \
@@ -388,23 +403,27 @@ EXTRA_DIST = $(ULINK_FIRMWARE) \
 
 
 # Standard Driver: common files
-DRIVERFILES = driver.c $(am__append_2) $(am__append_3) $(am__append_4) \
-	$(am__append_5) $(am__append_6) $(am__append_7) \
-	$(am__append_8) $(am__append_9) $(am__append_10) \
-	$(am__append_13) $(am__append_14) $(am__append_15) \
-	$(am__append_16) $(am__append_17) $(am__append_18) \
-	$(am__append_19) $(am__append_20) $(am__append_21) \
-	$(am__append_22) $(am__append_23) $(am__append_24) \
-	$(am__append_25) $(am__append_26) $(am__append_27) \
-	$(am__append_28) $(am__append_29) $(am__append_30) \
-	$(am__append_31) $(am__append_32) $(am__append_33)
-SUBDIRS = $(am__append_11)
+DRIVERFILES = $(am__append_5) driver.c $(am__append_7) $(am__append_8) \
+	$(am__append_9) $(am__append_10) $(am__append_11) \
+	$(am__append_12) $(am__append_13) $(am__append_14) \
+	$(am__append_17) $(am__append_18) $(am__append_19) \
+	$(am__append_20) $(am__append_21) $(am__append_22) \
+	$(am__append_23) $(am__append_24) $(am__append_25) \
+	$(am__append_26) $(am__append_27) $(am__append_28) \
+	$(am__append_29) $(am__append_30) $(am__append_31) \
+	$(am__append_32) $(am__append_33) $(am__append_34) \
+	$(am__append_35) $(am__append_36)
+SUBDIRS = $(am__append_2) $(am__append_15)
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@libjaylink_internal_la_SOURCES = jlink.c
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@libjaylink_internal_la_LIBADD = libjaylink/libjaylink/libjaylink.la
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@libjaylink_internal_la_CPPFLAGS = -I$(builddir)/libjaylink/libjaylink \
+@INTERNAL_LIBJAYLINK_TRUE@@JLINK_TRUE@	-I$(srcdir)/libjaylink $(AM_CPPFLAGS)
+
 @ULINK_TRUE@ulinkdir = $(pkgdatadir)/OpenULINK
 @ULINK_TRUE@dist_ulink_DATA = $(ULINK_FIRMWARE)/ulink_firmware.hex
 noinst_HEADERS = \
 	bitbang.h \
 	bitq.h \
-	ftd2xx_common.h \
 	libusb0_common.h \
 	libusb1_common.h \
 	libusb_common.h \
@@ -421,6 +440,7 @@ noinst_HEADERS = \
 	versaloon/versaloon_include.h \
 	versaloon/versaloon_internal.h
 
+DIST_SUBDIRS = usb_blaster $(am__append_37)
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
 all: all-recursive
 
@@ -465,6 +485,8 @@ clean-noinstLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
+libjaylink_internal.la: $(libjaylink_internal_la_OBJECTS) $(libjaylink_internal_la_DEPENDENCIES) 
+	$(LINK) $(am_libjaylink_internal_la_rpath) $(libjaylink_internal_la_OBJECTS) $(libjaylink_internal_la_LIBADD) $(LIBS)
 versaloon/usbtoxxx/$(am__dirstamp):
 	@$(MKDIR_P) versaloon/usbtoxxx
 	@: > versaloon/usbtoxxx/$(am__dirstamp)
@@ -515,6 +537,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libjaylink_internal_la-jlink.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-amt_jtagaccel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-arm-jtag-ew.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-at91rm9200.Plo@am__quote@
@@ -526,7 +549,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-driver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-dummy.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-ep93xx.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-ft2232.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-ftdi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-gw16012.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-jlink.Plo@am__quote@
@@ -580,6 +602,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
+libjaylink_internal_la-jlink.lo: jlink.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libjaylink_internal_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libjaylink_internal_la-jlink.lo -MD -MP -MF $(DEPDIR)/libjaylink_internal_la-jlink.Tpo -c -o libjaylink_internal_la-jlink.lo `test -f 'jlink.c' || echo '$(srcdir)/'`jlink.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libjaylink_internal_la-jlink.Tpo $(DEPDIR)/libjaylink_internal_la-jlink.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='jlink.c' object='libjaylink_internal_la-jlink.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libjaylink_internal_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libjaylink_internal_la-jlink.lo `test -f 'jlink.c' || echo '$(srcdir)/'`jlink.c
+
+libocdjtagdrivers_la-jlink.lo: jlink.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-jlink.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-jlink.Tpo -c -o libocdjtagdrivers_la-jlink.lo `test -f 'jlink.c' || echo '$(srcdir)/'`jlink.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libocdjtagdrivers_la-jlink.Tpo $(DEPDIR)/libocdjtagdrivers_la-jlink.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='jlink.c' object='libocdjtagdrivers_la-jlink.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libocdjtagdrivers_la-jlink.lo `test -f 'jlink.c' || echo '$(srcdir)/'`jlink.c
+
 libocdjtagdrivers_la-driver.lo: driver.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-driver.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-driver.Tpo -c -o libocdjtagdrivers_la-driver.lo `test -f 'driver.c' || echo '$(srcdir)/'`driver.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libocdjtagdrivers_la-driver.Tpo $(DEPDIR)/libocdjtagdrivers_la-driver.Plo
@@ -628,13 +664,6 @@ libocdjtagdrivers_la-dummy.lo: dummy.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dummy.c' object='libocdjtagdrivers_la-dummy.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libocdjtagdrivers_la-dummy.lo `test -f 'dummy.c' || echo '$(srcdir)/'`dummy.c
-
-libocdjtagdrivers_la-ft2232.lo: ft2232.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-ft2232.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-ft2232.Tpo -c -o libocdjtagdrivers_la-ft2232.lo `test -f 'ft2232.c' || echo '$(srcdir)/'`ft2232.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libocdjtagdrivers_la-ft2232.Tpo $(DEPDIR)/libocdjtagdrivers_la-ft2232.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ft2232.c' object='libocdjtagdrivers_la-ft2232.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libocdjtagdrivers_la-ft2232.lo `test -f 'ft2232.c' || echo '$(srcdir)/'`ft2232.c
 
 libocdjtagdrivers_la-ftdi.lo: ftdi.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-ftdi.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-ftdi.Tpo -c -o libocdjtagdrivers_la-ftdi.lo `test -f 'ftdi.c' || echo '$(srcdir)/'`ftdi.c
@@ -705,13 +734,6 @@ libocdjtagdrivers_la-usbprog.lo: usbprog.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='usbprog.c' object='libocdjtagdrivers_la-usbprog.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libocdjtagdrivers_la-usbprog.lo `test -f 'usbprog.c' || echo '$(srcdir)/'`usbprog.c
-
-libocdjtagdrivers_la-jlink.lo: jlink.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-jlink.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-jlink.Tpo -c -o libocdjtagdrivers_la-jlink.lo `test -f 'jlink.c' || echo '$(srcdir)/'`jlink.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libocdjtagdrivers_la-jlink.Tpo $(DEPDIR)/libocdjtagdrivers_la-jlink.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='jlink.c' object='libocdjtagdrivers_la-jlink.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libocdjtagdrivers_la-jlink.lo `test -f 'jlink.c' || echo '$(srcdir)/'`jlink.c
 
 libocdjtagdrivers_la-rlink.lo: rlink.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-rlink.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-rlink.Tpo -c -o libocdjtagdrivers_la-rlink.lo `test -f 'rlink.c' || echo '$(srcdir)/'`rlink.c

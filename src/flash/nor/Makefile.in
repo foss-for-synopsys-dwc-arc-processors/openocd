@@ -52,13 +52,15 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libocdflashnor_la_LIBADD =
-am__objects_1 = aduc702x.lo at91sam4.lo at91sam4l.lo at91samd.lo \
-	at91sam3.lo at91sam7.lo avrf.lo cfi.lo efm32.lo em357.lo \
-	faux.lo lpc2000.lo lpc288x.lo lpc2900.lo lpcspifi.lo mdr.lo \
-	non_cfi.lo ocl.lo pic32mx.lo spi.lo stmsmi.lo stellaris.lo \
-	stm32f1x.lo stm32f2x.lo stm32lx.lo str7x.lo str9x.lo \
-	str9xpec.lo tms470.lo virtual.lo fm3.lo dsp5680xx_flash.lo \
-	kinetis.lo mini51.lo nuc1x.lo nrf51.lo mrvlqspi.lo
+am__objects_1 = aduc702x.lo aducm360.lo ambiqmicro.lo at91sam4.lo \
+	at91sam4l.lo at91samd.lo at91sam3.lo at91sam7.lo atsamv.lo \
+	avrf.lo cfi.lo dsp5680xx_flash.lo efm32.lo em357.lo faux.lo \
+	fm3.lo fm4.lo jtagspi.lo kinetis.lo kinetis_ke.lo lpc2000.lo \
+	lpc288x.lo lpc2900.lo lpcspifi.lo mdr.lo mrvlqspi.lo \
+	niietcm4.lo non_cfi.lo nrf51.lo numicro.lo ocl.lo pic32mx.lo \
+	psoc4.lo sim3x.lo spi.lo stmsmi.lo stellaris.lo stm32f1x.lo \
+	stm32f2x.lo stm32lx.lo stm32l4x.lo str7x.lo str9x.lo \
+	str9xpec.lo tms470.lo virtual.lo xmc1xxx.lo xmc4xxx.lo
 am_libocdflashnor_la_OBJECTS = core.lo tcl.lo $(am__objects_1) \
 	drivers.lo
 libocdflashnor_la_OBJECTS = $(am_libocdflashnor_la_OBJECTS)
@@ -104,9 +106,11 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+GCC_WARNINGS = @GCC_WARNINGS@
 GREP = @GREP@
 HIDAPI_CFLAGS = @HIDAPI_CFLAGS@
 HIDAPI_LIBS = @HIDAPI_LIBS@
+HOST_CPPFLAGS = @HOST_CPPFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -116,6 +120,8 @@ LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFTDI_CFLAGS = @LIBFTDI_CFLAGS@
 LIBFTDI_LIBS = @LIBFTDI_LIBS@
+LIBJAYLINK_CFLAGS = @LIBJAYLINK_CFLAGS@
+LIBJAYLINK_LIBS = @LIBJAYLINK_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -207,9 +213,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # common flags used in openocd build
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src \
-	-I$(top_srcdir)/src/helper -DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DBINDIR=\"$(bindir)\" $(am__append_1)
+AM_CFLAGS = $(GCC_WARNINGS)
+AM_CPPFLAGS = $(HOST_CPPFLAGS) -I$(top_srcdir)/src \
+	-I$(top_builddir)/src -I$(top_srcdir)/src/helper \
+	-DPKGDATADIR=\"$(pkgdatadir)\" -DBINDIR=\"$(bindir)\" \
+	$(am__append_1)
 noinst_LTLIBRARIES = libocdflashnor.la
 libocdflashnor_la_SOURCES = \
 	core.c \
@@ -219,42 +227,53 @@ libocdflashnor_la_SOURCES = \
 
 NOR_DRIVERS = \
 	aduc702x.c \
+	aducm360.c \
+	ambiqmicro.c \
 	at91sam4.c \
 	at91sam4l.c \
 	at91samd.c \
 	at91sam3.c \
 	at91sam7.c \
+	atsamv.c \
 	avrf.c \
 	cfi.c \
+	dsp5680xx_flash.c \
 	efm32.c \
 	em357.c \
 	faux.c \
+	fm3.c \
+	fm4.c \
+	jtagspi.c \
+	kinetis.c \
+	kinetis_ke.c \
 	lpc2000.c \
 	lpc288x.c \
 	lpc2900.c \
 	lpcspifi.c \
 	mdr.c \
+	mrvlqspi.c \
+	niietcm4.c \
 	non_cfi.c \
+	nrf51.c \
+	numicro.c \
 	ocl.c \
 	pic32mx.c \
+	psoc4.c \
+	sim3x.c \
 	spi.c \
 	stmsmi.c \
 	stellaris.c \
 	stm32f1x.c \
 	stm32f2x.c \
 	stm32lx.c \
+	stm32l4x.c \
 	str7x.c \
 	str9x.c \
 	str9xpec.c \
 	tms470.c \
 	virtual.c \
-	fm3.c \
-	dsp5680xx_flash.c \
-	kinetis.c \
-	mini51.c \
-	nuc1x.c \
-	nrf51.c \
-	mrvlqspi.c
+	xmc1xxx.c \
+	xmc4xxx.c
 
 noinst_HEADERS = \
 	core.h \
@@ -319,11 +338,14 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aduc702x.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aducm360.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ambiqmicro.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/at91sam3.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/at91sam4.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/at91sam4l.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/at91sam7.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/at91samd.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atsamv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/avrf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cfi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/core.Plo@am__quote@
@@ -333,23 +355,29 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/em357.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/faux.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fm3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fm4.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jtagspi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kinetis.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kinetis_ke.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lpc2000.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lpc288x.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lpc2900.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lpcspifi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdr.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mini51.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mrvlqspi.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/niietcm4.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/non_cfi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nrf51.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nuc1x.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/numicro.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ocl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pic32mx.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/psoc4.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sim3x.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stellaris.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stm32f1x.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stm32f2x.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stm32l4x.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stm32lx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stmsmi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/str7x.Plo@am__quote@
@@ -358,6 +386,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tms470.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/virtual.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xmc1xxx.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xmc4xxx.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
