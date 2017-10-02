@@ -5,14 +5,16 @@ Content:
 
 1. How to build OpenOCD on Linux
 2. How to build OpenOCD for Windows (cross compile on Linux)
-3. How to use OpenOCD on Linux
-4. How to use OpenOCD on Windows
-5. Advanced debug commands
-6. Some useful ARC development commands
-7. Find your way in the source code
-8. Digilent cable installation instructions
-9. How to program a bit-file into FPGA with the Digilent HS cable
-10. Running internal testsuite
+3. How to build OpenOCD on macOS
+4. How to use OpenOCD on Linux
+5. How to use OpenOCD on Windows
+6. How to use OpenOCD on macOS
+7. Advanced debug commands
+8. Some useful ARC development commands
+9. Find your way in the source code
+10. Digilent cable installation instructions
+11. How to program a bit-file into FPGA with the Digilent HS cable
+12. Running internal testsuite
 
 Important notes:
 
@@ -159,7 +161,35 @@ default), copy </libusbx/install/path>/bin/libusb-1.0.dll to the OpenOCD bin
 directory. Copy OpenOCD installation to Window host.
 
 
-3. How to use OpenOCD on Linux
+3. How to build OpenOCD on macOS
+--------------------------------
+
+Install prerequisites: see README.OSX.
+
+Download OpenOCD sources:
+
+    $ git clone https://github.com/foss-for-synopsys-dwc-arc-processors/openocd
+    $ cd openocd
+
+Configure OpenOCD. Consult `configure --help` and generic OpenOCD documentation
+for details. For ARC you would want to have an ftdi driver.
+
+    $ ./bootstrap
+    $ ./configure --enable-ftdi --disable-doxygen-html
+
+Notes:
+  * if documentation is required, remove the option `--disable-doxygen-html`
+  * for development activities, add those options:
+    `--enable-verbose --enable-verbose-jtag-io`
+  * if build fails and there in error log there is something about "warnings
+    treated as errors", then try to configure with option `--disable-werror`.
+
+Now build and install:
+    $ make
+    $ sudo make install
+
+
+4. How to use OpenOCD on Linux
 -----------------------------------------------------------
 
 > Connection host is a host that is connected to the debug target via USB cable
@@ -220,7 +250,7 @@ Resume execution to reach function exit:
   (gdb) continue
 
 
-4. How to use OpenOCD on Windows
+5. How to use OpenOCD on Windows
 --------------------------------
 
 WinUSB driver should be used to allow OpenOCD to connect to debug cable and
@@ -236,7 +266,43 @@ complain about driver files created by Zadig. After installing the driver
 everything is the same as on Linux: run OpenOCD, connect to it with GDB, etc.
 
 
-5. Advanced debug commands
+6. How to use OpenOCD on macOS
+------------------------------
+
+> Connection host is a host that is connected to the debug target via USB cable
+> and runs OpenOCD. Debug host is a hsot that runs GDB, which connects to the
+> OpenOCD with TCP connection. Ehily typically it is the same host, they
+> actually can be different host and it is important to distinguish them.
+
+Connect debug target to the connection host. AXS10x products and EM Starter Kit
+have built-in debug cable, the don't require a separate Digilent HS cable. HS
+is required only for other debug targets like ML-509 board, etc.
+
+Run ioreg application to ensure that FTDI device is there:
+
+    $ ioreg -p IOUSB -l -w 0
+
+There should be output like this:
+    Digilent USB Device@14100000  <class AppleUSBDevice, id 0x1000015f7, registered, matched, active, busy 0 (5 ms), retain 21>
+    {
+      ...
+    }
+
+Note that exact output could differ from host to host.
+
+If you're using a USB adapter and have a driver kext matched to it,
+you will need to unload it prior to running OpenOCD. E.g. with Apple
+driver (OS X 10.9 or later) for FTDI run:
+  sudo kextunload -b com.apple.driver.AppleUSBFTDI
+for FTDI vendor driver use:
+  sudo kextunload FTDIUSBSerialDriver.kext
+
+Run OpenOCD:
+
+See for tag Run OpenOCD at How to use OpenOCD on Linux.
+
+
+7. Advanced debug commands
 --------------------------
 
 With the GDB "monitor" command, you have "direct" access to the core without
@@ -261,7 +327,7 @@ removed in future, when ARC OpenOCD will fully support flexible register
 configurations.
 
 
-6. Some useful ARC development commands
+8. Some useful ARC development commands
 ---------------------------------------
 
 Some command that might be useful during development:
@@ -274,7 +340,7 @@ Some command that might be useful during development:
     $ arc-elf32-readelf -x 1 u-boot.elf | more
 
 
-7. Find your way in the source code
+9. Find your way in the source code
 -----------------------------------
 
 Automake makefile entry starts from: src/target/Makefile.am
@@ -299,8 +365,8 @@ In src/target is the ARC specific code base:
 	arc_trgt.c + .h		target/board system functions
 
 
-8. Digilent driver installation instructions
---------------------------------------------
+10. Digilent driver installation instructions
+---------------------------------------------
 
 OpenOCD doesn't use Digilent drivers to communicate with Digilent debug cables,
 instead it uses it's own implementation of FTDI MPSSE protocol, which us
@@ -326,8 +392,8 @@ Untar and install products:
     $ cd ..
 
 
-9. How to program a bit-file into FPGA with the Digilent HS cable
------------------------------------------------------------------
+11. How to program a bit-file into FPGA with the Digilent HS cable
+------------------------------------------------------------------
 
 Below is an example given of how to program a Xilinx ML509 FPGA developers
 board. NOTE: make sure the Digilent HS cable is connected to the right
@@ -363,7 +429,7 @@ JTAG scan chain.
     Programming device. Do not touch your board. This may take a few minutes...
     Programming succeeded.
 
-10. Running internal testsuite
+12. Running internal testsuite
 ------------------------------
 
 There is a set of internal test for ARC and OpenOCD (consisting of just a
