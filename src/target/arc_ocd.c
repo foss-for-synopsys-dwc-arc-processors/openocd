@@ -99,6 +99,16 @@ int arc_ocd_assert_reset(struct target *target)
 
 		target_handle_event(target, TARGET_EVENT_RESET_ASSERT);
 		register_cache_invalidate(arc32->core_cache);
+		/* An ARC target might be in halt state after reset, so
+		 * if script requested processor to resume, then it must
+		 * be manually started to ensure that this request
+		 * is satisfied. */
+		if (target->state == TARGET_HALTED && !target->reset_halt) {
+			/* Resume the target and continue from the current
+			 * PC register value. */
+			LOG_DEBUG("Starting CPU execution after reset");
+			CHECK_RETVAL(target_resume(target, 1, 0, 0, 0));
+		}
 		target->state = TARGET_RESET;
 
 		return ERROR_OK;
