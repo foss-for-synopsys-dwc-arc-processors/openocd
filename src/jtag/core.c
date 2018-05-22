@@ -1801,11 +1801,16 @@ static struct transport jtag_transport = {
 	.select = jtag_select,
 	.init = jtag_init,
 };
-
+static struct transport cjtag_transport = {
+	.name = "cjtag",
+	.select = jtag_select,
+	.init = jtag_init,
+};
 static void jtag_constructor(void) __attribute__((constructor));
 static void jtag_constructor(void)
 {
 	transport_register(&jtag_transport);
+	transport_register(&cjtag_transport);
 }
 
 /** Returns true if the current debug session
@@ -1813,7 +1818,7 @@ static void jtag_constructor(void)
  */
 bool transport_is_jtag(void)
 {
-	return get_current_transport() == &jtag_transport;
+	return (get_current_transport() == &jtag_transport) || (get_current_transport() == &cjtag_transport);
 }
 
 void adapter_assert_reset(void)
