@@ -575,32 +575,28 @@ static void ftdi_execute_command(struct jtag_command *cmd)
 			ftdi_execute_runtest(cmd);
 			break;
 		case JTAG_TLR_RESET:
-			if (cjtag_mode)
-			{
-			// Flush anything in the queue...
-			mpsse_flush(mpsse_ctx);
-			mpsse_purge(mpsse_ctx);
-			// Initialise cJTAG
-			cjtag_initialise(mpsse_ctx);
-			// The initialise function above ends in the IDLE state
-			tap_set_state(TAP_IDLE);
+			if (cjtag_mode) {
+				/* Flush anything in the queue... */
+				mpsse_flush(mpsse_ctx);
+				mpsse_purge(mpsse_ctx);
+				/* Initialize cJTAG */
+				cjtag_initialize(mpsse_ctx);
+				/* The initialise function above ends in the IDLE state */
+				tap_set_state(TAP_IDLE);
 			}
-			else
-			{
-			ftdi_execute_statemove(cmd);
+			else {
+				ftdi_execute_statemove(cmd);
 			}
 			break;
 		case JTAG_PATHMOVE:
 			ftdi_execute_pathmove(cmd);
 			break;
 		case JTAG_SCAN:
-			if (cjtag_mode)
-			{
-			cjtag_execute_scan(cmd);
+			if (cjtag_mode)	{
+				cjtag_execute_scan(cmd);
 			}
-			else
-			{
-			ftdi_execute_scan(cmd);
+			else {
+				ftdi_execute_scan(cmd);
 			}
 			break;
 		case JTAG_SLEEP:
@@ -646,15 +642,9 @@ static int ftdi_initialize(void)
 	transport = get_current_transport();
 
 	cjtag_mode = false;
-	if (transport) 
-	{
-	if (strcmp(transport->name, "cjtag") == 0)
-	{
-	cjtag_mode = true;
+	if ((transport) && (strcmp(transport->name, "cjtag") == 0)) {
+		cjtag_mode = true;
 	}
-	}
-
-
 
 	if (tap_get_tms_path_len(TAP_IRPAUSE, TAP_IRPAUSE) == 7)
 		LOG_DEBUG("ftdi interface using 7 step jtag state transitions");
