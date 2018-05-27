@@ -85,6 +85,7 @@ static void non_zero_bit_scan_sequence(unsigned amount);
 static void zero_bit_scan_sequence(int repeat);
 static void transitions(const char *tms_values, int tdi_value);
 static void set_JTAG_to_idle(void);
+static void cjtag_move_to_state(tap_state_t goal_state);
 
 static struct mpsse_ctx *local_ctx;
 
