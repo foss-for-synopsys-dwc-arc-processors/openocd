@@ -85,6 +85,8 @@
 /* FTDI access library includes */
 #include "mpsse.h"
 
+#include "arc_ftdi_cjtag.h"
+
 #define JTAG_MODE (LSB_FIRST | POS_EDGE_IN | NEG_EDGE_OUT)
 #define SWD_MODE (LSB_FIRST | POS_EDGE_IN | NEG_EDGE_OUT)
 
@@ -93,6 +95,7 @@ static char *ftdi_serial;
 static uint8_t ftdi_channel;
 
 static bool swd_mode;
+static bool cjtag_mode;
 
 #define MAX_USB_IDS 8
 /* vid = pid = 0 marks the end of the list */
@@ -572,13 +575,29 @@ static void ftdi_execute_command(struct jtag_command *cmd)
 			ftdi_execute_runtest(cmd);
 			break;
 		case JTAG_TLR_RESET:
-			ftdi_execute_statemove(cmd);
+			if (cjtag_mode) {
+				/* Flush anything in the queue... */
+				mpsse_flush(mpsse_ctx);
+				mpsse_purge(mpsse_ctx);
+				/* Initialize cJTAG */
+				cjtag_initialize(mpsse_ctx);
+				/* The initialise function above ends in the IDLE state */
+				tap_set_state(TAP_IDLE);
+			}
+			else {
+				ftdi_execute_statemove(cmd);
+			}
 			break;
 		case JTAG_PATHMOVE:
 			ftdi_execute_pathmove(cmd);
 			break;
 		case JTAG_SCAN:
-			ftdi_execute_scan(cmd);
+			if (cjtag_mode)	{
+				cjtag_execute_scan(cmd);
+			}
+			else {
+				ftdi_execute_scan(cmd);
+			}
 			break;
 		case JTAG_SLEEP:
 			ftdi_execute_sleep(cmd);
@@ -619,6 +638,14 @@ static int ftdi_execute_queue(void)
 
 static int ftdi_initialize(void)
 {
+	struct transport *transport;
+	transport = get_current_transport();
+
+	cjtag_mode = false;
+	if ((transport) && (strcmp(transport->name, "cjtag") == 0)) {
+		cjtag_mode = true;
+	}
+
 	if (tap_get_tms_path_len(TAP_IRPAUSE, TAP_IRPAUSE) == 7)
 		LOG_DEBUG("ftdi interface using 7 step jtag state transitions");
 	else
@@ -1116,7 +1143,7 @@ static const struct swd_driver ftdi_swd = {
 	.run = ftdi_swd_run_queue,
 };
 
-static const char * const ftdi_transports[] = { "jtag", "swd", NULL };
+static const char * const ftdi_transports[] = { "jtag", "cjtag", "swd", NULL };
 
 struct jtag_interface ftdi_interface = {
 	.name = "ftdi",
