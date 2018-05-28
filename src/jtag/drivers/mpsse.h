@@ -77,8 +77,9 @@ int mpsse_set_frequency(struct mpsse_ctx *ctx, int frequency);
 int mpsse_flush(struct mpsse_ctx *ctx);
 void mpsse_purge(struct mpsse_ctx *ctx);
 
-/* Low level write read */
-void mpsse_write_read(struct mpsse_ctx *ctx, const uint8_t *out, unsigned out_length, uint8_t *in, unsigned in_length);
+/* Low level write read functions*/
+void mpsse_write(struct mpsse_ctx *ctx, const uint8_t *out, unsigned out_length);
+void mpsse_read(struct mpsse_ctx *ctx, uint8_t *in, unsigned in_length);
 
 
 #endif /* MPSSE_H_ */

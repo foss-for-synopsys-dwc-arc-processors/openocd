@@ -870,7 +870,7 @@ int mpsse_flush(struct mpsse_ctx *ctx)
 	return retval;
 }
 
-void mpsse_write_read(struct mpsse_ctx *ctx, const uint8_t *out, unsigned out_length, uint8_t *in, unsigned in_length)
+void mpsse_write(struct mpsse_ctx *ctx, const uint8_t *out, unsigned out_length)
 {
 	unsigned i;
 
@@ -879,17 +879,25 @@ void mpsse_write_read(struct mpsse_ctx *ctx, const uint8_t *out, unsigned out_le
 		return;
 	}
 
-	if (buffer_write_space(ctx) < out_length || (in && buffer_read_space(ctx) < in_length))
+	if (buffer_write_space(ctx) < out_length)
 		ctx->retval = mpsse_flush(ctx);
 
 	for (i=0; i < out_length; i++) {
 		buffer_write_byte(ctx, out[i]);
 	}
-
-	if (in_length != 0) {
-		buffer_add_read(ctx, in, 0, in_length * 8, 0);
-		/* Flush any existing commands... */
-		mpsse_flush(ctx);
-	}
 }
 
+void mpsse_read(struct mpsse_ctx *ctx, uint8_t *in, unsigned in_length)
+{
+	if (ctx->retval != ERROR_OK) {
+		DEBUG_IO("Ignoring command due to previous error");
+		return;
+	}
+
+	if (buffer_read_space(ctx) < in_length)
+		ctx->retval = mpsse_flush(ctx);
+
+	buffer_add_read(ctx, in, 0, in_length * 8, 0);
+	/* Flush any existing commands... */
+	mpsse_flush(ctx);
+}

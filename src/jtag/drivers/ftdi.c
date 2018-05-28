@@ -85,7 +85,7 @@
 /* FTDI access library includes */
 #include "mpsse.h"
 
-#include "ftdi_cjtag.h"
+#include "arc_ftdi_cjtag.h"
 
 #define JTAG_MODE (LSB_FIRST | POS_EDGE_IN | NEG_EDGE_OUT)
 #define SWD_MODE (LSB_FIRST | POS_EDGE_IN | NEG_EDGE_OUT)

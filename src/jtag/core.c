@@ -1801,16 +1801,19 @@ static struct transport jtag_transport = {
 	.select = jtag_select,
 	.init = jtag_init,
 };
+
 static struct transport cjtag_transport = {
 	.name = "cjtag",
 	.select = jtag_select,
 	.init = jtag_init,
 };
+
 static void jtag_constructor(void) __attribute__((constructor));
 static void jtag_constructor(void)
 {
 	transport_register(&jtag_transport);
 	transport_register(&cjtag_transport);
+	// The call to transport_register() for the SWD protocol is done in src\target\adi_v5_swd.c
 }
 
 /** Returns true if the current debug session

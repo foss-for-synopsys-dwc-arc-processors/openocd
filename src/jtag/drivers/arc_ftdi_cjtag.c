@@ -62,11 +62,11 @@ typedef enum
 } TycJtagScanFormat;
 
 #define MAX_SUPPORTED_SCAN_LENGTH 1000
-static unsigned char pucRxBuffer[MAX_SUPPORTED_SCAN_LENGTH];
+static uint8_t pucRxBuffer[MAX_SUPPORTED_SCAN_LENGTH];
 #define MAX_PREAMBLE  6
 #define MAX_POSTAMBLE 2
 
-TycJtagScanFormat tycJtagScanFormat = normal;
+static TycJtagScanFormat tycJtagScanFormat = normal;
 static int iWantResult  = 1;
 static unsigned long ulTxCount = 0;
 static void enter_2wire_mode(void);
@@ -89,43 +89,47 @@ static void cjtag_move_to_state(tap_state_t goal_state);
 
 static struct mpsse_ctx *local_ctx;
 
-static const unsigned char pucInitializeSequence[] = {	0x80, /* Set output pins			*/
-														0xE8, /*		Value				*/
-														0xEB, /*		Direction			*/
-														0x82, /* Set output pins (high byte)*/
-														0x00, /*		Value				*/
-														0x60, /*		Direction			*/
-														0x81, /* Read input pins			*/
-														0x87};/* Send immediate				*/
+static const uint8_t puDigilentHs2cInitializeSequence[] = {
+		0x80, /* Set output pins            */
+		0xE8, /*        Value               */
+		0xEB, /*        Direction           */
+		0x82, /* Set output pins (high byte)*/
+		0x00, /*        Value               */
+		0x60, /*        Direction           */
+		0x81, /* Read input pins            */
+		0x87  /* Send immediate             */
+};
 
-static const unsigned char pucEscapeSequence[] = {	0x80, /* Set output pins			*/
-													0xE8, /*		Value				*/
-													0xFB, /*		Direction			*/
-													0x80, /* Set output pins			*/
-													0xE8, /*		Value				*/
-													0xFA, /*		Direction			*/
-													0x80, /* Set output pins			*/
-													0xF9, /*		Value				*/
-													0xFA, /*		Direction			*/
-													0x8E, /* Clock with no data			*/
-													0x00, /*		Number of bits		*/
-													0x4B, /* Clock data to TMS pin		*/
-													0x05, /*		Length				*/
-													0x6A, /*		Data				*/
-													0x4B, /* Clock data to TMS pin		*/
-													0x01, /*		Length				*/
-													0x06, /*		Data				*/
-													0x8E, /* Clock with no data			*/
-													0x00, /*		Number of bits		*/
-													0x80, /* Set output pins			*/
-													0xE8, /*		Value				*/
-													0xFA, /*		Direction			*/
-													0x80, /* Set output pins			*/
-													0xE8, /*		Value				*/
-													0xFB, /*		Direction			*/
-													0x80, /* Set output pins			*/
-													0xE8, /*		Value				*/
-													0xEB};/*		Direction			*/
+static const uint8_t pucEscapeSequence[] = {
+		0x80, /* Set output pins            */
+		0xE8, /*        Value               */
+		0xFB, /*        Direction           */
+		0x80, /* Set output pins            */
+		0xE8, /*        Value               */
+		0xFA, /*        Direction           */
+		0x80, /* Set output pins            */
+		0xF9, /*        Value               */
+		0xFA, /*        Direction           */
+		0x8E, /* Clock with no data         */
+		0x00, /*        Number of bits      */
+		0x4B, /* Clock data to TMS pin      */
+		0x05, /*        Length              */
+		0x6A, /*        Data                */
+		0x4B, /* Clock data to TMS pin      */
+		0x01, /*        Length              */
+		0x06, /*        Data                */
+		0x8E, /* Clock with no data         */
+		0x00, /*        Number of bits      */
+		0x80, /* Set output pins            */
+		0xE8, /*        Value               */
+		0xFA, /*        Direction           */
+		0x80, /* Set output pins            */
+		0xE8, /*        Value               */
+		0xFB, /*        Direction           */
+		0x80, /* Set output pins            */
+		0xE8, /*        Value               */
+		0xEB  /*        Direction           */
+};
 
 /**
 * Initializes the cJTAG interface
@@ -133,7 +137,7 @@ static const unsigned char pucEscapeSequence[] = {	0x80, /* Set output pins			*/
 */
 void cjtag_initialize(struct mpsse_ctx *ctx)
 {
-	unsigned char ucResponse;
+	uint8_t ucResponse;
 
 	tycJtagScanFormat = normal;
 	iWantResult = 1;
@@ -143,10 +147,11 @@ void cjtag_initialize(struct mpsse_ctx *ctx)
 	local_ctx = ctx;
 
 	/* Initialize the FTDI chip pins state...*/
-	mpsse_write_read(local_ctx, pucInitializeSequence, ARRAY_SIZE(pucInitializeSequence), &ucResponse, 1);
+	mpsse_write(local_ctx, puDigilentHs2cInitializeSequence, ARRAY_SIZE(puDigilentHs2cInitializeSequence));
+	mpsse_read(local_ctx, &ucResponse, 1);
 
 	/* Issue the escape sequence...*/
-	mpsse_write_read(local_ctx, pucEscapeSequence, ARRAY_SIZE(pucEscapeSequence), NULL, 0);
+	mpsse_write(local_ctx, pucEscapeSequence, ARRAY_SIZE(pucEscapeSequence));
 
 	/* goto idle state...*/
 	set_JTAG_to_idle();
@@ -220,7 +225,7 @@ void cjtag_execute_scan(struct jtag_command *cmd)
 	cjtag_move_to_state(cmd->cmd.scan->end_state);
 
 	/* Perform the scan... */
-	mpsse_write_read(local_ctx, NULL, 0, pucRxBuffer, field->num_bits + ulTxCount);
+	mpsse_read(local_ctx, pucRxBuffer, field->num_bits + ulTxCount);
 
 	if (field->in_value) {
 		for (i = 0; i < field->num_bits; i++) {
@@ -252,7 +257,7 @@ static void set_JTAG_to_idle(void)
 */
 static void transitions(const char *tms_values, int tdi_value)
 {
-	unsigned char pucBuffer[0x100];
+	uint8_t pucBuffer[0x100];
 	unsigned char ucCount = 0;
 
 	ulTxCount = 0;
@@ -348,11 +353,13 @@ static void transitions(const char *tms_values, int tdi_value)
 		pucBuffer[ucCount++] = 0x87;
 	}
 
+	mpsse_write(local_ctx, pucBuffer, ucCount);
+
 	if (!iWantResult && in_normal_scan_mode()) {
-		mpsse_write_read(local_ctx, pucBuffer, ucCount, pucRxBuffer, 1);
+		mpsse_read(local_ctx, pucRxBuffer, 1);
 	}
 	else {
-		mpsse_write_read(local_ctx, pucBuffer, ucCount, pucRxBuffer, ulTxCount);
+		mpsse_read(local_ctx, pucRxBuffer, ulTxCount);
 	}
 }
 
@@ -446,7 +453,7 @@ static void send_2part_command(unsigned opcode, unsigned operand)
 */
 static void send_JTAG(unsigned tms_and_tdi)
 {
-	unsigned char pucBuffer[0x100];
+	uint8_t pucBuffer[0x100];
 	unsigned char ucCount = 0;
 
 	pucBuffer[ucCount++] = 0x1B;
@@ -502,7 +509,7 @@ static void send_JTAG(unsigned tms_and_tdi)
 		pucBuffer[ucCount++] = 0xA2;
 	pucBuffer[ucCount++] = 0xEB;
 
-	mpsse_write_read(local_ctx, pucBuffer, ucCount, NULL, 0);
+	mpsse_write(local_ctx, pucBuffer, ucCount);
 }
 
 /**
@@ -518,7 +525,7 @@ static void dummy_scan_packet(void)
 */
 static void send_check_packet(void)
 {
-	unsigned char pucBuffer[3];
+	uint8_t pucBuffer[3];
 	unsigned char ucCount = 0;
 
 	if (in_normal_scan_mode())
@@ -528,7 +535,7 @@ static void send_check_packet(void)
 	pucBuffer[ucCount++] = 0x03;
 	pucBuffer[ucCount++] = 0x00;
 
-	mpsse_write_read(local_ctx, pucBuffer, ucCount, NULL, 0);
+	mpsse_write(local_ctx, pucBuffer, ucCount);
 }
 
 /**
@@ -610,25 +617,31 @@ static bool in_normal_scan_mode(void)
 */
 static void set_format(TycJtagScanFormat sf)
 {
-	unsigned char normalFormatSeq[] = { 0x80,0xA0,0xEB,0x82,
-										0x60,0x60,0x80,0xA0,
-										0xEB,0x82,0x00,0x60,
-										0x80,0xE0,0xEB,0x82,
-										0x00,0x60};
-	unsigned char oscan1FormatSeq[] = { 0x80,0xE0,0xEB,0x82,
-										0x00,0x60,0x80,0xA0,
-										0xEB,0x82,0x60,0x60,
-										0x80,0xA0,0xEB,0x82,
-										0x60,0x60};
+	uint8_t normalFormatSeq[] = {
+		0x80,0xA0,0xEB,
+		0x82,0x60,0x60,
+		0x80,0xA0,0xEB,
+		0x82,0x00,0x60,
+		0x80,0xE0,0xEB,
+		0x82,0x00,0x60
+};
+	uint8_t oscan1FormatSeq[] = {
+		0x80,0xE0,0xEB,
+		0x82,0x00,0x60,
+		0x80,0xA0,0xEB,
+		0x82,0x60,0x60,
+		0x80,0xA0,0xEB,
+		0x82,0x60,0x60
+};
 
 	if (sf == tycJtagScanFormat)
 		return ;
 
 	if (sf == normal) {
-		mpsse_write_read(local_ctx, normalFormatSeq, ARRAY_SIZE(normalFormatSeq), NULL, 0);
+		mpsse_write(local_ctx, normalFormatSeq, ARRAY_SIZE(normalFormatSeq));
 	}
 	else if (sf == oscan1) {
-		mpsse_write_read(local_ctx, oscan1FormatSeq, ARRAY_SIZE(oscan1FormatSeq), NULL, 0);
+		mpsse_write(local_ctx, oscan1FormatSeq, ARRAY_SIZE(oscan1FormatSeq));
 	}
 
 	tycJtagScanFormat = sf;
@@ -670,7 +683,7 @@ static void enter_2wire_mode(void)
 */
 static void cjtag_transitions (const char *tms_values, int tdi_value)
 {
-	unsigned char pucBuffer[0x100];
+	uint8_t pucBuffer[0x100];
 	unsigned char ucCount = 0;
 
 	/* Take a string of 1s and 0s (tms_values) and execute transitions
@@ -736,7 +749,7 @@ static void cjtag_transitions (const char *tms_values, int tdi_value)
 		}
 	}
 
-	mpsse_write_read(local_ctx, pucBuffer, ucCount, NULL, 0);
+	mpsse_write(local_ctx, pucBuffer, ucCount);
 }
 
 /**
