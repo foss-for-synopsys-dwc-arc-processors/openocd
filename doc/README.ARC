@@ -221,8 +221,10 @@ Run OpenOCD:
 
 Valid openocd.cfg files are installed into
 `/usr/local/share/openocd/scripts/board/`:
- * snps_em_sk.cfg - DW ARC EM Starter Kit
- * snps_axs101.cfg - DW ARC AXS101 Software Development platform
+ * snps_em_sk_v2.3.cfg - ARC EM Starter Kit verison 2.3
+ * snps_axs101.cfg - ARC AXS101 Software Development platform
+ * snps_axs103_hs36.cfg - ARC AXS103 in configuration with ARC HS36 core
+ * snps_hsdk.cfg - ARC HSDK
 
 On the debug host (PC with GDB) start an ELF32 GDB debugger:
 
