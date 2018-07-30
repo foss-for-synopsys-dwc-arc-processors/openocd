@@ -49,7 +49,7 @@ DIST_COMMON = $(am__dist_ulink_DATA_DIST) $(noinst_HEADERS) \
 @PARPORT_TRUE@am__append_6 = parport.c
 @DUMMY_TRUE@am__append_7 = dummy.c
 @FT2232_DRIVER_TRUE@am__append_8 = ft2232.c
-@FTDI_TRUE@am__append_9 = ftdi.c mpsse.c
+@FTDI_TRUE@am__append_9 = ftdi.c arc_ftdi_cjtag.c mpsse.c
 @JTAG_VPI_TRUE@am__append_10 = jtag_vpi.c
 @USB_BLASTER_DRIVER_TRUE@am__append_11 = usb_blaster
 @USB_BLASTER_DRIVER_TRUE@am__append_12 = $(top_builddir)/src/jtag/drivers/usb_blaster/libocdusbblaster.la
@@ -93,9 +93,9 @@ LTLIBRARIES = $(noinst_LTLIBRARIES)
 libocdjtagdrivers_la_DEPENDENCIES = $(am__append_12)
 am__libocdjtagdrivers_la_SOURCES_DIST = driver.c libusb1_common.c \
 	usb_common.c libusb0_common.c bitbang.c parport.c dummy.c \
-	ft2232.c ftdi.c mpsse.c jtag_vpi.c amt_jtagaccel.c ep93xx.c \
-	at91rm9200.c gw16012.c bitq.c presto.c usbprog.c jlink.c \
-	rlink.c rlink_speed_table.c ulink.c \
+	ft2232.c ftdi.c arc_ftdi_cjtag.c mpsse.c jtag_vpi.c \
+	amt_jtagaccel.c ep93xx.c at91rm9200.c gw16012.c bitq.c \
+	presto.c usbprog.c jlink.c rlink.c rlink_speed_table.c ulink.c \
 	versaloon/usbtoxxx/usbtogpio.c \
 	versaloon/usbtoxxx/usbtojtagraw.c \
 	versaloon/usbtoxxx/usbtoswd.c versaloon/usbtoxxx/usbtopwr.c \
@@ -112,6 +112,7 @@ am__libocdjtagdrivers_la_SOURCES_DIST = driver.c libusb1_common.c \
 @DUMMY_TRUE@am__objects_6 = libocdjtagdrivers_la-dummy.lo
 @FT2232_DRIVER_TRUE@am__objects_7 = libocdjtagdrivers_la-ft2232.lo
 @FTDI_TRUE@am__objects_8 = libocdjtagdrivers_la-ftdi.lo \
+@FTDI_TRUE@	libocdjtagdrivers_la-arc_ftdi_cjtag.lo \
 @FTDI_TRUE@	libocdjtagdrivers_la-mpsse.lo
 @JTAG_VPI_TRUE@am__objects_9 = libocdjtagdrivers_la-jtag_vpi.lo
 @AMTJTAGACCEL_TRUE@am__objects_10 =  \
@@ -516,6 +517,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-amt_jtagaccel.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-arc_ftdi_cjtag.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-arm-jtag-ew.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-at91rm9200.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libocdjtagdrivers_la-bcm2835gpio.Plo@am__quote@
@@ -642,6 +644,13 @@ libocdjtagdrivers_la-ftdi.lo: ftdi.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ftdi.c' object='libocdjtagdrivers_la-ftdi.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libocdjtagdrivers_la-ftdi.lo `test -f 'ftdi.c' || echo '$(srcdir)/'`ftdi.c
+
+libocdjtagdrivers_la-arc_ftdi_cjtag.lo: arc_ftdi_cjtag.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-arc_ftdi_cjtag.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-arc_ftdi_cjtag.Tpo -c -o libocdjtagdrivers_la-arc_ftdi_cjtag.lo `test -f 'arc_ftdi_cjtag.c' || echo '$(srcdir)/'`arc_ftdi_cjtag.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/libocdjtagdrivers_la-arc_ftdi_cjtag.Tpo $(DEPDIR)/libocdjtagdrivers_la-arc_ftdi_cjtag.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='arc_ftdi_cjtag.c' object='libocdjtagdrivers_la-arc_ftdi_cjtag.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libocdjtagdrivers_la-arc_ftdi_cjtag.lo `test -f 'arc_ftdi_cjtag.c' || echo '$(srcdir)/'`arc_ftdi_cjtag.c
 
 libocdjtagdrivers_la-mpsse.lo: mpsse.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libocdjtagdrivers_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libocdjtagdrivers_la-mpsse.lo -MD -MP -MF $(DEPDIR)/libocdjtagdrivers_la-mpsse.Tpo -c -o libocdjtagdrivers_la-mpsse.lo `test -f 'mpsse.c' || echo '$(srcdir)/'`mpsse.c
