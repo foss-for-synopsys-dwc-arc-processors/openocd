@@ -136,12 +136,16 @@ struct arc32_common {
 
 	/* Cache control */
 	bool has_dcache;
-	/* If true, then D$ has been already flushed since core has been
+	bool has_l2cache;
+	/* If true, then cache has been already flushed since core has been
 	 * halted. */
 	bool dcache_flushed;
-	/* If true, then caches have been already flushed since core has been
+	bool l2cache_flushed;
+	/* If true, then cache has been already invalidated since core has been
 	 * halted. */
-	bool cache_invalidated;
+	bool icache_invalidated;
+	bool dcache_invalidated;
+	bool l2cache_invalidated;
 
 	/* Whether DEBUG.SS bit is present. This is a unique feature of ARC 600. */
 	bool has_debug_ss;
@@ -265,9 +269,11 @@ int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
 	struct jtag_tap *tap);
 
 int arc32_build_reg_cache(struct target *target);
+
 int arc32_build_bcr_reg_cache(struct target *target);
 
 int arc32_save_context(struct target *target);
+
 int arc32_restore_context(struct target *target);
 
 int arc32_enable_interrupts(struct target *target, int enable);
@@ -278,12 +284,15 @@ int arc32_config_step(struct target *target, int enable_step);
 
 int arc32_cache_invalidate(struct target *target);
 
+int arc32_cache_flush(struct target *target);
+
 int arc32_wait_until_core_is_halted(struct target *target);
 
 int arc32_print_core_state(struct target *target);
+
 int arc32_arch_state(struct target *target);
+
 int arc32_get_current_pc(struct target *target);
-int arc32_dcache_flush(struct target *target);
 
 int arc32_reset_caches_states(struct target *target);
 
