@@ -92,6 +92,8 @@ int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
 	 * because if it isn't, there will be no error, just a slight
 	 * performance penalty from unnecessary JTAG operations. */
 	arc32->has_dcache = true;
+	/* L2$ isn't presented in a target by default. */
+	arc32->has_l2cache = false;
 	arc32_reset_caches_states(target);
 
 	/* Add standard GDB data types */
@@ -420,24 +422,35 @@ int arc32_config_step(struct target *target, int enable_step)
 
 /* This function is cheap to call and returns quickly if caches already has
  * been invalidated since core had been halted. */
-int arc32_cache_invalidate(struct target *target)
+static int arc32_icache_invalidate(struct arc32_common *arc32)
+{
+	uint32_t value = IC_IVIC_INVALIDATE;	/* invalidate I$ */
+
+	if (arc32->icache_invalidated)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Invalidating I$.");
+
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, AUX_IC_IVIC_REG, value));
+	arc32->icache_invalidated = true;
+
+	return ERROR_OK;
+}
+
+/* This function is cheap to call and returns quickly if caches already has
+ * been invalidated since core had been halted. */
+static int arc32_dcache_invalidate(struct arc32_common *arc32)
 {
 	uint32_t value, backup;
 
-	struct arc32_common *arc32 = target_to_arc32(target);
-
-	/* Don't waste time if already done. */
-	if (arc32->cache_invalidated)
+	if (!arc32->has_dcache || arc32->dcache_invalidated)
 	    return ERROR_OK;
 
-	LOG_DEBUG("Invalidating I$ & D$.");
+	LOG_DEBUG("Invalidating D$.");
 
-	value = IC_IVIC_INVALIDATE;	/* invalidate I$ */
-	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, AUX_IC_IVIC_REG, value));
 	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc32->jtag_info, AUX_DC_CTRL_REG, &value));
-
 	backup = value;
-	value = value & ~DC_CTRL_IM;
+	value &= ~DC_CTRL_IM;
 
 	/* set DC_CTRL invalidate mode to invalidate-only (no flushing!!) */
 	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, AUX_DC_CTRL_REG, value));
@@ -447,7 +460,52 @@ int arc32_cache_invalidate(struct target *target)
 	/* restore DC_CTRL invalidate mode */
 	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, AUX_DC_CTRL_REG, backup));
 
-	arc32->cache_invalidated = true;
+	arc32->dcache_invalidated = true;
+
+	return ERROR_OK;
+}
+
+/* This function is cheap to call and returns quickly if caches already has
+ * been invalidated since core had been halted. */
+static int arc32_l2cache_invalidate(struct arc32_common *arc32)
+{
+	uint32_t value, backup;
+
+	if (!arc32->has_l2cache || arc32->l2cache_invalidated)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Invalidating L2$.");
+
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc32->jtag_info, SLC_AUX_CACHE_CTRL, &value));
+	backup = value;
+	value &= ~L2_CTRL_IM;
+
+	/* set L2_CTRL invalidate mode to invalidate-only (no flushing!!) */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, SLC_AUX_CACHE_CTRL, value));
+	/* invalidate L2$ */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, SLC_AUX_CACHE_INV, L2_INV_IV));
+
+	/* Wait until invalidate operation ends */
+	do {
+	    LOG_DEBUG("Waiting for invalidation end.");
+	    CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc32->jtag_info, SLC_AUX_CACHE_CTRL, &value));
+	} while (value & L2_CTRL_BS);
+
+	/* restore L2_CTRL invalidate mode */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, SLC_AUX_CACHE_CTRL, backup));
+
+	arc32->l2cache_invalidated = true;
+
+	return ERROR_OK;
+}
+
+
+int arc32_cache_invalidate(struct target *target)
+{
+	struct arc32_common *arc32 = target_to_arc32(target);
+	CHECK_RETVAL(arc32_icache_invalidate(arc32));
+	CHECK_RETVAL(arc32_dcache_invalidate(arc32));
+	CHECK_RETVAL(arc32_l2cache_invalidate(arc32));
 
 	return ERROR_OK;
 }
@@ -457,12 +515,10 @@ int arc32_cache_invalidate(struct target *target)
  * values directly from memory, bypassing cache, so if there are unflushed
  * lines debugger will read invalid values, which will cause a lot of troubles.
  * */
-int arc32_dcache_flush(struct target *target)
+static int arc32_dcache_flush(struct arc32_common *arc32)
 {
 	uint32_t value, dc_ctrl_value;
 	bool has_to_set_dc_ctrl_im;
-
-	struct arc32_common *arc32 = target_to_arc32(target);
 
 	/* Don't waste time if already done. */
 	if (!arc32->has_dcache || arc32->dcache_flushed)
@@ -490,6 +546,40 @@ int arc32_dcache_flush(struct target *target)
 	}
 
 	arc32->dcache_flushed = true;
+
+	return ERROR_OK;
+}
+
+/* This function is cheap to call and returns quickly if caches already has
+ * been flushed since core had been halted. */
+static int arc32_l2cache_flush(struct arc32_common *arc32)
+{
+	uint32_t value;
+
+	if (!arc32->has_l2cache || arc32->l2cache_flushed)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Flushing L2$.");
+
+	/* Flush L2 cache */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc32->jtag_info, SLC_AUX_CACHE_FLUSH, L2_FLUSH_FL));
+
+	/* Wait until flush operation ends */
+	do {
+	    LOG_DEBUG("Waiting for flushing end.");
+	    CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc32->jtag_info, SLC_AUX_CACHE_CTRL, &value));
+	} while (value & L2_CTRL_BS);
+
+	arc32->l2cache_flushed = true;
+
+	return ERROR_OK;
+}
+
+int arc32_cache_flush(struct target *target)
+{
+	struct arc32_common *arc32 = target_to_arc32(target);
+	CHECK_RETVAL(arc32_dcache_flush(arc32));
+	CHECK_RETVAL(arc32_l2cache_flush(arc32));
 
 	return ERROR_OK;
 }
@@ -554,7 +644,10 @@ int arc32_reset_caches_states(struct target *target)
 
 	/* Reset caches states. */
 	arc32->dcache_flushed = false;
-	arc32->cache_invalidated = false;
+	arc32->l2cache_flushed = false;
+	arc32->icache_invalidated = false;
+	arc32->dcache_invalidated = false;
+	arc32->l2cache_invalidated = false;
 
 	return ERROR_OK;
 }
