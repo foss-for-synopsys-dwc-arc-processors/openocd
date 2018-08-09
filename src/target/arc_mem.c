@@ -74,7 +74,10 @@ static int arc_mem_write_block32(struct target *target, uint32_t addr,
 	/* Check arguments */
 	assert(!(addr & 3));
 
-	/* No need to flush cache, because we don't read values from memory. */
+	/* We need to flush the cache since it might contain dirty
+	 * lines, so the cache invalidation may cause data inconsistency. */
+	CHECK_RETVAL(arc32_cache_flush(target));
+
 	CHECK_RETVAL(arc_jtag_write_memory( &arc32->jtag_info, addr, count,
 				(uint32_t *)buf));
 	/* Invalidate caches. */
@@ -96,7 +99,8 @@ static int arc_mem_write_block16(struct target *target, uint32_t addr,
 	/* Check arguments */
 	assert(!(addr & 1));
 
-	/* We will read data from memory, so we need to flush the cache. */
+	/* We need to flush the cache since it might contain dirty
+	 * lines, so the cache invalidation may cause data inconsistency. */
 	CHECK_RETVAL(arc32_cache_flush(target));
 
 	uint32_t buffer_he;
@@ -147,7 +151,8 @@ static int arc_mem_write_block8(struct target *target, uint32_t addr,
 	LOG_DEBUG("Write 1-byte memory block: addr=0x%08" PRIx32 ", count=%" PRIu32,
 			addr, count);
 
-	/* We will read data from memory, so we need to flush the cache. */
+	/* We need to flush the cache since it might contain dirty
+	 * lines, so the cache invalidation may cause data inconsistency. */
 	CHECK_RETVAL(arc32_cache_flush(target));
 
 	uint32_t buffer_he;
