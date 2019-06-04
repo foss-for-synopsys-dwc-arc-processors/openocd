@@ -1,0 +1,100 @@
+/***************************************************************************
+ *   Copyright (C) 2013-2015 Synopsys, Inc.                                *
+ *   Frank Dols <frank.dols@synopsys.com>                                  *
+ *   Mischa Jonker <mischa.jonker@synopsys.com>                            *
+ *   Anton Kolesov <anton.kolesov@synopsys.com>                            *
+ *   Evgeniy Didin <didin@synopsys.com>
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ ***************************************************************************/
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "arc32.h"
+
+static int arc_v2_init_target(struct command_context *cmd_ctx, struct target *target)
+{
+  /* Will be uncommented in register introdution patch. */
+	//CHECK_RETVAL(arc32_build_reg_cache(target));
+	//CHECK_RETVAL(arc32_build_bcr_reg_cache(target));
+	return ERROR_OK;
+}
+
+static int arc_v2_target_create(struct target *target, Jim_Interp *interp)
+{
+  struct arc32_common *arc32 = calloc(1, sizeof(struct arc32_common));
+
+  LOG_DEBUG("Entering");
+  CHECK_RETVAL(arc32_init_arch_info(target, arc32, target->tap));
+
+  return ERROR_OK;
+}
+
+
+/* ARC v2 target */
+struct target_type arcv2_target = {
+	.name = "arcv2",
+
+	.poll =	NULL,
+
+	.arch_state = NULL,
+
+	/* TODO That seems like something similiar to metaware hostlink, so perhaps
+	 * we can exploit this in the future. */
+	.target_request_data = NULL,
+
+	.halt = NULL,
+	.resume = NULL,
+	.step = NULL,
+
+	.assert_reset = NULL,
+	.deassert_reset = NULL,
+
+	/* TODO Implement soft_reset_halt */
+	.soft_reset_halt = NULL,
+
+	.get_gdb_reg_list = NULL,
+
+	.read_memory = NULL,
+	.write_memory = NULL,
+	.checksum_memory = NULL,
+	.blank_check_memory = NULL,
+
+	.add_breakpoint = NULL,
+	.add_context_breakpoint = NULL,
+	.add_hybrid_breakpoint = NULL,
+	.remove_breakpoint = NULL,
+	.add_watchpoint = NULL,
+	.remove_watchpoint = NULL,
+	.hit_watchpoint = NULL,
+
+	.run_algorithm = NULL,
+	.start_algorithm = NULL,
+	.wait_algorithm = NULL,
+
+	//.commands = arc_monitor_command_handlers, /* see: arc_mntr.c|.h */
+  .commands = NULL,
+	.target_create = arc_v2_target_create,
+	.init_target = arc_v2_init_target,
+	.examine = NULL,
+
+	.virt2phys = NULL,
+	.read_phys_memory = NULL,
+	.write_phys_memory = NULL,
+	.mmu = NULL,
+};
