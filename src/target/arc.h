@@ -37,6 +37,33 @@
 
 #define ARC_COMMON_MAGIC	0xB32EB324  /* just a unique number */
 
+/* Register data type */
+struct arc_reg_data_type {
+       struct list_head list;
+       struct reg_data_type data_type;
+};
+
+/* Standard GDB register types */
+static const struct reg_data_type standard_gdb_types[] = {
+       { .type = REG_TYPE_INT,         .id = "int" },
+       { .type = REG_TYPE_INT8,        .id = "int8" },
+       { .type = REG_TYPE_INT16,       .id = "int16" },
+       { .type = REG_TYPE_INT32,       .id = "int32" },
+       { .type = REG_TYPE_INT64,       .id = "int64" },
+       { .type = REG_TYPE_INT128,      .id = "int128" },
+       { .type = REG_TYPE_UINT8,       .id = "uint8" },
+       { .type = REG_TYPE_UINT16,      .id = "uint16" },
+       { .type = REG_TYPE_UINT32,      .id = "uint32" },
+       { .type = REG_TYPE_UINT64,      .id = "uint64" },
+       { .type = REG_TYPE_UINT128,     .id = "uint128" },
+       { .type = REG_TYPE_CODE_PTR,    .id = "code_ptr" },
+       { .type = REG_TYPE_DATA_PTR,    .id = "data_ptr" },
+       { .type = REG_TYPE_FLOAT,       .id = "float" },
+       { .type = REG_TYPE_IEEE_SINGLE, .id = "ieee_single" },
+       { .type = REG_TYPE_IEEE_DOUBLE, .id = "ieee_double" },
+};
+
+
 struct arc_common {
 	uint32_t common_magic;
 	void *arch_info;
@@ -121,8 +148,17 @@ struct arc_common {
 		}				\
 	} while (0)
 
+static inline struct arc_common * target_to_arc(struct target *target)
+{
+       return target->arch_info;
+}
+
 /* ----- Exported functions ------------------------------------------------ */
 int arc_init_arch_info(struct target *target, struct arc_common *arc,
 	struct jtag_tap *tap);
+
+/* Configurable registers functions */
+void arc_add_reg_data_type(struct target *target,
+               struct arc_reg_data_type *data_type);
 
 #endif /* ARC_H */

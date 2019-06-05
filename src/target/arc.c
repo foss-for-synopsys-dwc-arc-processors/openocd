@@ -28,6 +28,17 @@
 
 #include "arc.h"
 
+void arc_add_reg_data_type(struct target *target,
+               struct arc_reg_data_type *data_type)
+{
+       LOG_DEBUG("-");
+       struct arc_common *arc = target_to_arc(target);
+       assert(arc);
+
+       list_add_tail(&data_type->list, &arc->reg_data_types);
+}
+
+
 /* Initialize arc_common structure, which passes to openocd target instance */
 int arc_init_arch_info(struct target *target, struct arc_common *arc,
 	struct jtag_tap *tap)
@@ -55,7 +66,20 @@ int arc_init_arch_info(struct target *target, struct arc_common *arc,
 	/* TODO: uncomment this as this function be introduced */
 	//arc_reset_caches_states(target);
 
-	/* TODO: Add standard GDB data types */
+        /* Add standard GDB data types */
+        INIT_LIST_HEAD(&arc->reg_data_types);
+        struct arc_reg_data_type *std_types = calloc(ARRAY_SIZE(standard_gdb_types),
+                        sizeof(struct arc_reg_data_type));
+        if (!std_types) {
+                LOG_ERROR("Cannot allocate memory");
+                return ERROR_FAIL;
+        }
+        for (unsigned int i = 0; i < ARRAY_SIZE(standard_gdb_types); i++) {
+                std_types[i].data_type.type = standard_gdb_types[i].type;
+                std_types[i].data_type.id = standard_gdb_types[i].id;
+                arc_add_reg_data_type(target, &(std_types[i]));
+        }
+
 
 	/* Fields related to target descriptions */
 	INIT_LIST_HEAD(&arc->core_reg_descriptions);
