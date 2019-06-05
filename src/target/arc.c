@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2013-2015 Synopsys, Inc.                                *
+ *   Copyright (C) 2013-2015,2019 Synopsys, Inc.                           *
  *   Frank Dols <frank.dols@synopsys.com>                                  *
  *   Mischa Jonker <mischa.jonker@synopsys.com>                            *
  *   Anton Kolesov <anton.kolesov@synopsys.com>                            *
@@ -26,69 +26,48 @@
 #include "config.h"
 #endif
 
-#include "arc32.h"
+#include "arc.h"
 
-/* Initialize arc32_common structure, which passes to openocd target instance */
-int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
+/* Initialize arc_common structure, which passes to openocd target instance */
+int arc_init_arch_info(struct target *target, struct arc_common *arc,
 	struct jtag_tap *tap)
 {
-	arc32->common_magic = ARC32_COMMON_MAGIC;
-	target->arch_info = arc32;
+	arc->common_magic = ARC_COMMON_MAGIC;
+	target->arch_info = arc;
 
-	arc32->fast_data_area = NULL;
+	arc->fast_data_area = NULL;
 
-	/* TODO: uncomment this as jtag functionality as introduced */
-/*
-	arc32->jtag_info.tap = tap;
-	arc32->jtag_info.scann_size = 4;
-	arc32->jtag_info.always_check_status_rd = false;
-	arc32->jtag_info.check_status_fl = false;
-	arc32->jtag_info.wait_until_write_finished = false;
-*/
+	/* TODO: jtag functionality */
+
 	/* has breakpoint/watchpoint unit been scanned */
-	arc32->bp_scanned = 0;
+	arc->bp_scanned = 0;
 
 	/* We don't know how many actionpoints are in the core yet. */
-	arc32->actionpoints_num_avail = 0;
-	arc32->actionpoints_num = 0;
-	arc32->actionpoints_list = NULL;
+	arc->actionpoints_num_avail = 0;
+	arc->actionpoints_num = 0;
+	arc->actionpoints_list = NULL;
 
 	/* Flush D$ by default. It is safe to assume that D$ is present,
 	 * because if it isn't, there will be no error, just a slight
 	 * performance penalty from unnecessary JTAG operations. */
-	arc32->has_dcache = true;
+	arc->has_dcache = true;
 
 	/* TODO: uncomment this as this function be introduced */
-	//arc32_reset_caches_states(target);
+	//arc_reset_caches_states(target);
 
-	/* TODO: uncomment this as register functionality as introduced */
-	/* Add standard GDB data types */
-	/*
-	INIT_LIST_HEAD(&arc32->reg_data_types);
-	struct arc_reg_data_type *std_types = calloc(ARRAY_SIZE(standard_gdb_types),
-			sizeof(struct arc_reg_data_type));
-	if (!std_types) {
-		LOG_ERROR("Cannot allocate memory");
-		return ERROR_FAIL;
-	}
-	for (unsigned int i = 0; i < ARRAY_SIZE(standard_gdb_types); i++) {
-		std_types[i].data_type.type = standard_gdb_types[i].type;
-		std_types[i].data_type.id = standard_gdb_types[i].id;
-		arc32_add_reg_data_type(target, &(std_types[i]));
-	}
-	*/
+	/* TODO: Add standard GDB data types */
 
 	/* Fields related to target descriptions */
-	INIT_LIST_HEAD(&arc32->core_reg_descriptions);
-	INIT_LIST_HEAD(&arc32->aux_reg_descriptions);
-	INIT_LIST_HEAD(&arc32->bcr_reg_descriptions);
-	arc32->num_regs = 0;
-	arc32->num_core_regs = 0;
-	arc32->num_aux_regs = 0;
-	arc32->num_bcr_regs = 0;
-	arc32->last_general_reg = ULONG_MAX;
-	arc32->pc_index_in_cache = ULONG_MAX;
-	arc32->debug_index_in_cache = ULONG_MAX;
+	INIT_LIST_HEAD(&arc->core_reg_descriptions);
+	INIT_LIST_HEAD(&arc->aux_reg_descriptions);
+	INIT_LIST_HEAD(&arc->bcr_reg_descriptions);
+	arc->num_regs = 0;
+	arc->num_core_regs = 0;
+	arc->num_aux_regs = 0;
+	arc->num_bcr_regs = 0;
+	arc->last_general_reg = ULONG_MAX;
+	arc->pc_index_in_cache = ULONG_MAX;
+	arc->debug_index_in_cache = ULONG_MAX;
 
 	return ERROR_OK;
 }

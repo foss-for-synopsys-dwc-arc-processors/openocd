@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2013-2015 Synopsys, Inc.                                *
+ *   Copyright (C) 2013-2015,2019 Synopsys, Inc.                           *
  *   Frank Dols <frank.dols@synopsys.com>                                  *
  *   Mischa Jonker <mischa.jonker@synopsys.com>                            *
  *   Anton Kolesov <anton.kolesov@synopsys.com>                            *
@@ -25,22 +25,22 @@
 #include "config.h"
 #endif
 
-#include "arc32.h"
+#include "arc.h"
 
 static int arc_v2_init_target(struct command_context *cmd_ctx, struct target *target)
 {
   /* Will be uncommented in register introdution patch. */
-	//CHECK_RETVAL(arc32_build_reg_cache(target));
-	//CHECK_RETVAL(arc32_build_bcr_reg_cache(target));
+	//CHECK_RETVAL(arc_build_reg_cache(target));
+	//CHECK_RETVAL(arc_build_bcr_reg_cache(target));
 	return ERROR_OK;
 }
 
 static int arc_v2_target_create(struct target *target, Jim_Interp *interp)
 {
-  struct arc32_common *arc32 = calloc(1, sizeof(struct arc32_common));
+  struct arc_common *arc = calloc(1, sizeof(struct arc_common));
 
   LOG_DEBUG("Entering");
-  CHECK_RETVAL(arc32_init_arch_info(target, arc32, target->tap));
+  CHECK_RETVAL(arc_init_arch_info(target, arc, target->tap));
 
   return ERROR_OK;
 }
@@ -87,8 +87,7 @@ struct target_type arcv2_target = {
 	.start_algorithm = NULL,
 	.wait_algorithm = NULL,
 
-	//.commands = arc_monitor_command_handlers, /* see: arc_mntr.c|.h */
-  .commands = NULL,
+	.commands = NULL,
 	.target_create = arc_v2_target_create,
 	.init_target = arc_v2_init_target,
 	.examine = NULL,

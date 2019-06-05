@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2013-2015 Synopsys, Inc.                                *
+ *   Copyright (C) 2013-2015,2019 Synopsys, Inc.                           *
  *   Frank Dols <frank.dols@synopsys.com>                                  *
  *   Mischa Jonker <mischa.jonker@synopsys.com>                            *
  *   Anton Kolesov <anton.kolesov@synopsys.com>                            *
@@ -21,8 +21,8 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
  ***************************************************************************/
 
-#ifndef ARC32_H
-#define ARC32_H
+#ifndef ARC_H
+#define ARC_H
 
 #include <helper/time_support.h>
 #include <jtag/jtag.h>
@@ -35,12 +35,9 @@
 #include "target_request.h"
 #include "target_type.h"
 
-#define ARC32_COMMON_MAGIC	0xB32EB324  /* just a unique number */
+#define ARC_COMMON_MAGIC	0xB32EB324  /* just a unique number */
 
-typedef uint32_t arc32_address_t;
-
-
-struct arc32_common {
+struct arc_common {
 	uint32_t common_magic;
 	void *arch_info;
 
@@ -57,7 +54,7 @@ struct arc32_common {
 	/* Actionpoints */
 	unsigned int actionpoints_num;
 	unsigned int actionpoints_num_avail;
-	struct arc32_comparator *actionpoints_list;
+	struct arc_comparator *actionpoints_list;
 
 	/* Cache control */
 	bool has_dcache;
@@ -79,12 +76,12 @@ struct arc32_common {
 	bool on_step_reset_debug_ra;
 
 	/* CCM memory regions (optional). */
-	arc32_address_t iccm0_start;
-	arc32_address_t iccm0_end;
-	arc32_address_t iccm1_start;
-	arc32_address_t iccm1_end;
-	arc32_address_t dccm_start;
-	arc32_address_t dccm_end;
+	uint32_t iccm0_start;
+	uint32_t iccm0_end;
+	uint32_t iccm1_start;
+	uint32_t iccm1_end;
+	uint32_t dccm_start;
+	uint32_t dccm_end;
 
 	/* Register descriptions */
 	struct list_head reg_data_types;
@@ -125,7 +122,7 @@ struct arc32_common {
 	} while (0)
 
 /* ----- Exported functions ------------------------------------------------ */
-int arc32_init_arch_info(struct target *target, struct arc32_common *arc32,
+int arc_init_arch_info(struct target *target, struct arc_common *arc,
 	struct jtag_tap *tap);
 
-#endif /* ARC32_H */
+#endif /* ARC_H */

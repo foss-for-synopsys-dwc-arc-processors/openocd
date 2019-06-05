@@ -24,7 +24,7 @@ noinst_LTLIBRARIES += %D%/libtarget.la
 	$(STM8_SRC) \
 	$(INTEL_IA32_SRC) \
 	$(ESIRISC_SRC) \
-        $(ARC32_SRC) \
+        $(ARC_SRC) \
 	%D%/avrt.c \
 	%D%/dsp563xx.c \
 	%D%/dsp563xx_once.c \
@@ -147,8 +147,8 @@ ESIRISC_SRC = \
 	%D%/esirisc_jtag.c \
 	%D%/esirisc_trace.c
 
-ARC32_SRC = \
-        %D%/arc32.c \
+ARC_SRC = \
+        %D%/arc.c \
 	%D%/arc_v2.c
 
 %C%_libtarget_la_SOURCES += \
