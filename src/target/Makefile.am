@@ -149,7 +149,8 @@ ESIRISC_SRC = \
 
 ARC_SRC = \
         %D%/arc.c \
-	%D%/arc_v2.c
+	%D%/arc_v2.c \
+	%D%/arc_cmd.c
 
 %C%_libtarget_la_SOURCES += \
 	%D%/algorithm.h \
