@@ -153,6 +153,40 @@ static inline struct arc_common * target_to_arc(struct target *target)
        return target->arch_info;
 }
 
+
+/* ARC Register description */
+struct arc_reg_desc {
+	/* Register name */
+	char *name;
+
+	/* GDB XML feature */
+	char *gdb_xml_feature;
+
+	/* Is this a register in g/G-packet? */
+	bool is_general;
+
+	/* Architectural number: core reg num or AUX reg num */
+	uint32_t arch_num;
+
+	/* Core or AUX register? */
+	bool is_core;
+
+	/* Build configuration register? */
+	bool is_bcr;
+
+	/* Data type */
+	struct reg_data_type *data_type;
+
+	struct list_head list;
+};
+
+/* Error codes */
+#define ERROR_ARC_REGISTER_NOT_FOUND       (-700)
+#define ERROR_ARC_REGISTER_FIELD_NOT_FOUND (-701)
+#define ERROR_ARC_REGISTER_IS_NOT_STRUCT   (-702)
+#define ERROR_ARC_FIELD_IS_NOT_BITFIELD    (-703)
+#define ERROR_ARC_REGTYPE_NOT_FOUND        (-704)
+
 /* ----- Exported functions ------------------------------------------------ */
 int arc_init_arch_info(struct target *target, struct arc_common *arc,
 	struct jtag_tap *tap);
@@ -160,5 +194,8 @@ int arc_init_arch_info(struct target *target, struct arc_common *arc,
 /* Configurable registers functions */
 void arc_add_reg_data_type(struct target *target,
                struct arc_reg_data_type *data_type);
+
+int arc_add_reg(struct target *target, struct arc_reg_desc *arc_reg,
+               const char * const type_name, const size_t type_name_len);
 
 #endif /* ARC_H */
