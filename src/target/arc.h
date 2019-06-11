@@ -180,6 +180,19 @@ struct arc_reg_desc {
 	struct list_head list;
 };
 
+struct arc_reg_t {
+	struct arc_reg_desc *desc;
+	struct target *target;
+	struct arc_common *arc_common;
+	uint32_t value;
+};
+
+const struct reg_arch_type arc_reg_type;
+
+/* GDB register groups. For now we suport only general and "empty" */
+static const char * const reg_group_general = "general";
+static const char * const reg_group_other = "";
+
 /* Error codes */
 #define ERROR_ARC_REGISTER_NOT_FOUND       (-700)
 #define ERROR_ARC_REGISTER_FIELD_NOT_FOUND (-701)
@@ -197,5 +210,8 @@ void arc_add_reg_data_type(struct target *target,
 
 int arc_add_reg(struct target *target, struct arc_reg_desc *arc_reg,
                const char * const type_name, const size_t type_name_len);
+
+int arc_build_reg_cache(struct target *target);
+int arc_build_bcr_reg_cache(struct target *target);
 
 #endif /* ARC_H */

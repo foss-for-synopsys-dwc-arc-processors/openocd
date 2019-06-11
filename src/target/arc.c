@@ -140,3 +140,158 @@ int arc_add_reg(struct target *target, struct arc_reg_desc *arc_reg,
 
 	return ERROR_OK;
 }
+
+
+/* Common code to initialize `struct reg` for different registers: core, aux, bcr. */
+static void arc_init_reg(
+		struct target *target,
+		struct reg *reg,
+		struct arc_reg_t *arc_reg,
+		struct arc_reg_desc *reg_desc,
+		unsigned long number)
+{
+	assert(target);
+	assert(reg);
+	assert(arc_reg);
+	assert(reg_desc);
+
+	struct arc_common *arc = target_to_arc(target);
+
+	/* Initialize struct arc_reg_t */
+	arc_reg->desc = reg_desc;
+	arc_reg->target = target;
+	arc_reg->arc_common = arc;
+
+	/* Initialize struct reg */
+	reg->name = reg_desc->name;
+	reg->size = 32; /* All register in ARC are 32-bit */
+	reg->value = calloc(1, 4);
+	reg->dirty = 0;
+	reg->valid = 0;
+	reg->type = &arc_reg_type;
+	reg->arch_info = arc_reg;
+	reg->exist = false;
+	reg->caller_save = true; /* @todo should be configurable. */
+	reg->reg_data_type = reg_desc->data_type;
+
+	reg->feature = calloc(1, sizeof(struct reg_feature));
+	reg->feature->name = reg_desc->gdb_xml_feature;
+
+	/* reg->number is used by OpenOCD as value for @regnum. Thus when setting
+	 * value of a register GDB will use it as a number of register in
+	 * P-packet. OpenOCD gdbserver will then use number of register in
+	 * P-packet as an array index in the reg_list returned by
+	 * arc_regs_get_gdb_reg_list. So to ensure that registers are assigned
+	 * correctly it would be required to either sort registers in
+	 * arc_regs_get_gdb_reg_list or to assign numbers sequentially here and
+	 * according to how registers will be sorted in
+	 * arc_regs_get_gdb_reg_list. Second options is much more simpler. */
+	reg->number = number;
+
+	if (reg_desc->is_general) {
+		arc->last_general_reg = reg->number;
+		reg->group = reg_group_general;
+	} else {
+		reg->group = reg_group_other;
+	}
+}
+
+int arc_build_reg_cache(struct target *target)
+{
+	/* get pointers to arch-specific information */
+	struct arc_common *arc = target_to_arc(target);
+	const unsigned long num_regs = arc->num_core_regs + arc->num_aux_regs;
+	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
+	struct reg_cache *cache = calloc(1, sizeof(struct reg_cache));
+	struct reg *reg_list = calloc(num_regs, sizeof(struct reg));
+	struct arc_reg_t *reg_arch_info = calloc(num_regs, sizeof(struct arc_reg_t));
+
+	/* Build the process context cache */
+	cache->name = "arc registers";
+	cache->next = NULL;
+	cache->reg_list = reg_list;
+	cache->num_regs = num_regs;
+	arc->core_cache = cache;
+	(*cache_p) = cache;
+
+	struct arc_reg_desc *reg_desc;
+	unsigned long i = 0;
+	list_for_each_entry(reg_desc, &arc->core_reg_descriptions, list) {
+		arc_init_reg(target, &reg_list[i], &reg_arch_info[i], reg_desc, i);
+
+		LOG_DEBUG("reg n=%3li name=%3s group=%s feature=%s", i,
+			reg_list[i].name, reg_list[i].group,
+			reg_list[i].feature->name);
+
+		i += 1;
+	}
+
+	list_for_each_entry(reg_desc, &arc->aux_reg_descriptions, list) {
+		arc_init_reg(target, &reg_list[i], &reg_arch_info[i], reg_desc, i);
+
+		LOG_DEBUG("reg n=%3li name=%3s group=%s feature=%s", i,
+			reg_list[i].name, reg_list[i].group,
+			reg_list[i].feature->name);
+
+		/* PC and DEBUG are essential so we search for them. */
+		if (arc->pc_index_in_cache == ULONG_MAX && strcmp("pc", reg_desc->name) == 0)
+			arc->pc_index_in_cache = i;
+		else if (arc->debug_index_in_cache == ULONG_MAX
+				&& strcmp("debug", reg_desc->name) == 0)
+			arc->debug_index_in_cache = i;
+
+		i += 1;
+	}
+
+	if (arc->pc_index_in_cache == ULONG_MAX
+			|| arc->debug_index_in_cache == ULONG_MAX) {
+		LOG_ERROR("`pc' and `debug' registers must be present in target description.");
+		return ERROR_FAIL;
+	}
+
+	assert(i == (arc->num_core_regs + arc->num_aux_regs));
+
+	return ERROR_OK;
+}
+
+/* This function must be called only after arc_build_reg_cache */
+int arc_build_bcr_reg_cache(struct target *target)
+{
+	/* get pointers to arch-specific information */
+	struct arc_common *arc = target_to_arc(target);
+	const unsigned long num_regs = arc->num_bcr_regs;
+	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
+	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
+	struct reg *reg_list = calloc(num_regs, sizeof(struct reg));
+	struct arc_reg_t *reg_arch_info = calloc(num_regs, sizeof(struct arc_reg_t));
+
+
+	/* Build the process context cache */
+	cache->name = "arc.bcr";
+	cache->next = NULL;
+	cache->reg_list = reg_list;
+	cache->num_regs = num_regs;
+	(*cache_p) = cache;
+
+
+	struct arc_reg_desc *reg_desc;
+	unsigned long i = 0;
+	unsigned long gdb_regnum = arc->core_cache->num_regs;
+
+	list_for_each_entry(reg_desc, &arc->bcr_reg_descriptions, list) {
+		arc_init_reg(target, &reg_list[i], &reg_arch_info[i], reg_desc, gdb_regnum);
+		/* BCRs always semantically, they are just read-as-zero, if there is
+		 * not real register. */
+		reg_list[i].exist = true;
+
+		LOG_DEBUG("reg n=%3li name=%3s group=%s feature=%s", i,
+			reg_list[i].name, reg_list[i].group,
+			reg_list[i].feature->name);
+		i += 1;
+		gdb_regnum += 1;
+	}
+
+	assert(i == arc->num_bcr_regs);
+
+	return ERROR_OK;
+}
