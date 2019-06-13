@@ -35,6 +35,9 @@
 #include "target_request.h"
 #include "target_type.h"
 
+#include "arc_jtag.h"
+
+
 #define ARC_COMMON_MAGIC	0xB32EB324  /* just a unique number */
 
 /* Register data type */
