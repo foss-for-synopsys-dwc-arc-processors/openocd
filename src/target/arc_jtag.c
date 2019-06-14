@@ -43,6 +43,9 @@ static void arc_jtag_read_dr(struct arc_jtag *jtag_info, uint8_t *data,
 static void arc_jtag_write_dr(struct arc_jtag *jtag_info, uint32_t data,
 	tap_state_t end_state);
 
+static void arc_jtag_set_transaction(struct arc_jtag *jtag_info,
+	arc_jtag_transaction_t new_trans, tap_state_t end_state);
+static void arc_jtag_reset_transaction(struct arc_jtag *jtag_info);
 
 /**
  * This functions sets instruction register in TAP. TAP end state is always
@@ -135,4 +138,54 @@ static void arc_jtag_write_dr(struct arc_jtag *jtag_info, uint32_t data,
 	field.out_value = out_value;
 	field.in_value = NULL;
 	jtag_add_dr_scan(jtag_info->tap, 1, &field, jtag_info->tap_end_state);
+}
+
+
+/**
+ * Set transaction in command register. This function sets instruction register
+ * and then transaction register, there is no need to invoke write_ir before
+ * invoking this function.
+ *
+ * @param jtag_info
+ * @param new_trans	Transaction to write to transaction command register.
+ * @param end_state	End state after writing.
+ */
+static void arc_jtag_set_transaction(struct arc_jtag *jtag_info,
+		arc_jtag_transaction_t new_trans, tap_state_t end_state)
+{
+	assert(jtag_info != NULL);
+	assert(jtag_info->tap != NULL);
+
+	/* No need to do anything. */
+	if (jtag_info->cur_trans == new_trans)
+		return;
+
+	/* Set instruction. We used to call write_ir at upper levels, however
+	 * write_ir-write_transaction were constantly in pair, so to avoid code
+	 * duplication this function does it self. For this reasons it is "set"
+	 * instead of "write". */
+	arc_jtag_write_ir(jtag_info, ARC_TRANSACTION_CMD_REG);
+
+	jtag_info->tap_end_state = end_state;
+
+	uint8_t out_value[4];
+	buf_set_u32(out_value, 0, ARC_TRANSACTION_CMD_REG_LENGTH, new_trans);
+
+	struct scan_field field;
+	field.num_bits = ARC_TRANSACTION_CMD_REG_LENGTH;
+	field.out_value = out_value;
+	field.in_value = NULL;
+
+	jtag_add_dr_scan(jtag_info->tap, 1, &field, jtag_info->tap_end_state);
+	jtag_info->cur_trans = new_trans;
+}
+
+
+/**
+ * Run reset through transaction set. None of the previous
+ * settings/commands/etc. are used anymore (or no influence).
+ */
+static void arc_jtag_reset_transaction(struct arc_jtag *jtag_info)
+{
+	arc_jtag_set_transaction(jtag_info, ARC_JTAG_CMD_NOP, TAP_IDLE);
 }

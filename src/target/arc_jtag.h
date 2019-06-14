@@ -25,6 +25,18 @@
  #ifndef ARC_JTAG_H
  #define ARC_JTAG_H
 
+#define ARC_TRANSACTION_CMD_REG 	0x9 /* Command to perform */
+#define ARC_TRANSACTION_CMD_REG_LENGTH 4
+
+typedef enum arc_jtag_transaction {
+	ARC_JTAG_WRITE_TO_MEMORY = 0x0,
+	ARC_JTAG_WRITE_TO_CORE_REG = 0x1,
+	ARC_JTAG_WRITE_TO_AUX_REG = 0x2,
+	ARC_JTAG_CMD_NOP = 0x3,
+	ARC_JTAG_READ_FROM_MEMORY = 0x4,
+	ARC_JTAG_READ_FROM_CORE_REG = 0x5,
+	ARC_JTAG_READ_FROM_AUX_REG = 0x6,
+} arc_jtag_transaction_t;
 
 struct arc_jtag {
 	struct jtag_tap *tap;
