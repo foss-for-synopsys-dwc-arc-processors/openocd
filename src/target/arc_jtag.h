@@ -71,4 +71,21 @@ int arc_jtag_shutdown(struct arc_jtag *jtag_info);
 int arc_jtag_status(struct arc_jtag *const jtag_info, uint32_t *const value);
 int arc_jtag_idcode(struct arc_jtag *const jtag_info, uint32_t *const value);
 
+int arc_jtag_write_core_reg(struct arc_jtag *jtag_info, uint32_t *addr,
+	uint32_t count, const uint32_t *buffer);
+int arc_jtag_read_core_reg(struct arc_jtag *jtag_info, uint32_t *addr,
+	uint32_t count, uint32_t *buffer);
+int arc_jtag_write_core_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	const uint32_t buffer);
+int arc_jtag_read_core_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	uint32_t *buffer);
+
+int arc_jtag_write_aux_reg(struct arc_jtag *jtag_info, uint32_t *addr,
+	uint32_t count, const uint32_t* buffer);
+int arc_jtag_write_aux_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	uint32_t value);
+int arc_jtag_read_aux_reg(struct arc_jtag *jtag_info, uint32_t *addr,
+	uint32_t count, uint32_t *buffer);
+int arc_jtag_read_aux_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	uint32_t *value);
 #endif /* ARC_JTAG_H */

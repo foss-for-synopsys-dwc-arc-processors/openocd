@@ -396,3 +396,100 @@ static int arc_jtag_read_registers(struct arc_jtag *jtag_info, reg_type_t type,
 
 	return ERROR_OK;
 }
+
+
+/** Wrapper function to ease writing of one core register. */
+int arc_jtag_write_core_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	uint32_t value)
+{
+	return arc_jtag_write_core_reg(jtag_info, &addr, 1, &value);
+}
+
+/**
+ * Write core registers. addr is an array of addresses, and those addresses can
+ * be in any order, though it is recommended that they are in sequential order
+ * where possible, as this reduces number of JTAG commands to transfer.
+ *
+ * @param jtag_info
+ * @param addr		Array of registers numbers.
+ * @param count		Amount of registers in arrays.
+ * @param values	Array of register values.
+ */
+int arc_jtag_write_core_reg(struct arc_jtag *jtag_info, uint32_t* addr,
+	uint32_t count, const uint32_t* buffer)
+{
+	return arc_jtag_write_registers(jtag_info, ARC_JTAG_CORE_REG, addr, count,
+			buffer);
+}
+
+/** Wrapper function to ease reading of one core register. */
+int arc_jtag_read_core_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	uint32_t *value)
+{
+	return arc_jtag_read_core_reg(jtag_info, &addr, 1, value);
+}
+
+/**
+ * Read core registers. addr is an array of addresses, and those addresses can
+ * be in any order, though it is recommended that they are in sequential order
+ * where possible, as this reduces number of JTAG commands to transfer.
+ *
+ * @param jtag_info
+ * @param addr		Array of core register numbers.
+ * @param count		Amount of registers in arrays.
+ * @param values	Array of register values.
+ */
+int arc_jtag_read_core_reg(struct arc_jtag *jtag_info, uint32_t *addr,
+	uint32_t count, uint32_t* buffer)
+{
+	return arc_jtag_read_registers(jtag_info, ARC_JTAG_CORE_REG, addr, count,
+			buffer);
+}
+
+/** Wrapper function to ease writing of one AUX register. */
+int arc_jtag_write_aux_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	uint32_t value)
+{
+	return arc_jtag_write_aux_reg(jtag_info, &addr, 1, &value);
+}
+
+/**
+ * Write AUX registers. addr is an array of addresses, and those addresses can
+ * be in any order, though it is recommended that they are in sequential order
+ * where possible, as this reduces number of JTAG commands to transfer.
+ *
+ * @param jtag_info
+ * @param addr		Array of registers numbers.
+ * @param count		Amount of registers in arrays.
+ * @param values	Array of register values.
+ */
+int arc_jtag_write_aux_reg(struct arc_jtag *jtag_info, uint32_t* addr,
+	uint32_t count, const uint32_t* buffer)
+{
+	return arc_jtag_write_registers(jtag_info, ARC_JTAG_AUX_REG, addr, count,
+			buffer);
+}
+
+/** Wrapper function to ease reading of one AUX register. */
+int arc_jtag_read_aux_reg_one(struct arc_jtag *jtag_info, uint32_t addr,
+	uint32_t *value)
+{
+	return arc_jtag_read_aux_reg(jtag_info, &addr, 1, value);
+}
+
+/**
+ * Read AUX registers. addr is an array of addresses, and those addresses can
+ * be in any order, though it is recommended that they are in sequential order
+ * where possible, as this reduces number of JTAG commands to transfer.
+ *
+ * @param jtag_info
+ * @param addr		Array of AUX register numbers.
+ * @param count		Amount of registers in arrays.
+ * @param values	Array of register values.
+ */
+int arc_jtag_read_aux_reg(struct arc_jtag *jtag_info, uint32_t *addr,
+	uint32_t count, uint32_t* buffer)
+{
+	return arc_jtag_read_registers(jtag_info, ARC_JTAG_AUX_REG, addr, count,
+			buffer);
+}
