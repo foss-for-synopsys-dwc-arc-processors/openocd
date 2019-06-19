@@ -28,6 +28,12 @@
 #define ARC_TRANSACTION_CMD_REG 	0x9 /* Command to perform */
 #define ARC_TRANSACTION_CMD_REG_LENGTH 4
 
+/* Jtag status register, value is placed in IR to read jtag status register */
+#define ARC_JTAG_STATUS_REG   0x8
+#define ARC_IDCODE_REG        0xC /* ARC core type information */
+
+
+
 typedef enum arc_jtag_transaction {
 	ARC_JTAG_WRITE_TO_MEMORY = 0x0,
 	ARC_JTAG_WRITE_TO_CORE_REG = 0x1,
@@ -55,5 +61,12 @@ struct arc_jtag {
 	bool check_status_fl;
 	bool wait_until_write_finished;
 };
+
+/* ----- Exported JTAG functions ------------------------------------------- */
+
+int arc_jtag_startup(struct arc_jtag *jtag_info);
+int arc_jtag_shutdown(struct arc_jtag *jtag_info);
+int arc_jtag_status(struct arc_jtag *const jtag_info, uint32_t *const value);
+int arc_jtag_idcode(struct arc_jtag *const jtag_info, uint32_t *const value);
 
 #endif /* ARC_JTAG_H */

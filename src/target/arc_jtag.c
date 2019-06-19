@@ -189,3 +189,82 @@ static void arc_jtag_reset_transaction(struct arc_jtag *jtag_info)
 {
 	arc_jtag_set_transaction(jtag_info, ARC_JTAG_CMD_NOP, TAP_IDLE);
 }
+
+static void arc_jtag_enque_status_read(struct arc_jtag * const jtag_info,
+	uint8_t * const buffer)
+{
+	assert(jtag_info);
+	assert(jtag_info->tap);
+	assert(buffer);
+
+  /* first writin code(0x8) of jtag status register in IR */
+	arc_jtag_write_ir(jtag_info, ARC_JTAG_STATUS_REG);
+	/* Now reading dr performs jtag status register read */
+	arc_jtag_read_dr(jtag_info, buffer, TAP_IDLE);
+}
+
+/* ----- Exported JTAG functions ------------------------------------------- */
+
+int arc_jtag_startup(struct arc_jtag *jtag_info)
+{
+	assert(jtag_info);
+
+	arc_jtag_reset_transaction(jtag_info);
+	CHECK_RETVAL(jtag_execute_queue());
+
+	return ERROR_OK;
+}
+
+int arc_jtag_shutdown(struct arc_jtag *jtag_info)
+{
+	LOG_WARNING("arc_jtag_shutdown not implemented");
+	return ERROR_OK;
+}
+
+/** Read STATUS register. */
+int arc_jtag_status(struct arc_jtag * const jtag_info, uint32_t * const value)
+{
+	assert(jtag_info != NULL);
+	assert(jtag_info->tap != NULL);
+
+	uint8_t buffer[4];
+
+	/* Fill command queue. */
+	arc_jtag_reset_transaction(jtag_info);
+	arc_jtag_enque_status_read(jtag_info, buffer);
+	arc_jtag_reset_transaction(jtag_info);
+
+	/* Execute queue. */
+	CHECK_RETVAL(jtag_execute_queue());
+
+	/* Parse output. */
+	*value = buf_get_u32(buffer, 0, 32);
+
+	return ERROR_OK;
+}
+
+/** Read IDCODE register. */
+int arc_jtag_idcode(struct arc_jtag * const jtag_info, uint32_t * const value)
+{
+	assert(jtag_info != NULL);
+	assert(jtag_info->tap != NULL);
+
+	LOG_DEBUG("Reading IDCODE register.");
+
+	uint8_t buffer[4];
+
+	/* Fill command queue. */
+	arc_jtag_reset_transaction(jtag_info);
+	arc_jtag_write_ir(jtag_info, ARC_IDCODE_REG);
+	arc_jtag_read_dr(jtag_info, buffer, TAP_IDLE);
+	arc_jtag_reset_transaction(jtag_info);
+
+	/* Execute queue. */
+	CHECK_RETVAL(jtag_execute_queue());
+
+	/* Parse output. */
+	*value = buf_get_u32(buffer, 0, 32);
+	LOG_DEBUG("IDCODE register=0x%08" PRIx32, *value);
+
+	return ERROR_OK;
+}
