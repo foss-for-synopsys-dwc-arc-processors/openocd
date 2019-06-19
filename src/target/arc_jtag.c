@@ -47,6 +47,10 @@ static void arc_jtag_set_transaction(struct arc_jtag *jtag_info,
 	arc_jtag_transaction_t new_trans, tap_state_t end_state);
 static void arc_jtag_reset_transaction(struct arc_jtag *jtag_info);
 
+static int arc_jtag_write_registers(struct arc_jtag *jtag_info, reg_type_t type,
+	uint32_t *addr, uint32_t count, const uint32_t *buffer);
+static int arc_jtag_read_registers(struct arc_jtag *jtag_info, reg_type_t type,
+	uint32_t *addr, uint32_t count, uint32_t *buffer);
 /**
  * This functions sets instruction register in TAP. TAP end state is always
  * IRPAUSE.
@@ -265,6 +269,130 @@ int arc_jtag_idcode(struct arc_jtag * const jtag_info, uint32_t * const value)
 	/* Parse output. */
 	*value = buf_get_u32(buffer, 0, 32);
 	LOG_DEBUG("IDCODE register=0x%08" PRIx32, *value);
+
+	return ERROR_OK;
+}
+
+/**
+ * Write registers. addr is an array of addresses, and those addresses can be
+ * in any order, though it is recommended that they are in sequential order
+ * where possible, as this reduces number of JTAG commands to transfer.
+ *
+ * @param jtag_info
+ * @param type		Type of registers to write: core or aux.
+ * @param addr		Array of registers numbers.
+ * @param count		Amount of registers in arrays.
+ * @param values	Array of register values.
+ */
+static int arc_jtag_write_registers(struct arc_jtag *jtag_info, reg_type_t type,
+	uint32_t *addr, uint32_t count, const uint32_t *buffer)
+{
+	unsigned int i;
+
+	LOG_DEBUG("Writing to %s registers: addr[0]=0x%" PRIx32 ";count=%" PRIu32
+			  ";buffer[0]=0x%08" PRIx32,
+		(type == ARC_JTAG_CORE_REG ? "core" : "aux"), *addr, count, *buffer);
+
+	if (count == 0) {
+		LOG_WARNING("Trying to read 0 registers");
+		return ERROR_OK;
+	}
+
+	arc_jtag_reset_transaction(jtag_info);
+
+	/* What registers are we writing to? */
+	const uint32_t transaction = (type == ARC_JTAG_CORE_REG ?
+			ARC_JTAG_WRITE_TO_CORE_REG : ARC_JTAG_WRITE_TO_AUX_REG);
+	arc_jtag_set_transaction(jtag_info, transaction, TAP_DRPAUSE);
+
+	for (i = 0; i < count; i++) {
+		/* Some of AUX registers are sequential, so we need to set address only
+		 * for the first one in sequence. */
+		if ( i == 0 || (addr[i] != addr[i-1] + 1) ) {
+			arc_jtag_write_ir(jtag_info, ARC_ADDRESS_REG);
+			arc_jtag_write_dr(jtag_info, addr[i], TAP_DRPAUSE);
+			/* No need to set ir each time, but only if current ir is
+			 * different. It is safe to put it into the if body, because this
+			 * if is always executed in first iteration. */
+			arc_jtag_write_ir(jtag_info, ARC_DATA_REG);
+		}
+		arc_jtag_write_dr(jtag_info, *(buffer + i), TAP_IDLE);
+	}
+
+	arc_jtag_reset_transaction(jtag_info);
+
+	/* Execute queue. */
+	CHECK_RETVAL(jtag_execute_queue());
+	return ERROR_OK;
+}
+
+/**
+ * Read registers. addr is an array of addresses, and those addresses can be in
+ * any order, though it is recommended that they are in sequential order where
+ * possible, as this reduces number of JTAG commands to transfer.
+ *
+ * @param jtag_info
+ * @param type		Type of registers to read: core or aux.
+ * @param addr		Array of registers numbers.
+ * @param count		Amount of registers in arrays.
+ * @param values	Array of register values.
+ */
+static int arc_jtag_read_registers(struct arc_jtag *jtag_info, reg_type_t type,
+		uint32_t *addr, uint32_t count, uint32_t *buffer)
+{
+	uint32_t i;
+
+	assert(jtag_info != NULL);
+	assert(jtag_info->tap != NULL);
+
+	LOG_DEBUG("Reading %s registers: addr[0]=0x%" PRIx32 ";count=%" PRIu32,
+		(type == ARC_JTAG_CORE_REG ? "core" : "aux"), *addr, count);
+
+	if (count == 0) {
+		LOG_WARNING("Trying to read 0 registers");
+		return ERROR_OK;
+	}
+
+	arc_jtag_reset_transaction(jtag_info);
+
+	/* What type of registers we are reading? */
+	const uint32_t transaction = (type == ARC_JTAG_CORE_REG ?
+			ARC_JTAG_READ_FROM_CORE_REG : ARC_JTAG_READ_FROM_AUX_REG);
+	arc_jtag_set_transaction(jtag_info, transaction, TAP_DRPAUSE);
+
+	struct scan_field *fields = calloc(sizeof(struct scan_field), count);
+	uint8_t *data_buf = calloc(sizeof(uint8_t), count * 4);
+
+	for (i = 0; i < count; i++) {
+		/* Some of registers are sequential, so we need to set address only
+		 * for the first one in sequence. */
+		if (i == 0 || (addr[i] != addr[i-1] + 1)) {
+			/* Set address of register */
+			arc_jtag_write_ir(jtag_info, ARC_ADDRESS_REG);
+			arc_jtag_write_dr(jtag_info, addr[i], TAP_IDLE);  // TAP_IDLE or TAP_DRPAUSE?
+			arc_jtag_write_ir(jtag_info, ARC_DATA_REG);
+		}
+
+		arc_jtag_read_dr(jtag_info, data_buf + i * 4, TAP_IDLE);
+	}
+
+	/* Resetting transaction after reads or
+	 * writes is not really required, it is done more as a sanity check.
+	 * That is however done in a separate JTAG queue flush, since time
+	 * since the previous queue flush should be practically enough to do
+	 * any pending operations, if there were. That seems like not a very
+	 * reliable approach and might be reconsidered in future. */
+	arc_jtag_reset_transaction(jtag_info);
+	CHECK_RETVAL(jtag_execute_queue());
+
+	/* Convert byte-buffers to host presentation. */
+	for (i = 0; i < count; i++) {
+		buffer[i] = buf_get_u32(data_buf + 4*i, 0, 32);
+	}
+
+	free(data_buf);
+	free(fields);
+	LOG_DEBUG("Read from register: buf[0]=0x%" PRIx32, buffer[0]);
 
 	return ERROR_OK;
 }
