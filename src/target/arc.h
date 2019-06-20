@@ -216,4 +216,8 @@ int arc_add_reg(struct target *target, struct arc_reg_desc *arc_reg,
 int arc_build_reg_cache(struct target *target);
 int arc_build_bcr_reg_cache(struct target *target);
 
+
+struct reg *arc32_register_get_by_name(struct reg_cache *first,
+					const char *name, bool search_all);
+
 #endif /* ARC_H */

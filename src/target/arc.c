@@ -38,6 +38,35 @@ void arc_add_reg_data_type(struct target *target,
        list_add_tail(&data_type->list, &arc->reg_data_types);
 }
 
+/* ----- Exported functions ------------------------------------------------ */
+
+/**
+ * Private implementation of register_get_by_name() for ARC that
+ * doesn't skip not [yet] existing registers. Used in many places
+ * for iteration through registers and even for marking required registers as
+ * existing.
+ */
+struct reg *arc32_register_get_by_name(struct reg_cache *first,
+		const char *name, bool search_all)
+{
+	unsigned i;
+	struct reg_cache *cache = first;
+
+	while (cache) {
+		for (i = 0; i < cache->num_regs; i++) {
+			if (strcmp(cache->reg_list[i].name, name) == 0)
+				return &(cache->reg_list[i]);
+		}
+
+		if (search_all)
+			cache = cache->next;
+		else
+			break;
+	}
+
+	return NULL;
+}
+
 
 /* Initialize arc_common structure, which passes to openocd target instance */
 int arc_init_arch_info(struct target *target, struct arc_common *arc,
