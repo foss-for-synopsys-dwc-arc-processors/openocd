@@ -296,3 +296,96 @@ int arc_build_bcr_reg_cache(struct target *target)
 
 	return ERROR_OK;
 }
+
+
+static int arc_regs_get_core_reg(struct reg *reg)
+{
+	assert(reg != NULL);
+
+	struct arc_reg_t *arc_reg = reg->arch_info;
+	struct target *target = arc_reg->target;
+	struct arc_common *arc = target_to_arc(target);
+
+	if (reg->valid) {
+		LOG_DEBUG("Get register (cached) gdb_num=%" PRIu32 ", name=%s, value=0x%" PRIx32,
+				reg->number, arc_reg->desc->name, arc_reg->value);
+		return ERROR_OK;
+	}
+
+	if (arc_reg->desc->is_core) {
+		if (arc_reg->desc->arch_num == 61 || arc_reg->desc->arch_num == 62) {
+			LOG_ERROR("It is forbidden to read core registers 61 and 62.");
+			return ERROR_FAIL;
+		}
+		arc_jtag_read_core_reg_one(&arc->jtag_info, arc_reg->desc->arch_num,
+			&arc_reg->value);
+	} else {
+		arc_jtag_read_aux_reg_one(&arc->jtag_info, arc_reg->desc->arch_num,
+			&arc_reg->value);
+	}
+
+	buf_set_u32(reg->value, 0, 32, arc_reg->value);
+
+	/* In general it is preferable that target is halted, so its state doesn't
+	 * change in ways unknown to OpenOCD, and there used to be a check in this
+	 * function - it would work only if target is halted.  However there is a
+	 * twist - arc_configure is called from arc_examine_target.
+	 * arc_configure will read registers via this function, but target may be
+	 * still run at this point - if it was running when OpenOCD connected to it.
+	 * ARC initialization scripts would do a "force halt" of target, but that
+	 * happens only after target is examined, so this function wouldn't work if
+	 * it would require target to be halted.  It is possible to do a force halt
+	 * of target from arc_ocd_examine_target, but then if we look at this
+	 * problem longterm - this is not a solution, as it would prevent non-stop
+	 * debugging.  Preferable way seems to allow register reading from nonhalted
+	 * target, but those reads should be uncached.  Therefore "valid" bit is set
+	 * only when target is halted.
+	 *
+	 * The same is not done for register setter - for now it will continue to
+	 * support only halted targets, untill there will be a real need for async
+	 * writes there as well.
+	 */
+	if (target->state == TARGET_HALTED) {
+		reg->valid = true;
+	} else {
+		reg->valid = false;
+	}
+	reg->dirty = false;
+
+	LOG_DEBUG("Get register gdb_num=%" PRIu32 ", name=%s, value=0x%" PRIx32,
+			reg->number , arc_reg->desc->name, arc_reg->value);
+
+	return ERROR_OK;
+}
+
+static int arc_regs_set_core_reg(struct reg *reg, uint8_t *buf)
+{
+	struct arc_reg_t *arc_reg = reg->arch_info;
+	struct target *target = arc_reg->target;
+	uint32_t value = buf_get_u32(buf, 0, 32);
+
+	if (target->state != TARGET_HALTED)
+		return ERROR_TARGET_NOT_HALTED;
+
+	if (arc_reg->desc->is_core && (arc_reg->desc->arch_num == 61 ||
+			arc_reg->desc->arch_num == 62)) {
+		LOG_ERROR("It is forbidden to write core registers 61 and 62.");
+		return ERROR_FAIL;
+	}
+
+	buf_set_u32(reg->value, 0, 32, value);
+
+	arc_reg->value = value;
+
+	LOG_DEBUG("Set register gdb_num=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+			reg->number, arc_reg->desc->name, value);
+	reg->valid = true;
+	reg->dirty = true;
+
+	return ERROR_OK;
+}
+
+const struct reg_arch_type arc_reg_type = {
+	.get = arc_regs_get_core_reg,
+	.set = arc_regs_set_core_reg,
+};
