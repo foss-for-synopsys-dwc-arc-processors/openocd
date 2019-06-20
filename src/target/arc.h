@@ -71,8 +71,7 @@ struct arc_common {
 	uint32_t common_magic;
 	void *arch_info;
 
-  /* TODO: uncomment this as jtag functionality as introduced */
-	//struct arc_jtag jtag_info;
+	struct arc_jtag jtag_info;
 
 	struct reg_cache *core_cache;
 

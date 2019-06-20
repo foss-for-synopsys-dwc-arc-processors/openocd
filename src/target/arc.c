@@ -48,7 +48,8 @@ int arc_init_arch_info(struct target *target, struct arc_common *arc,
 
 	arc->fast_data_area = NULL;
 
-	/* TODO: jtag functionality */
+	arc->jtag_info.tap = tap;
+	arc->jtag_info.scann_size = 4;
 
 	/* has breakpoint/watchpoint unit been scanned */
 	arc->bp_scanned = 0;
