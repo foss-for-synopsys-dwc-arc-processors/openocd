@@ -46,7 +46,7 @@ void arc_add_reg_data_type(struct target *target,
  * for iteration through registers and even for marking required registers as
  * existing.
  */
-struct reg *arc32_register_get_by_name(struct reg_cache *first,
+struct reg *arc_register_get_by_name(struct reg_cache *first,
 		const char *name, bool search_all)
 {
 	unsigned i;
