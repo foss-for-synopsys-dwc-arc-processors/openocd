@@ -503,3 +503,88 @@ int arc_set_register_value(struct target *target, const char *reg_name,
 
 	return ERROR_OK;
 }
+
+/* Configure some core features, depending on BCRs. */
+int arc_configure(struct target *target)
+{
+	LOG_DEBUG("Configuring ARC ICCM and DCCM");
+	struct arc_common *arc = target_to_arc(target);
+
+	/* DCCM. But only if DCCM_BUILD and AUX_DCCM are known registers. */
+	arc->dccm_start = 0;
+	arc->dccm_end = 0;
+	if (arc_register_get_by_name(target->reg_cache, "dccm_build", true) &&
+	    arc_register_get_by_name(target->reg_cache, "aux_dccm", true)) {
+
+		uint32_t dccm_build_version, dccm_build_size0, dccm_build_size1;
+		CHECK_RETVAL(arc_get_register_field(target, "dccm_build", "version",
+			&dccm_build_version));
+		CHECK_RETVAL(arc_get_register_field(target, "dccm_build", "size0",
+			&dccm_build_size0));
+		CHECK_RETVAL(arc_get_register_field(target, "dccm_build", "size1",
+			&dccm_build_size1));
+    /* There is no yet support of configurable number of cycles,
+       So there is no difference between v3 and v4 */
+		if ((dccm_build_version == 3 || dccm_build_version == 4) && dccm_build_size0 > 0) {
+			CHECK_RETVAL(arc_get_register_value(target, "aux_dccm", &(arc->dccm_start)));
+			uint32_t dccm_size = 0x100;
+			dccm_size <<= dccm_build_size0;
+			if (dccm_build_size0 == 0xF)
+				dccm_size <<= dccm_build_size1;
+			arc->dccm_end = arc->dccm_start + dccm_size;
+			LOG_DEBUG("DCCM detected start=0x%" PRIx32 " end=0x%" PRIx32,
+					arc->dccm_start, arc->dccm_end);
+		}
+	}
+
+	/* Only if ICCM_BUILD and AUX_ICCM are known registers. */
+	arc->iccm0_start = 0;
+	arc->iccm0_end = 0;
+	if (arc_register_get_by_name(target->reg_cache, "iccm_build", true) &&
+	    arc_register_get_by_name(target->reg_cache, "aux_iccm", true)) {
+
+		/* ICCM0 */
+		uint32_t iccm_build_version, iccm_build_size00, iccm_build_size01;
+		uint32_t aux_iccm = 0;
+		CHECK_RETVAL(arc_get_register_field(target, "iccm_build", "version",
+			&iccm_build_version));
+		CHECK_RETVAL(arc_get_register_field(target, "iccm_build", "iccm0_size0",
+			&iccm_build_size00));
+		CHECK_RETVAL(arc_get_register_field(target, "iccm_build", "iccm0_size1",
+			&iccm_build_size01));
+		if (iccm_build_version == 4 && iccm_build_size00 > 0) {
+			CHECK_RETVAL(arc_get_register_value(target, "aux_iccm", &aux_iccm));
+			uint32_t iccm0_size = 0x100;
+			iccm0_size <<= iccm_build_size00;
+			if (iccm_build_size00 == 0xF)
+				iccm0_size <<= iccm_build_size01;
+      /* iccm0 start is located in highest 4 bits of aux_iccm */
+			arc->iccm0_start = aux_iccm & 0xF0000000;
+			arc->iccm0_end = arc->iccm0_start + iccm0_size;
+			LOG_DEBUG("ICCM0 detected start=0x%" PRIx32 " end=0x%" PRIx32,
+					arc->iccm0_start, arc->iccm0_end);
+		}
+
+		/* ICCM1 */
+		uint32_t iccm_build_size10, iccm_build_size11;
+		CHECK_RETVAL(arc_get_register_field(target, "iccm_build", "iccm1_size0",
+			&iccm_build_size10));
+		CHECK_RETVAL(arc_get_register_field(target, "iccm_build", "iccm1_size1",
+			&iccm_build_size11));
+		if (iccm_build_version == 4 && iccm_build_size10 > 0) {
+			/* Use value read for ICCM0 */
+			if (!aux_iccm)
+				CHECK_RETVAL(arc_get_register_value(target, "aux_iccm", &aux_iccm));
+			uint32_t iccm1_size = 0x100;
+			iccm1_size <<= iccm_build_size10;
+			if (iccm_build_size10 == 0xF)
+				iccm1_size <<= iccm_build_size11;
+			arc->iccm1_start = aux_iccm & 0x0F000000;
+			arc->iccm1_end = arc->iccm1_start + iccm1_size;
+			LOG_DEBUG("ICCM1 detected start=0x%" PRIx32 " end=0x%" PRIx32,
+					arc->iccm1_start, arc->iccm1_end);
+		}
+	}
+
+	return ERROR_OK;
+}
