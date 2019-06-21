@@ -425,11 +425,6 @@ int arc_get_register_field(struct target *target, const char *reg_name,
 {
 	LOG_DEBUG("getting register field (reg_name=%s, field_name=%s)", reg_name, field_name);
 
-	if (!(reg_name && field_name && value_ptr)) {
-		LOG_ERROR("Arguments cannot be NULL.");
-		return ERROR_COMMAND_SYNTAX_ERROR;
-	}
-
 	/* Get register */
 	struct reg *reg = arc_register_get_by_name(target->reg_cache, reg_name, true);
 
