@@ -222,5 +222,11 @@ struct reg *arc_register_get_by_name(struct reg_cache *first,
 /* Get value of field in struct register */
 int arc_get_register_field(struct target *target, const char *reg_name,
 		const char *field_name, uint32_t *value_ptr);
+/* Get value of 32-bit register. */
+int arc_get_register_value(struct target *target, const char *reg_name,
+		uint32_t * value_ptr);
+/* Set value of 32-bit register. */
+int arc_set_register_value(struct target *target, const char *reg_name,
+		uint32_t value);
 
 #endif /* ARC_H */

@@ -464,3 +464,42 @@ int arc_get_register_field(struct target *target, const char *reg_name,
 
 	return ERROR_OK;
 }
+
+int arc_get_register_value(struct target *target, const char *reg_name,
+		uint32_t *value_ptr)
+{
+	LOG_DEBUG("reg_name=%s", reg_name);
+
+	struct reg *reg = arc_register_get_by_name(target->reg_cache, reg_name, true);
+
+	if (!reg)
+		return ERROR_ARC_REGISTER_NOT_FOUND;
+
+	if (!reg->valid)
+		CHECK_RETVAL(reg->type->get(reg));
+
+	const struct arc_reg_t * const arc_r = reg->arch_info;
+	*value_ptr = arc_r->value;
+
+	LOG_DEBUG("return %s=0x%08" PRIx32, reg_name, *value_ptr);
+
+	return ERROR_OK;
+}
+
+/* Set value of 32-bit register. */
+int arc_set_register_value(struct target *target, const char *reg_name,
+		uint32_t value)
+{
+	LOG_DEBUG("reg_name=%s value=0x%08" PRIx32, reg_name, value);
+
+	struct reg *reg = arc_register_get_by_name(target->reg_cache, reg_name, true);
+
+	if (!reg)
+		return ERROR_ARC_REGISTER_NOT_FOUND;
+
+	uint8_t value_buf[4];
+	buf_set_u32(value_buf, 0, 32, value);
+	CHECK_RETVAL(reg->type->set(reg, value_buf));
+
+	return ERROR_OK;
+}
