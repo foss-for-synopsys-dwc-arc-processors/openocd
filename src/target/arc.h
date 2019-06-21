@@ -216,8 +216,11 @@ int arc_add_reg(struct target *target, struct arc_reg_desc *arc_reg,
 int arc_build_reg_cache(struct target *target);
 int arc_build_bcr_reg_cache(struct target *target);
 
-
 struct reg *arc_register_get_by_name(struct reg_cache *first,
 					const char *name, bool search_all);
+
+/* Get value of field in struct register */
+int arc_get_register_field(struct target *target, const char *reg_name,
+		const char *field_name, uint32_t *value_ptr);
 
 #endif /* ARC_H */
