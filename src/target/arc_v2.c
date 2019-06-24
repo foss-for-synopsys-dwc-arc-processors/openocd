@@ -90,7 +90,7 @@ struct target_type arcv2_target = {
 	.commands = NULL,
 	.target_create = arc_v2_target_create,
 	.init_target = arc_v2_init_target,
-	.examine = NULL,
+	.examine = arc_examine,
 
 	.virt2phys = NULL,
 	.read_phys_memory = NULL,

@@ -30,6 +30,14 @@
 
 /* Jtag status register, value is placed in IR to read jtag status register */
 #define ARC_JTAG_STATUS_REG   0x8
+/* Jtag status register field */
+#define ARC_JTAG_STAT_ST		0x1
+#define ARC_JTAG_STAT_FL		0x2
+#define ARC_JTAG_STAT_RD		0x4
+#define ARC_JTAG_STAT_NIU		0x8 /* Not in use */
+#define ARC_JTAG_STAT_RU		0x10
+#define ARC_JTAG_STAT_RA		0x20
+
 #define ARC_IDCODE_REG        0xC /* ARC core type information */
 #define ARC_ADDRESS_REG				0xA /* SoC address to access */
 #define ARC_DATA_REG				0xB /* Data read/written from SoC */

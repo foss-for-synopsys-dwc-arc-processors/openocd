@@ -229,4 +229,6 @@ int arc_get_register_value(struct target *target, const char *reg_name,
 int arc_set_register_value(struct target *target, const char *reg_name,
 		uint32_t value);
 
+int arc_examine(struct target *target);
+
 #endif /* ARC_H */

@@ -588,3 +588,27 @@ int arc_configure(struct target *target)
 
 	return ERROR_OK;
 }
+
+/* arc_examine is function, which is used for all arc targets*/
+int arc_examine(struct target *target)
+{
+	uint32_t status;
+	struct arc_common *arc = target_to_arc(target);
+
+	CHECK_RETVAL(arc_jtag_startup(&arc->jtag_info));
+
+	if (!target_was_examined(target)) {
+		CHECK_RETVAL(arc_jtag_status(&arc->jtag_info, &status));
+		if (status & ARC_JTAG_STAT_RU)
+			target->state = TARGET_RUNNING;
+		else
+			target->state = TARGET_HALTED;
+
+		/* Read BCRs and configure optional registers. */
+		CHECK_RETVAL(arc_configure(target));
+
+		target_set_examined(target);
+	}
+
+	return ERROR_OK;
+}
