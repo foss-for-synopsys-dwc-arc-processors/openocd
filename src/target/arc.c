@@ -612,3 +612,51 @@ int arc_examine(struct target *target)
 
 	return ERROR_OK;
 }
+
+int arc_halt(struct target *target)
+{
+	LOG_DEBUG("target->state: %s", target_state_name(target));
+
+	if (target->state == TARGET_HALTED) {
+		LOG_DEBUG("target was already halted");
+		return ERROR_OK;
+	}
+
+	if (target->state == TARGET_UNKNOWN)
+		LOG_WARNING("target was in unknown state when halt was requested");
+
+	if (target->state == TARGET_RESET) {
+		if ((jtag_get_reset_config() & RESET_SRST_PULLS_TRST) && jtag_get_srst()) {
+			LOG_ERROR("can't request a halt while in reset if nSRST pulls nTRST");
+			return ERROR_TARGET_FAILURE;
+		} else {
+			target->debug_reason = DBG_REASON_DBGRQ;
+		}
+	}
+
+	/* break (stop) processor */
+	uint32_t value;
+	struct arc_common *arc = target_to_arc(target);
+
+	/* Do read-modify-write sequence, or DEBUG.UB will be reset unintentionally.
+	* We do not use here arc_get/set_core_reg functions here because they imply
+	* that the processor is already halted.
+	*/
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_DEBUG_REG, &value));
+	value |= SET_CORE_FORCE_HALT; /* set the HALT bit */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DEBUG_REG, value));
+	alive_sleep(1);
+
+	/* update state and notify gdb*/
+	target->state = TARGET_HALTED;
+	target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+
+	/* some more debug information */
+	if (debug_level >= LOG_LVL_DEBUG) {
+		LOG_DEBUG("core stopped (halted) DEGUB-REG: 0x%08" PRIx32, value);
+		CHECK_RETVAL(arc_get_register_value(target, "status32", &value));
+		LOG_DEBUG("core STATUS32: 0x%08" PRIx32, value);
+	}
+
+	return ERROR_OK;
+}

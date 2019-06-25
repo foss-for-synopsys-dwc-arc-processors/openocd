@@ -59,7 +59,7 @@ struct target_type arcv2_target = {
 	 * we can exploit this in the future. */
 	.target_request_data = NULL,
 
-	.halt = NULL,
+	.halt = arc_halt,
 	.resume = NULL,
 	.step = NULL,
 

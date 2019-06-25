@@ -40,6 +40,9 @@
 
 #define ARC_COMMON_MAGIC	0xB32EB324  /* just a unique number */
 
+#define AUX_DEBUG_REG                   0x5
+#define SET_CORE_FORCE_HALT             (1 << 1)
+
 /* Register data type */
 struct arc_reg_data_type {
        struct list_head list;
@@ -230,5 +233,6 @@ int arc_set_register_value(struct target *target, const char *reg_name,
 		uint32_t value);
 
 int arc_examine(struct target *target);
+int arc_halt(struct target *target);
 
 #endif /* ARC_H */
