@@ -32,6 +32,7 @@ static int arc_v2_init_target(struct command_context *cmd_ctx, struct target *ta
   /* Will be uncommented in register introdution patch. */
 	CHECK_RETVAL(arc_build_reg_cache(target));
 	CHECK_RETVAL(arc_build_bcr_reg_cache(target));
+	target->debug_reason = DBG_REASON_DBGRQ;
 	return ERROR_OK;
 }
 
