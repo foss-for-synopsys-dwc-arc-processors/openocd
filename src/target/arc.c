@@ -800,3 +800,20 @@ static int arc_examine_debug_reason(struct target *target)
 
 	return ERROR_OK;
 }
+
+static int arc_debug_entry(struct target *target)
+{
+	uint32_t dpc;
+	struct arc_common *arc = target_to_arc(target);
+
+	/* save current PC */
+	CHECK_RETVAL(arc_get_register_value(target, "pc", &dpc));
+	arc->jtag_info.dpc = dpc;
+	arc_save_context(target);
+
+	/* TODO: reset internal indicators of caches states, otherwise D$/I$
+	 * will not be flushed/invalidated when required. */
+	CHECK_RETVAL(arc_examine_debug_reason(target));
+
+	return ERROR_OK;
+}
