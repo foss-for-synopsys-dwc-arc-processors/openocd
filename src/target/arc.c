@@ -660,3 +660,118 @@ int arc_halt(struct target *target)
 
 	return ERROR_OK;
 }
+
+/**
+ * Read registers that are used in GDB g-packet. We don't read them one-by-one,
+ * but do that in one batch operation to improve speed. Calls to JTAG layer are
+ * expensive so it is better to make one big call that reads all necessary
+ * registers, instead of many calls, one for one register.
+ */
+static int arc_save_context(struct target *target)
+{
+	int retval = ERROR_OK;
+	unsigned int i;
+	struct arc_common *arc = target_to_arc(target);
+	struct reg *reg_list = arc->core_cache->reg_list;
+
+	LOG_DEBUG("Saving aux and core registers values");
+	assert(reg_list);
+
+	/* It is assumed that there is at least one AUX register in the list, for
+	 * example PC. */
+	const uint32_t core_regs_size = arc->num_core_regs * sizeof(uint32_t);
+	/* last_general_reg is inclusive number. To get count of registers it is
+	 * required to do +1. */
+	const uint32_t regs_to_scan =
+		MIN(arc->last_general_reg + 1, arc->num_regs);
+	const uint32_t aux_regs_size = arc->num_aux_regs * sizeof(uint32_t);
+	uint32_t *core_values = malloc(core_regs_size);
+	uint32_t *aux_values = malloc(aux_regs_size);
+	uint32_t *core_addrs = malloc(core_regs_size);
+	uint32_t *aux_addrs = malloc(aux_regs_size);
+	unsigned int core_cnt = 0;
+	unsigned int aux_cnt = 0;
+
+	if (!core_values || !core_addrs || !aux_values || !aux_addrs)  {
+		LOG_ERROR("Not enough memory");
+		retval = ERROR_FAIL;
+		goto exit;
+	}
+
+	memset(core_values, 0xdeadbeef, core_regs_size);
+	memset(core_addrs, 0xdeadbeef, core_regs_size);
+	memset(aux_values, 0xdeadbeef, aux_regs_size);
+	memset(aux_addrs, 0xdeadbeef, aux_regs_size);
+
+	for (i = 0; i < MIN(arc->num_core_regs, regs_to_scan); i++) {
+		struct reg *reg = &(reg_list[i]);
+		struct arc_reg_t *arc_reg = reg->arch_info;
+		if (!reg->valid && reg->exist) {
+			core_addrs[core_cnt] = arc_reg->desc->arch_num;
+			core_cnt += 1;
+		}
+	}
+
+	for (i = arc->num_core_regs; i < regs_to_scan; i++) {
+		struct reg *reg = &(reg_list[i]);
+		struct arc_reg_t *arc_reg = reg->arch_info;
+		if (!reg->valid && reg->exist) {
+			aux_addrs[aux_cnt] = arc_reg->desc->arch_num;
+			aux_cnt += 1;
+		}
+	}
+
+	/* Read data from target. */
+	retval = arc_jtag_read_core_reg(&arc->jtag_info, core_addrs, core_cnt, core_values);
+	if (ERROR_OK != retval) {
+		LOG_ERROR("Attempt to read core registers failed.");
+		retval = ERROR_FAIL;
+		goto exit;
+	}
+	retval = arc_jtag_read_aux_reg(&arc->jtag_info, aux_addrs, aux_cnt, aux_values);
+	if (ERROR_OK != retval) {
+		LOG_ERROR("Attempt to read aux registers failed.");
+		retval = ERROR_FAIL;
+		goto exit;
+	}
+
+	/* Parse core regs */
+	core_cnt = 0;
+	for (i = 0; i < MIN(arc->num_core_regs, regs_to_scan); i++) {
+		struct reg *reg = &(reg_list[i]);
+		struct arc_reg_t *arc_reg = reg->arch_info;
+		if (!reg->valid && reg->exist) {
+			arc_reg->value = core_values[core_cnt];
+			core_cnt += 1;
+			buf_set_u32(reg->value, 0, 32, arc_reg->value);
+			reg->valid = true;
+			reg->dirty = false;
+			LOG_DEBUG("Get core register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+				i , arc_reg->desc->name, arc_reg->value);
+		}
+	}
+
+	/* Parse aux regs */
+	aux_cnt = 0;
+	for (i = arc->num_core_regs; i < regs_to_scan; i++) {
+		struct reg *reg = &(reg_list[i]);
+		struct arc_reg_t *arc_reg = reg->arch_info;
+		if (!reg->valid && reg->exist) {
+			arc_reg->value = aux_values[aux_cnt];
+			aux_cnt += 1;
+			buf_set_u32(reg->value, 0, 32, arc_reg->value);
+			reg->valid = true;
+			reg->dirty = false;
+			LOG_DEBUG("Get aux register regnum=%" PRIu32 ", name=%s, value=0x%08" PRIx32,
+				i , arc_reg->desc->name, arc_reg->value);
+		}
+	}
+
+exit:
+	free(core_values);
+	free(core_addrs);
+	free(aux_values);
+	free(aux_addrs);
+
+	return retval;
+}
