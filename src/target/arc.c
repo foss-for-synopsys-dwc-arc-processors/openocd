@@ -775,3 +775,28 @@ exit:
 
 	return retval;
 }
+
+static int arc_examine_debug_reason(struct target *target)
+{
+	/* Only check for reason if don't know it already. */
+	/* BTW After singlestep at this point core is not marked as halted, so
+	 * reading from memory to get current instruction wouldn't work anyway.  */
+	if (target->debug_reason == DBG_REASON_DBGRQ ||
+	    target->debug_reason == DBG_REASON_SINGLESTEP) {
+		return ERROR_OK;
+	}
+
+	uint32_t debug_bh;
+	CHECK_RETVAL(arc_get_register_field(target, "debug", "bh",
+				&debug_bh));
+
+	if (debug_bh) {
+		/* DEBUG.BH is set if core halted due to BRK instruction.  */
+		target->debug_reason = DBG_REASON_BREAKPOINT;
+	} else {
+		/* TODO: Add Actionpoint check when AP support will be introduced*/
+		LOG_WARNING("Unknown debug reason");
+	}
+
+	return ERROR_OK;
+}
