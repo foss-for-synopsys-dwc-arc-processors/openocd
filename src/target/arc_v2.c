@@ -51,7 +51,7 @@ static int arc_v2_target_create(struct target *target, Jim_Interp *interp)
 struct target_type arcv2_target = {
 	.name = "arcv2",
 
-	.poll =	NULL,
+	.poll =	arc_poll,
 
 	.arch_state = NULL,
 

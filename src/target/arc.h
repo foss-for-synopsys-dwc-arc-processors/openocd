@@ -43,6 +43,8 @@
 #define AUX_DEBUG_REG                   0x5
 #define SET_CORE_FORCE_HALT             (1 << 1)
 
+#define AUX_STATUS32_REG_HALT_BIT       (1)
+
 /* Register data type */
 struct arc_reg_data_type {
        struct list_head list;
@@ -234,5 +236,6 @@ int arc_set_register_value(struct target *target, const char *reg_name,
 
 int arc_examine(struct target *target);
 int arc_halt(struct target *target);
+int arc_poll(struct target *target);
 
 #endif /* ARC_H */
