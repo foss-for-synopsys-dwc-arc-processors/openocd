@@ -138,10 +138,23 @@ static const struct rtos_register_stacking arm_cpu_saved_fp_stacking = {
 /* TODO: Should be verified */
 
 static const struct stack_register_offset arc_callee_saved[] = {
-	{ 13,  0,  32 }, // r13
-	{ 14,  4,  32 },
-	{ 15,  8,  32 },
-	{ 16,  12,  32 },
+        { 13,  0,  32 },
+        { 14,  4,  32 },
+				{ 15,  8,  32 },
+				{ 16,  12,  32 },
+				{ 17,  16,  32 },
+				{ 18,  20,  32 },
+				{ 19,  24,  32 },
+				{ 20,  28,  32 },
+				{ 21,  32,  32 },
+				{ 22,  36,  32 },
+				{ 23,  40,  32 },
+				{ 24,  44,  32 },
+				{ 25,  48,  32 },
+				{ 26,  52,  32 },
+				{ 27,  56,  32 }, //FP
+				{ 30,  60,  32 } //r28
+
 };
 
 static const struct rtos_register_stacking arc_callee_saved_stacking = {
@@ -157,10 +170,39 @@ static const struct stack_register_offset arc_cpu_saved[] = {
 	{ 1,   4,  32 }, //r1
 	{ 2,   8,  32 }, //r2
 	{ 3,   12,  32 }, //r3
-	{ 67,   16,  32 }, // status32
-	{ 64,   20,  32 } // pc
+	{ 4,   -1,  32 }, //r4
+	{ 5,   -1,  32 }, //r5
+	{ 6,   -1,  32 }, //r6
+	{ 7,   -1,  32 }, //r7
+	{ 8,   -1,  32 }, //r8
+	{ 9,   -1,  32 }, //r9
+	{ 10,   -1,  32 }, //r10
+	{ 11,   -1,  32 }, //r11
+	{ 12,   -1,  32 }, //r12
+	{ 13,   -1,  32 }, //r13
+	{ 14,   -1,  32 }, //r14
+	{ 15,   -1,  32 }, //r15
+	{ 16,   -1,  32 }, //r16
+	{ 17,   -1,  32 }, //r17
+	{ 18,   -1,  32 }, //r18
+	{ 19,   -1,  32 }, //r19
+	{ 20,   -1,  32 }, //r20
+	{ 21,   -1,  32 }, //r21
+	{ 22,   -1,  32 }, //r22
+	{ 23,   -1,  32 }, //r23
+	{ 24,   -1,  32 }, //r24
+	{ 25,   -1,  32 }, //r25
+	{ 26,   -1,  32 }, //GP
+	{ 27,   -1,  32 }, //FP
+	{ 28,   -1,  32 }, //SP
+	{ 29,   -1,  32 }, //ILINK
+	{ 30,   -1,  32 }, //r30
+	{ 31,   -1,  32 }, //BLINK
+	{ 64,   20,  32 }, // pc
+	{ 67,   16,  32 } // status32
 
 };
+
 static const struct rtos_register_stacking arc_cpu_saved_stacking = {
 	.stack_registers_size = 24,   //arc_cpu_saved amount * 4
 	.stack_growth_direction = -1,
