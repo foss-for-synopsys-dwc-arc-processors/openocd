@@ -387,6 +387,7 @@ static int Zephyr_fetch_thread_list(struct rtos *rtos, uint32_t current_thread)
 	int64_t curr_id;
 	uint32_t curr;
 	int retval;
+	int _id;
 
 	retval = target_read_u32(rtos->target, Zephyr_kptr(rtos, OFFSET_K_THREADS),
 		&curr);
@@ -396,6 +397,7 @@ static int Zephyr_fetch_thread_list(struct rtos *rtos, uint32_t current_thread)
 	}
 
 	array_init(&thread_array);
+	_id = 1;
 
 	for (curr_id = -1; curr; curr = thread.next_ptr) {
 		retval = Zephyr_fetch_thread(rtos, &thread, curr);
@@ -421,6 +423,8 @@ static int Zephyr_fetch_thread_list(struct rtos *rtos, uint32_t current_thread)
 
 		if (td->threadid == current_thread)
 			curr_id = (int64_t)thread_array.elements - 1;
+		td->threadid = _id;
+		_id += 1;
 	}
 
 	LOG_DEBUG("Got information for %zu threads", thread_array.elements);
