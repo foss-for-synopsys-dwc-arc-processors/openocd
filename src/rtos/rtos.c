@@ -300,7 +300,7 @@ int rtos_thread_packet(struct connection *connection, char const *packet, int pa
 				(target->rtos->thread_count != 0)) {
 			threadid_t threadid = 0;
 			int found = -1;
-			sscanf(packet, "qThreadExtraInfo,%" SCNx64, &threadid);
+			sscanf(packet, "qThreadExtraInfo,%" SCNx32, &threadid);
 
 			if ((target->rtos != NULL) && (target->rtos->thread_details != NULL)) {
 				int thread_num;

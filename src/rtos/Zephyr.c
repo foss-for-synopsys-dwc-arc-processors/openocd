@@ -39,7 +39,7 @@ struct Zephyr_thread {
 	uint8_t state;
 	uint8_t user_options;
 	int8_t prio;
-	char name[64];
+	char name[32];
 };
 
 enum Zephyr_offsets {
@@ -356,21 +356,13 @@ static int Zephyr_fetch_thread(const struct rtos *rtos,
 	if (param->offsets[OFFSET_T_NAME] != UNIMPLEMENTED) {
 		uint32_t name_ptr;
 
-		retval = target_read_u32(rtos->target,
-								 ptr + param->offsets[OFFSET_T_NAME],
-								 &name_ptr);
+		retval = target_read_buffer(rtos->target,  ptr + param->offsets[OFFSET_T_NAME],
+				sizeof(thread->name) - 1, (uint8_t *)thread->name);
+
 		if (retval != ERROR_OK)
 			return retval;
+		thread->name[sizeof(thread->name) - 1] = '\0';
 
-		if (name_ptr) {
-			retval = target_read_buffer(rtos->target, name_ptr,
-										sizeof(thread->name) - 1,
-										(uint8_t *)thread->name);
-			if (retval != ERROR_OK)
-				return retval;
-
-			thread->name[sizeof(thread->name) - 1] = '\0';
-		}
 	}
 
 	LOG_DEBUG("Fetched thread%" PRIx32 ": {entry@0x%" PRIx32
