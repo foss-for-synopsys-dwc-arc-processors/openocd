@@ -138,73 +138,76 @@ static const struct rtos_register_stacking arm_cpu_saved_fp_stacking = {
 /* TODO: Should be verified */
 
 static const struct stack_register_offset arc_callee_saved[] = {
-        { 13,  0,  32 },
-        { 14,  4,  32 },
-				{ 15,  8,  32 },
-				{ 16,  12,  32 },
-				{ 17,  16,  32 },
-				{ 18,  20,  32 },
-				{ 19,  24,  32 },
-				{ 20,  28,  32 },
-				{ 21,  32,  32 },
-				{ 22,  36,  32 },
-				{ 23,  40,  32 },
-				{ 24,  44,  32 },
-				{ 25,  48,  32 },
-				{ 26,  52,  32 },
-				{ 27,  56,  32 }, //FP
-				{ 30,  60,  32 } //r28
+	{ 13,  0,  32 }, //r13
+	{ 14,  4,  32 }, //r14...
+	{ 15,  8,  32 },
+	{ 16,  12,  32 },
+	{ 17,  16,  32 },
+	{ 18,  20,  32 },
+	{ 19,  24,  32 },
+	{ 20,  28,  32 },
+	{ 21,  32,  32 },
+	{ 22,  36,  32 },
+	{ 23,  40,  32 },
+	{ 24,  44,  32 },
+	{ 25,  48,  32 },
+	{ 26,  52,  32 }, //GP
+	{ 27,  56,  32 }, //FP
+	{ 30,  60,  32 }  //r30
 
 };
 
 static const struct rtos_register_stacking arc_callee_saved_stacking = {
-        .stack_registers_size = 4,
+        .stack_registers_size = 64,
         .stack_growth_direction = -1,
         .num_output_registers = ARRAY_SIZE(arc_callee_saved),
         .register_offsets = arc_callee_saved,
 };
 
-/* TODO: Should be verified */
-static const struct stack_register_offset arc_cpu_saved[] = {
-	{ 0,   0,  32 }, //r0
-	{ 1,   4,  32 }, //r1
-	{ 2,   8,  32 }, //r2
-	{ 3,   12,  32 }, //r3
-	{ 4,   -1,  32 }, //r4
-	{ 5,   -1,  32 }, //r5
-	{ 6,   -1,  32 }, //r6
-	{ 7,   -1,  32 }, //r7
-	{ 8,   -1,  32 }, //r8
-	{ 9,   -1,  32 }, //r9
-	{ 10,   -1,  32 }, //r10
-	{ 11,   -1,  32 }, //r11
-	{ 12,   -1,  32 }, //r12
-	{ 13,   -1,  32 }, //r13
-	{ 14,   -1,  32 }, //r14
-	{ 15,   -1,  32 }, //r15
-	{ 16,   -1,  32 }, //r16
-	{ 17,   -1,  32 }, //r17
-	{ 18,   -1,  32 }, //r18
-	{ 19,   -1,  32 }, //r19
-	{ 20,   -1,  32 }, //r20
-	{ 21,   -1,  32 }, //r21
-	{ 22,   -1,  32 }, //r22
-	{ 23,   -1,  32 }, //r23
-	{ 24,   -1,  32 }, //r24
-	{ 25,   -1,  32 }, //r25
-	{ 26,   -1,  32 }, //GP
-	{ 27,   -1,  32 }, //FP
-	{ 28,   -1,  32 }, //SP
-	{ 29,   -1,  32 }, //ILINK
-	{ 30,   -1,  32 }, //r30
-	{ 31,   -1,  32 }, //BLINK
-	{ 64,   20,  32 }, // pc
-	{ 67,   16,  32 } // status32
 
+/* The stack besides callee registers contains blink,
+ * sec_stat(aux 0x09, available if ARC_HAS_SECURE is enabled) and
+ * status32 registers. The offset for status32 is 8 because on
+ * EMSK security is enabled, and sec_stat is stored in stack. */
+static const struct stack_register_offset arc_cpu_saved[] = {
+        { 0,   -1,  32 }, //r0
+        { 1,   -1,  32 }, //r1
+        { 2,   -1,  32 }, //r2
+        { 3,   -1,  32 }, //r3
+        { 4,   -1,  32 }, //r4
+        { 5,   -1,  32 }, //r5
+        { 6,   -1,  32 }, //r6
+        { 7,   -1,  32 }, //r7
+        { 8,   -1,  32 }, //r8
+        { 9,   -1,  32 }, //r9
+        { 10,   -1,  32 }, //r10
+        { 11,   -1,  32 }, //r11
+        { 12,   -1,  32 }, //r12
+        { 13,   -1,  32 }, //r13
+        { 14,   -1,  32 }, //r14
+        { 15,   -1,  32 }, //r15
+        { 16,   -1,  32 }, //r16
+        { 17,   -1,  32 }, //r17
+        { 18,   -1,  32 }, //r18
+        { 19,   -1,  32 }, //r19
+        { 20,   -1,  32 }, //r20
+        { 21,   -1,  32 }, //r21
+        { 22,   -1,  32 }, //r22
+        { 23,   -1,  32 }, //r23
+        { 24,   -1,  32 }, //r24
+        { 25,   -1,  32 }, //r25
+        { 26,   -1,  32 }, //GP
+        { 27,   -1,  32 }, //FP
+        { 28,   -1,  32 }, //SP
+        { 29,   -1,  32 }, //ILINK
+        { 30,   -1,  32 }, //r30
+        { 31,   0,  32 }, //BLINK
+        { 64,   -1,  32 }, // pc
+        { 67,   8,  32 } // status32  NOTE: change "8" to "4" if ARC_HAS_SECURE is disabled
 };
 
 static const struct rtos_register_stacking arc_cpu_saved_stacking = {
-	.stack_registers_size = 24,   //arc_cpu_saved amount * 4
+	.stack_registers_size = 12,   //NOTE: change to 8 if ARC_HAS_SECURE is disabled
 	.stack_growth_direction = -1,
 	.num_output_registers = ARRAY_SIZE(arc_cpu_saved),
 	.register_offsets = arc_cpu_saved,
@@ -549,7 +552,7 @@ static int Zephyr_get_thread_reg_list(struct rtos *rtos, int64_t thread_id,
 	const struct rtos_register_stacking *stacking;
 	struct rtos_reg *callee_saved_reg_list;
 	int num_callee_saved_regs;
-	int64_t addr;
+	int64_t addr, real_stack_addr;
 	int retval;
 
 	LOG_INFO("Getting thread %" PRId64 " reg list", thread_id);
@@ -566,24 +569,27 @@ static int Zephyr_get_thread_reg_list(struct rtos *rtos, int64_t thread_id,
 
 	addr = thread_id + params->offsets[OFFSET_T_STACK_POINTER]
 		 - params->callee_saved_stacking->register_offsets[0].offset;
+	/* Getting real stack addres from Kernel thread struct */
+	retval = target_read_u32(rtos->target,addr, &real_stack_addr); 
+	if (retval < 0)
+		return retval;
+	
+	/* Getting callee registers */
 	retval = rtos_generic_stack_read(rtos->target,
 									 params->callee_saved_stacking,
-									 addr, &callee_saved_reg_list,
+									 real_stack_addr, &callee_saved_reg_list,
 									 &num_callee_saved_regs);
 	if (retval < 0)
 		return retval;
 
-	addr = target_buffer_get_u32(rtos->target,
-								 callee_saved_reg_list[0].value);
-	if (params->offsets[OFFSET_T_PREEMPT_FLOAT] != UNIMPLEMENTED)
-		stacking = params->cpu_saved_fp_stacking;
-	else
-		stacking = params->cpu_saved_nofp_stacking;
-	retval = rtos_generic_stack_read(rtos->target, stacking, addr, reg_list,
-									 num_regs);
+	stacking = params->cpu_saved_nofp_stacking;
+	/* Getting blink and status32 registers */
+	retval = rtos_generic_stack_read(rtos->target, stacking,
+					 real_stack_addr + num_callee_saved_regs * 4, //status32 and blink are below callee regs in memory
+					 reg_list, num_regs);
 
 	if (retval >= 0)
-		for (int i = 1; i < num_callee_saved_regs; i++)
+		for (int i = 0; i < num_callee_saved_regs; i++)
 			buf_cpy(callee_saved_reg_list[i].value,
 					(*reg_list)[callee_saved_reg_list[i].number].value,
 					callee_saved_reg_list[i].size);
