@@ -202,12 +202,16 @@ static const struct stack_register_offset arc_cpu_saved[] = {
         { 29,   -1,  32 }, //ILINK
         { 30,   -1,  32 }, //r30
         { 31,   0,  32 }, //BLINK
+	{ 60,   -1, 32 }, //lp_count
+	{ 63,   -1, 32 }, //pcl
         { 64,   -1,  32 }, // pc
-        { 67,   8,  32 } // status32  NOTE: change "8" to "4" if ARC_HAS_SECURE is disabled
+	{ 65,   -1,  32 }, // lp_start
+	{ 66,   -1,  32 }, // lp_end
+        { 67,   4,  32 } // status32  NOTE: change "8" to "4" if ARC_HAS_SECURE is disabled
 };
 
 static const struct rtos_register_stacking arc_cpu_saved_stacking = {
-	.stack_registers_size = 12,   //NOTE: change to 8 if ARC_HAS_SECURE is disabled
+	.stack_registers_size = 8,   //NOTE: change to 8 if ARC_HAS_SECURE is disabled
 	.stack_growth_direction = -1,
 	.num_output_registers = ARRAY_SIZE(arc_cpu_saved),
 	.register_offsets = arc_cpu_saved,
