@@ -405,7 +405,7 @@ int rtos_thread_packet(struct connection *connection, char const *packet, int pa
 	} else if (packet[0] == 'T') {	/* Is thread alive? */
 		threadid_t threadid;
 		int found = -1;
-		sscanf(packet, "T%" SCNx64, &threadid);
+		sscanf(packet, "T%" SCNx32, &threadid);
 		if ((target->rtos != NULL) && (target->rtos->thread_details != NULL)) {
 			int thread_num;
 			for (thread_num = 0; thread_num < target->rtos->thread_count; thread_num++) {
