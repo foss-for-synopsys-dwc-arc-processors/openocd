@@ -548,7 +548,7 @@ static int Zephyr_get_thread_reg_list(struct rtos *rtos, int64_t thread_id,
 	const struct rtos_register_stacking *stacking;
 	struct rtos_reg *callee_saved_reg_list;
 	int num_callee_saved_regs;
-	int64_t addr;
+	int64_t addr, real_stack_addr;
 	int retval;
 
 	LOG_INFO("Getting thread %" PRId64 " reg list", thread_id);
@@ -565,24 +565,27 @@ static int Zephyr_get_thread_reg_list(struct rtos *rtos, int64_t thread_id,
 
 	addr = thread_id + params->offsets[OFFSET_T_STACK_POINTER]
 		 - params->callee_saved_stacking->register_offsets[0].offset;
+	/* Getting real stack addres from Kernel thread struct */
+	retval = target_read_u32(rtos->target,addr, &real_stack_addr);
+	if (retval < 0)
+		return retval;
+
+	/* Getting callee registers */
 	retval = rtos_generic_stack_read(rtos->target,
 									 params->callee_saved_stacking,
-									 addr, &callee_saved_reg_list,
+									 real_stack_addr, &callee_saved_reg_list,
 									 &num_callee_saved_regs);
 	if (retval < 0)
 		return retval;
 
-	addr = target_buffer_get_u32(rtos->target,
-								 callee_saved_reg_list[0].value);
-	if (params->offsets[OFFSET_T_PREEMPT_FLOAT] != UNIMPLEMENTED)
-		stacking = params->cpu_saved_fp_stacking;
-	else
-		stacking = params->cpu_saved_nofp_stacking;
-	retval = rtos_generic_stack_read(rtos->target, stacking, addr, reg_list,
-									 num_regs);
+	stacking = params->cpu_saved_nofp_stacking;
+	/* Getting blink and status32 registers */
+	retval = rtos_generic_stack_read(rtos->target, stacking,
+					 real_stack_addr + num_callee_saved_regs * 4, //status32 and blink are below callee regs in memory
+					 reg_list, num_regs);
 
 	if (retval >= 0)
-		for (int i = 1; i < num_callee_saved_regs; i++)
+		for (int i = 0; i < num_callee_saved_regs; i++)
 			buf_cpy(callee_saved_reg_list[i].value,
 					(*reg_list)[callee_saved_reg_list[i].number].value,
 					callee_saved_reg_list[i].size);
