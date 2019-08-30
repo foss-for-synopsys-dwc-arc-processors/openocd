@@ -29,8 +29,14 @@
 #include "target/target.h"
 #include "target/target_type.h"
 #include "target/armv7m.h"
+#include "target/arc32.h"
+
 
 #define UNIMPLEMENTED 0xFFFFFFFFU
+
+/*ARC specific defines*/
+#define ARC_AUX_SEC_BUILD_REG 0xdb
+#define ARC_REG_NUM 38
 
 struct Zephyr_thread {
 	uint32_t ptr, next_ptr;
@@ -169,7 +175,7 @@ static const struct rtos_register_stacking arc_callee_saved_stacking = {
  * sec_stat(aux 0x09, available if ARC_HAS_SECURE is enabled) and
  * status32 registers. The offset for status32 is 8 because on
  * EMSK security is enabled, and sec_stat is stored in stack. */
-static const struct stack_register_offset arc_cpu_saved[] = {
+static struct stack_register_offset arc_cpu_saved[] = {
         { 0,   -1,  32 }, //r0
         { 1,   -1,  32 }, //r1
         { 2,   -1,  32 }, //r2
@@ -207,11 +213,11 @@ static const struct stack_register_offset arc_cpu_saved[] = {
         { 64,   -1,  32 }, // pc
 	{ 65,   -1,  32 }, // lp_start
 	{ 66,   -1,  32 }, // lp_end
-        { 67,   4,  32 } // status32  NOTE: change "8" to "4" if ARC_HAS_SECURE is disabled
+        { 67,   4,  32 } // status32
 };
 
-static const struct rtos_register_stacking arc_cpu_saved_stacking = {
-	.stack_registers_size = 8,   //NOTE: change to 8 if ARC_HAS_SECURE is disabled
+static struct rtos_register_stacking arc_cpu_saved_stacking = {
+	.stack_registers_size = 8,
 	.stack_growth_direction = -1,
 	.num_output_registers = ARRAY_SIZE(arc_cpu_saved),
 	.register_offsets = arc_cpu_saved,
@@ -647,6 +653,25 @@ static int Zephyr_create(struct target *target)
 		if (!name) {
 			LOG_ERROR("Zephyr: failed to determine target type");
 			return ERROR_FAIL;
+		}
+	}
+	/* ARC specific, check if EM target has security subsystem
+	* In case of ARC_HAS_SECURE zephyr option enabled
+	* the thread stack contains blink,sec_stat,status32 register
+	* values. If ARC_HAS_SECURE is disabled, only blink and status32
+	* register values are saved on stack. */
+	if (!strcmp(name, "arcv2")){
+		uint32_t value;
+		struct arc32_common *arc32 = target_to_arc32(target);
+		/*reading SEC_BUILD bcr */
+		CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc32->jtag_info, ARC_AUX_SEC_BUILD_REG, &value));
+		if (value != 0){
+			LOG_DEBUG("ARC EM board has security subsystem, changing offsets");
+			arc_cpu_saved[ARC_REG_NUM-1].offset = 8;
+			/* After reading callee registers in stack
+			 * now blink,sec_stat,status32 registers
+			 * are located. */
+			arc_cpu_saved_stacking.stack_registers_size = 12;
 		}
 	}
 
