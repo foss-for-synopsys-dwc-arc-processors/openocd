@@ -2760,7 +2760,7 @@ static bool gdb_handle_vcont_packet(struct connection *connection, const char *p
 		if (strncmp(parse, "s:", 2) == 0) {
 			struct target *ct = target;
 			int current_pc = 1;
-			int64_t thread_id;
+			uint32_t thread_id;
 			char *endp;
 
 			parse += 2;
