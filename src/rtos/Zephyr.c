@@ -595,6 +595,17 @@ static int Zephyr_get_thread_reg_list(struct rtos *rtos, int64_t thread_id,
 					(*reg_list)[callee_saved_reg_list[i].number].value,
 					callee_saved_reg_list[i].size);
 
+	//Put blink value into PC
+	buf_cpy((*reg_list)[31].value,(*reg_list)[34].value,32);
+
+        // Put address after callee/caller in SP
+	uint8_t stack_p[8];
+	int64_t stack_top;
+	stack_top = real_stack_addr + num_callee_saved_regs * 4 + arc_cpu_saved_stacking.stack_registers_size;
+
+	memcpy(stack_p, &(stack_top), 8);
+	buf_cpy(stack_p,(*reg_list)[28].value,32);
+
 	free(callee_saved_reg_list);
 
 	return retval;
