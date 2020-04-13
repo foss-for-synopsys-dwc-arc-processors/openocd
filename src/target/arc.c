@@ -47,7 +47,9 @@
  *     Currently used internally during configure step.
  */
 
-
+/* TODO: remove declaration below after cleanup */
+static int arc_configure_actionpoint(struct target *target, uint32_t ap_num,
+	uint32_t match_value, uint32_t control_tt, uint32_t control_at);
 
 void arc_reg_data_type_add(struct target *target,
 		struct arc_reg_data_type *data_type)
@@ -574,6 +576,28 @@ static int arc_get_register_value(struct target *target, const char *reg_name,
 	return ERROR_OK;
 }
 
+/* Set value of 32-bit register. TODO: cleanup */
+int arc_set_register_value(struct target *target, const char *reg_name,
+		uint32_t value)
+{
+	LOG_DEBUG("reg_name=%s value=0x%08" PRIx32, reg_name, value);
+
+	if (!(target && reg_name)) {
+		LOG_ERROR("Arguments cannot be NULL.");
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+
+	struct reg *reg = arc_reg_get_by_name(target->reg_cache, reg_name, true);
+
+	if (!reg)
+		return ERROR_ARC_REGISTER_NOT_FOUND;
+
+	uint8_t value_buf[4];
+	buf_set_u32(value_buf, 0, 32, value);
+	CHECK_RETVAL(reg->type->set(reg, value_buf));
+
+	return ERROR_OK;
+}
 
 /* Configure DCCM's */
 static int arc_configure_dccm(struct target  *target)
@@ -1595,6 +1619,52 @@ int arc_step(struct target *target, int current, target_addr_t address,
 
 	return ERROR_OK;
 }
+
+
+/* TODO: rework/cleanup core below */
+
+static int arc_configure_actionpoint(struct target *target, uint32_t ap_num,
+	uint32_t match_value, uint32_t control_tt, uint32_t control_at)
+{
+	struct arc_common *arc = target_to_arc(target);
+
+	if (control_tt != AP_AC_TT_DISABLE) {
+
+		if (arc->actionpoints_num_avail < 1) {
+			LOG_ERROR("No free actionpoints, maximim amount is %" PRIu32,
+					arc->actionpoints_num);
+			return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
+		}
+
+		/* Names of register to set - 24 chars should be enough. Looks a little
+		 * bit out-of-place for C code, but makes it aligned to the bigger
+		 * concept of "ARC registers are defined in TCL" as far as possible.
+		 */
+		char ap_amv_reg_name[24], ap_amm_reg_name[24], ap_ac_reg_name[24];
+		snprintf(ap_amv_reg_name, 24, "ap_amv%u", ap_num);
+		snprintf(ap_amm_reg_name, 24, "ap_amm%u", ap_num);
+		snprintf(ap_ac_reg_name, 24, "ap_ac%u", ap_num);
+		CHECK_RETVAL(arc_set_register_value(target, ap_amv_reg_name,
+					 match_value));
+		CHECK_RETVAL(arc_set_register_value(target, ap_amm_reg_name, 0));
+		CHECK_RETVAL(arc_set_register_value(target, ap_ac_reg_name,
+					 control_tt | control_at));
+		arc->actionpoints_num_avail--;
+	} else {
+		char ap_ac_reg_name[24];
+		snprintf(ap_ac_reg_name, 24, "ap_ac%u", ap_num);
+		CHECK_RETVAL(arc_set_register_value(target, ap_ac_reg_name,
+					 AP_AC_TT_DISABLE));
+		arc->actionpoints_num_avail++;
+	}
+
+	return ERROR_OK;
+}
+
+
+
+
+/* TODO: rework core above */
 
 /* ARC v2 target */
 struct target_type arcv2_target = {

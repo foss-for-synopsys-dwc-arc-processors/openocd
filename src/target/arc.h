@@ -60,6 +60,23 @@
 /* ARC 16bits opcodes */
 #define ARC_SDBBP_16 0x7FFF      /* BRK_S */
 
+ /* Action Point */
+#define AP_AMV_BASE				0x220
+#define AP_AMM_BASE				0x221
+#define AP_AC_BASE				0x222
+#define AP_STRUCT_LEN			0x3
+
+#define AP_AC_AT_INST_ADDR		0x0
+#define AP_AC_AT_MEMORY_ADDR	0x2
+#define AP_AC_AT_AUXREG_ADDR	0x4
+
+#define AP_AC_TT_DISABLE		0x00
+#define AP_AC_TT_WRITE			0x10
+#define AP_AC_TT_READ			0x20
+#define AP_AC_TT_READWRITE		0x30
+
+
+
 struct arc_reg_bitfield {
 	struct reg_data_type_bitfield bitfield;
 	char name[REG_TYPE_MAX_NAME_LENGTH];
@@ -100,6 +117,20 @@ static const struct reg_data_type standard_gdb_types[] = {
 	{ .type = REG_TYPE_IEEE_DOUBLE, .id = "ieee_double" },
 };
 
+/* TODO: cleanup below */
+enum arc_actionpoint_type {
+	ARC_AP_BREAKPOINT,
+	ARC_AP_WATCHPOINT,
+};
+
+/* offsets into arc core register cache */
+struct arc_comparator {
+	int used;
+	uint32_t bp_value;
+	uint32_t reg_address;
+	enum arc_actionpoint_type type;
+};
+/* TODO: clenup above */
 
 struct arc_common {
 	uint32_t common_magic;
@@ -108,6 +139,12 @@ struct arc_common {
 
 	struct reg_cache *core_and_aux_cache;
 	struct reg_cache *bcr_cache;
+
+	/* Actionpoints TODO: cleanup */
+	unsigned int actionpoints_num;
+	unsigned int actionpoints_num_avail;
+	struct arc_comparator *actionpoints_list;
+
 
 	/* Indicate if cach was built (for deinit function) */
 	bool core_aux_cache_built;
