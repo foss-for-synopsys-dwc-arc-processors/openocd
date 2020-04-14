@@ -2050,6 +2050,39 @@ void arc_reset_actionpoints(struct target *target)
 	}
 }
 
+
+static int arc_hit_watchpoint(struct target *target, struct watchpoint **hit_watchpoint)
+{
+	assert(target);
+	assert(hit_watchpoint);
+
+	struct arc_comparator *actionpoint = NULL;
+	CHECK_RETVAL(get_current_actionpoint(target, &actionpoint));
+
+	if (actionpoint != NULL) {
+		if (!actionpoint->used) {
+			LOG_WARNING("Target halted by unused actionpoint.");
+		}
+
+		/* If this check fails - that is some sort of an error in OpenOCD. */
+		if (actionpoint->type != ARC_AP_WATCHPOINT) {
+			LOG_WARNING("Target halted by breakpoint, but is treated as a "
+					"watchpoint.");
+		}
+
+		for (struct watchpoint *watchpoint = target->watchpoints;
+				watchpoint != NULL;
+				watchpoint = watchpoint->next ) {
+			if (actionpoint->bp_value == watchpoint->address) {
+				*hit_watchpoint = watchpoint;
+				return ERROR_OK;
+			}
+		}
+	}
+
+	return ERROR_FAIL;
+}
+
 /* TODO: rework core above */
 
 /* ARC v2 target */
@@ -2087,7 +2120,7 @@ struct target_type arcv2_target = {
 	.remove_breakpoint = arc_remove_breakpoint,
 	.add_watchpoint = arc_add_watchpoint,
 	.remove_watchpoint = arc_remove_watchpoint,
-	.hit_watchpoint = NULL,
+	.hit_watchpoint = arc_hit_watchpoint,
 
 	.run_algorithm = NULL,
 	.start_algorithm = NULL,
