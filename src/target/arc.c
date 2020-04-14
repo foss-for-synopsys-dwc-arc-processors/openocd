@@ -1623,6 +1623,24 @@ int arc_step(struct target *target, int current, target_addr_t address,
 
 /* TODO: rework/cleanup core below */
 
+void arc_set_actionpoints_num(struct target *target, unsigned ap_num)
+{
+	LOG_DEBUG("target=%s actionpoints=%u", target_name(target), ap_num);
+	struct arc_common *arc = target_to_arc(target);
+
+	/* Make sure that there are no enabled actionpoints in target. */
+	//arc_dbg_reset_actionpoints(target);
+
+	/* Assume that all points have been removed from target.  */
+	free(arc->actionpoints_list);
+
+	arc->actionpoints_num_avail = ap_num;
+	arc->actionpoints_num = ap_num;
+	/* calloc can be safely called when ncount == 0.  */
+	arc->actionpoints_list = calloc(ap_num, sizeof(struct arc_comparator));
+}
+
+
 static int arc_configure_actionpoint(struct target *target, uint32_t ap_num,
 	uint32_t match_value, uint32_t control_tt, uint32_t control_at)
 {
