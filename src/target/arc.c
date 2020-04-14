@@ -1301,6 +1301,27 @@ static int arc_target_create(struct target *target, Jim_Interp *interp)
 }
 
 /**
+ * Reset internal states of caches. Must be called when entering debugging.
+ *
+ * @param target Target for which to reset caches states.
+ */
+int arc_reset_caches_states(struct target *target)
+{
+	struct arc_common *arc = target_to_arc(target);
+
+	LOG_DEBUG("Resetting internal variables of caches states");
+
+	/* Reset caches states. */
+	arc->dcache_flushed = false;
+	arc->l2cache_flushed = false;
+	arc->icache_invalidated = false;
+	arc->dcache_invalidated = false;
+	arc->l2cache_invalidated = false;
+
+	return ERROR_OK;
+}
+
+/**
  * Write 4-byte instruction to memory. This is like target_write_u32, however
  * in case of little endian ARC instructions are in middle endian format, not
  * little endian, so different type of conversion should be done.
@@ -2137,6 +2158,181 @@ static int arc_resume(struct target *target, int current, target_addr_t address,
 
 	return ERROR_OK;
 }
+
+
+/* This function invalidates icache. */
+static int arc_icache_invalidate(struct target *target)
+{
+	uint32_t value = IC_IVIC_INVALIDATE;	/* invalidate I$ */
+
+	struct arc_common *arc = target_to_arc(target);
+
+	/* Don't waste time if already done. */
+	if (arc->icache_invalidated)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Invalidating I$.");
+
+	value = IC_IVIC_INVALIDATE;	/* invalidate I$ */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_IC_IVIC_REG, value));
+
+	arc->icache_invalidated = true;
+
+	return ERROR_OK;
+}
+
+/* This function invalidates dcache */
+static int arc_dcache_invalidate(struct target *target)
+{
+	uint32_t value, backup;
+
+	struct arc_common *arc = target_to_arc(target);
+
+	if (!arc->has_dcache || arc->dcache_invalidated)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Invalidating D$.");
+
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_DC_CTRL_REG, &value));
+	backup = value;
+	value &= ~DC_CTRL_IM;
+
+	/* set DC_CTRL invalidate mode to invalidate-only (no flushing!!) */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DC_CTRL_REG, value));
+	value = DC_IVDC_INVALIDATE;	/* invalidate D$ */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DC_IVDC_REG, value));
+
+	/* restore DC_CTRL invalidate mode */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DC_CTRL_REG, backup));
+
+	arc->dcache_invalidated = true;
+
+	return ERROR_OK;
+}
+
+/* This function invalidates l2 cache. */
+static int arc_l2cache_invalidate(struct target *target)
+{
+	uint32_t value, backup;
+
+	struct arc_common *arc = target_to_arc(target);
+
+	if (!arc->has_l2cache || arc->l2cache_invalidated)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Invalidating L2$.");
+
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, SLC_AUX_CACHE_CTRL, &value));
+	backup = value;
+	value &= ~L2_CTRL_IM;
+
+	/* set L2_CTRL invalidate mode to invalidate-only (no flushing!!) */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, SLC_AUX_CACHE_CTRL, value));
+	/* invalidate L2$ */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, SLC_AUX_CACHE_INV, L2_INV_IV));
+
+	/* Wait until invalidate operation ends */
+	do {
+	    LOG_DEBUG("Waiting for invalidation end.");
+	    CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, SLC_AUX_CACHE_CTRL, &value));
+	} while (value & L2_CTRL_BS);
+
+	/* restore L2_CTRL invalidate mode */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, SLC_AUX_CACHE_CTRL, backup));
+
+	arc->l2cache_invalidated = true;
+
+	return ERROR_OK;
+}
+
+
+int arc_cache_invalidate(struct target *target)
+{
+	CHECK_RETVAL(arc_icache_invalidate(target));
+	CHECK_RETVAL(arc_dcache_invalidate(target));
+	CHECK_RETVAL(arc_l2cache_invalidate(target));
+
+	return ERROR_OK;
+}
+
+/* Flush data cache. This function is cheap to call and return quickly if D$
+ * already has been flushed since target had been halted. JTAG debugger reads
+ * values directly from memory, bypassing cache, so if there are unflushed
+ * lines debugger will read invalid values, which will cause a lot of troubles.
+ * */
+int arc_dcache_flush(struct target *target)
+{
+	uint32_t value, dc_ctrl_value;
+	bool has_to_set_dc_ctrl_im;
+
+	struct arc_common *arc = target_to_arc(target);
+
+	/* Don't waste time if already done. */
+	if (!arc->has_dcache || arc->dcache_flushed)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Flushing D$.");
+
+	/* Store current value of DC_CTRL */
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_DC_CTRL_REG, &dc_ctrl_value));
+
+	/* Set DC_CTRL invalidate mode to flush (if not already set) */
+	has_to_set_dc_ctrl_im = (dc_ctrl_value & DC_CTRL_IM) == 0;
+	if (has_to_set_dc_ctrl_im) {
+		value = dc_ctrl_value | DC_CTRL_IM;
+		CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DC_CTRL_REG, value));
+	}
+
+	/* Flush D$ */
+	value = DC_IVDC_INVALIDATE;
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DC_IVDC_REG, value));
+
+	/* Restore DC_CTRL invalidate mode (even of flush failed) */
+	if (has_to_set_dc_ctrl_im) {
+	    CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DC_CTRL_REG, dc_ctrl_value));
+	}
+
+	arc->dcache_flushed = true;
+
+	return ERROR_OK;
+}
+
+
+/* This function flushes l2cache. */
+static int arc_l2cache_flush(struct target *target)
+{
+	uint32_t value;
+
+	struct arc_common *arc = target_to_arc(target);
+
+	/* Don't waste time if already done. */
+	if (!arc->has_l2cache || arc->l2cache_flushed)
+	    return ERROR_OK;
+
+	LOG_DEBUG("Flushing L2$.");
+
+	/* Flush L2 cache */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, SLC_AUX_CACHE_FLUSH, L2_FLUSH_FL));
+
+	/* Wait until flush operation ends */
+	do {
+	    LOG_DEBUG("Waiting for flushing end.");
+	    CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, SLC_AUX_CACHE_CTRL, &value));
+	} while (value & L2_CTRL_BS);
+
+	arc->l2cache_flushed = true;
+
+	return ERROR_OK;
+}
+
+int arc_cache_flush(struct target *target)
+{
+	CHECK_RETVAL(arc_dcache_flush(target));
+	CHECK_RETVAL(arc_l2cache_flush(target));
+
+	return ERROR_OK;
+}
+
 /* TODO: rework core above */
 
 /* ARC v2 target */

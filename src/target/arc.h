@@ -75,7 +75,23 @@
 #define AP_AC_TT_READ			0x20
 #define AP_AC_TT_READWRITE		0x30
 
+/* Cache registers */
+#define AUX_IC_IVIC_REG			0X10
+#define IC_IVIC_INVALIDATE		0XFFFFFFFF
 
+#define AUX_DC_IVDC_REG			0X47
+#define DC_IVDC_INVALIDATE		(1)
+#define AUX_DC_CTRL_REG			0X48
+#define DC_CTRL_IM			(1 << 6)
+
+/* L2 cache registers */
+#define SLC_AUX_CACHE_CTRL 		0x903
+#define L2_CTRL_IM			(1 << 6)
+#define L2_CTRL_BS			(1 << 8)
+#define SLC_AUX_CACHE_FLUSH 		0x904
+#define L2_FLUSH_FL     		(1)
+#define SLC_AUX_CACHE_INV 		0x905
+#define L2_INV_IV       		(1)
 
 struct arc_reg_bitfield {
 	struct reg_data_type_bitfield bitfield;
@@ -145,6 +161,21 @@ struct arc_common {
 	unsigned int actionpoints_num_avail;
 	struct arc_comparator *actionpoints_list;
 
+
+	/* Cache control */
+	bool has_dcache;
+	bool has_l2cache;
+	/* If true, then D$ has been already flushed since core has been
+	 * halted. */
+	bool dcache_flushed;
+	/* If true, then L2 has been already flushed since core has been
+	 * halted. */
+	bool l2cache_flushed;
+	/* If true, then caches have been already flushed since core has been
+	 * halted. */
+	bool icache_invalidated;
+	bool dcache_invalidated;
+	bool l2cache_invalidated;
 
 	/* Indicate if cach was built (for deinit function) */
 	bool core_aux_cache_built;
