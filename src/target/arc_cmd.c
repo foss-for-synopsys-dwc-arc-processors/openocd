@@ -909,6 +909,125 @@ static int jim_arc_get_reg_field(Jim_Interp *interp, int argc, Jim_Obj * const *
 	return JIM_OK;
 }
 
+/* TODO: cleanup code below */
+COMMAND_HANDLER(set_actionpoint_auxreg_addr)
+{
+	int retval = ERROR_OK;
+
+
+	struct target *target = get_current_target(CMD_CTX);
+	struct target_list *head;
+	head = target->head;
+
+	if (target->state != TARGET_HALTED) {
+		command_print(CMD, "NOTE: target must be HALTED for \"%s\" command",
+			CMD_NAME);
+		return ERROR_OK;
+	}
+
+	if (head == (struct target_list *)NULL) {
+		if (CMD_ARGC == 2) {
+			uint32_t auxreg_addr = 0;
+			uint32_t transaction = AP_AC_TT_DISABLE;
+
+			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], auxreg_addr);
+
+			switch (CMD_ARGV[1][0]) {
+				case 'r':
+					transaction = AP_AC_TT_READ;
+					break;
+				case 'w':
+					transaction = AP_AC_TT_WRITE;
+					break;
+				case 'a':
+					transaction = AP_AC_TT_READWRITE;
+					break;
+				default:
+					LOG_ERROR("invalid watchpoint mode ('%c')", CMD_ARGV[2][0]);
+					return ERROR_COMMAND_SYNTAX_ERROR;
+			}
+
+			return arc_add_auxreg_actionpoint(target, auxreg_addr, transaction);
+
+		} else {
+			return ERROR_COMMAND_SYNTAX_ERROR;
+		}
+	} else
+		LOG_ERROR(" > head list is not NULL !");
+
+	return retval;
+}
+
+COMMAND_HANDLER(remove_actionpoint_auxreg_addr)
+{
+	int retval = ERROR_OK;
+
+	struct target *target = get_current_target(CMD_CTX);
+	struct target_list *head;
+	head = target->head;
+
+	if (target->state != TARGET_HALTED) {
+		command_print(CMD, "NOTE: target must be HALTED for \"%s\" command",
+			CMD_NAME);
+		return ERROR_OK;
+	}
+
+	if (head == (struct target_list *)NULL) {
+		if (CMD_ARGC == 1) {
+			uint32_t auxreg_addr = 0;
+			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], auxreg_addr);
+
+			return arc_remove_auxreg_actionpoint(target, auxreg_addr);
+
+		} else {
+			return ERROR_COMMAND_SYNTAX_ERROR;
+		}
+	} else
+		LOG_ERROR(" > head list is not NULL !");
+
+	return retval;
+}
+
+static int jim_handle_actionpoints_num(Jim_Interp *interp, int argc,
+	Jim_Obj * const *argv)
+{
+	Jim_GetOptInfo goi;
+	Jim_GetOpt_Setup(&goi, interp, argc - 1, argv + 1);
+
+	LOG_DEBUG("-");
+
+	if (goi.argc >= 2) {
+		Jim_WrongNumArgs(interp, goi.argc, goi.argv, "[?amount of actionpoints?]");
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+
+	struct command_context *context = current_command_context(interp);
+	assert(context);
+
+	struct target *target = get_current_target(context);
+
+	if (!target) {
+		Jim_SetResultFormatted(goi.interp, "No current target");
+		return JIM_ERR;
+	}
+
+	struct arc_common *arc = target_to_arc(target);
+	/* It is not possible to pass &arc->actionpoints_num directly to
+	 * handle_command_parse_uint, because this value should be valid during
+	 * "actionpoint reset, initiated by arc_set_actionpoints_num.  */
+	unsigned int ap_num = arc->actionpoints_num;
+
+	if (goi.argc == 1) {
+		JIM_CHECK_RETVAL(arc_cmd_jim_get_uint32(&goi, &ap_num));
+		arc_set_actionpoints_num(target, ap_num);
+	}
+
+	Jim_SetResultInt(interp, ap_num);
+
+	return JIM_OK;
+}
+
+
 /* ----- Exported target commands ------------------------------------------ */
 
 static const struct command_registration arc_core_command_handlers[] = {
@@ -966,6 +1085,27 @@ static const struct command_registration arc_core_command_handlers[] = {
 		.help = "ARC JTAG specific commands",
 		.usage = "",
 		.chain = arc_jtag_command_group,
+	},
+	{
+		.name = "ap-auxreg-addr",
+		.handler = set_actionpoint_auxreg_addr,
+		.mode = COMMAND_EXEC,
+		.usage = "has two argument: <auxreg-addr> <r|w|a>",
+		.help = "sets break when aux register is accessed",
+	},
+	{
+		.name = "rap-auxreg-addr",
+		.handler = remove_actionpoint_auxreg_addr,
+		.mode = COMMAND_EXEC,
+		.usage = "has only one argument: <auxreg-addr>",
+		.help = "removes break when aux register is accessed",
+	},
+	{
+		.name = "num-actionpoints",
+		.jim_handler = jim_handle_actionpoints_num,
+		.mode = COMMAND_ANY,
+		.usage = "[<unsigned integer>]",
+		.help = "Prints or sets amount of actionpoints in the processor.",
 	},
 	COMMAND_REGISTRATION_DONE
 };
