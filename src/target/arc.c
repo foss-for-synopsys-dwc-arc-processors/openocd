@@ -55,6 +55,7 @@ static void arc_enable_breakpoints(struct target *target);
 static int get_current_actionpoint(struct target *target,
 		struct arc_comparator **actionpoint);
 void arc_reset_actionpoints(struct target *target);
+int arc_config_step(struct target *target, int enable_step);
 
 const char * const arc_reg_debug = "debug";
 
@@ -1187,82 +1188,42 @@ static int arc_enable_interrupts(struct target *target, int enable)
 	return ERROR_OK;
 }
 
-static int arc_resume(struct target *target, int current, target_addr_t address,
-	int handle_breakpoints, int debug_execution)
+
+int arc_enter_debug(struct target *target)
 {
-	struct arc_common *arc = target_to_arc(target);
-	uint32_t resume_pc = 0;
 	uint32_t value;
-	struct reg *pc = &arc->core_and_aux_cache->reg_list[arc->pc_index_in_cache];
+	struct arc_common *arc = target_to_arc(target);
 
-	LOG_DEBUG("current:%i, address:0x%08" TARGET_PRIxADDR ", handle_breakpoints(not supported yet):%i,"
-		" debug_execution:%i", current, address, handle_breakpoints, debug_execution);
+	target->state = TARGET_HALTED;
 
-	if (target->state != TARGET_HALTED) {
-		LOG_WARNING("target not halted");
-		return ERROR_TARGET_NOT_HALTED;
-	}
+	/* Do read-modify-write sequence, or DEBUG.UB will be reset unintentionally. */
+	/* TODO: I think this should be moved to halt(). */
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_DEBUG_REG, &value));
+	value |= SET_CORE_FORCE_HALT; /* set the HALT bit */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_DEBUG_REG, value));
+	alive_sleep(1);
 
-	if (!debug_execution) {
-		/* (gdb) continue = execute until we hit break/watch-point */
-		LOG_DEBUG("we are in debug execution mode");
-		target_free_all_working_areas(target);
-		arc_enable_breakpoints(target);
-		arc_enable_watchpoints(target);
-	}
+#ifdef DEBUG
+	LOG_DEBUG("core stopped (halted) DEGUB-REG: 0x%08" PRIx32, value);
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc32->jtag_info, AUX_STATUS32_REG, &value));
+	LOG_DEBUG("core STATUS32: 0x%08" PRIx32, value);
+#endif
 
-	/* current = 1: continue on current PC, otherwise continue at <address> */
-	if (!current) {
-		target_buffer_set_u32(target, pc->value, address);
-		pc->dirty = 1;
-		pc->valid = 1;
-		LOG_DEBUG("Changing the value of current PC to 0x%08" TARGET_PRIxADDR, address);
-	}
+	return ERROR_OK;
+}
 
-	if (!current)
-		resume_pc = address;
-	else
-		resume_pc = target_buffer_get_u32(target, pc->value);
+static int arc_single_step_core(struct target *target)
+{
+	arc_debug_entry(target);
 
-	CHECK_RETVAL(arc_restore_context(target));
+	/* disable interrupts while stepping */
+	arc_enable_interrupts(target, 0);
 
-	LOG_DEBUG("Target resumes from PC=0x%" PRIx32 ", pc.dirty=%i, pc.valid=%i",
-		resume_pc, pc->dirty, pc->valid);
+	/* configure single step mode */
+	arc_config_step(target, 1);
 
-	/* check if GDB tells to set our PC where to continue from */
-	if ((pc->valid == 1) && (resume_pc == target_buffer_get_u32(target, pc->value))) {
-		value = target_buffer_get_u32(target, pc->value);
-		LOG_DEBUG("resume Core (when start-core) with PC @:0x%08" PRIx32, value);
-		CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_PC_REG, value));
-	}
-
-	/* Restore IRQ state if not in debug_execution*/
-	if (!debug_execution)
-		CHECK_RETVAL(arc_enable_interrupts(target, arc->irq_state));
-	else
-		CHECK_RETVAL(arc_enable_interrupts(target, !debug_execution));
-
-	target->debug_reason = DBG_REASON_NOTHALTED;
-
-	/* ready to get us going again */
-	target->state = TARGET_RUNNING;
-	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, &value));
-	value &= ~SET_CORE_HALT_BIT;        /* clear the HALT bit */
-	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, value));
-	LOG_DEBUG("Core started to run");
-
-	/* registers are now invalid */
-	register_cache_invalidate(arc->core_and_aux_cache);
-
-	if (!debug_execution) {
-		target->state = TARGET_RUNNING;
-		CHECK_RETVAL(target_call_event_callbacks(target, TARGET_EVENT_RESUMED));
-		LOG_DEBUG("target resumed at 0x%08" PRIx32, resume_pc);
-	} else {
-		target->state = TARGET_DEBUG_RUNNING;
-		CHECK_RETVAL(target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED));
-		LOG_DEBUG("target debug resumed at 0x%08" PRIx32, resume_pc);
-	}
+	/* exit debug mode */
+	arc_enter_debug(target);
 
 	return ERROR_OK;
 }
@@ -2083,6 +2044,99 @@ static int arc_hit_watchpoint(struct target *target, struct watchpoint **hit_wat
 	return ERROR_FAIL;
 }
 
+static int arc_resume(struct target *target, int current, target_addr_t address,
+	int handle_breakpoints, int debug_execution)
+{
+	struct arc_common *arc = target_to_arc(target);
+	uint32_t resume_pc = 0;
+	uint32_t value;
+	struct breakpoint *breakpoint = NULL;
+	struct reg *pc = &arc->core_and_aux_cache->reg_list[arc->pc_index_in_cache];
+
+	LOG_DEBUG("current:%i, address:0x%08" TARGET_PRIxADDR ", handle_breakpoints(not supported yet):%i,"
+		" debug_execution:%i", current, address, handle_breakpoints, debug_execution);
+
+	if (target->state != TARGET_HALTED) {
+		LOG_WARNING("target not halted");
+		return ERROR_TARGET_NOT_HALTED;
+	}
+
+	if (!debug_execution) {
+		/* (gdb) continue = execute until we hit break/watch-point */
+		LOG_DEBUG("we are in debug execution mode");
+		target_free_all_working_areas(target);
+		arc_enable_breakpoints(target);
+		arc_enable_watchpoints(target);
+	}
+
+	/* current = 1: continue on current PC, otherwise continue at <address> */
+	if (!current) {
+		target_buffer_set_u32(target, pc->value, address);
+		pc->dirty = 1;
+		pc->valid = 1;
+		LOG_DEBUG("Changing the value of current PC to 0x%08" TARGET_PRIxADDR, address);
+	}
+
+	if (!current)
+		resume_pc = address;
+	else
+		resume_pc = target_buffer_get_u32(target, pc->value);
+
+	CHECK_RETVAL(arc_restore_context(target));
+
+	LOG_DEBUG("Target resumes from PC=0x%" PRIx32 ", pc.dirty=%i, pc.valid=%i",
+		resume_pc, pc->dirty, pc->valid);
+
+	/* check if GDB tells to set our PC where to continue from */
+	if ((pc->valid == 1) && (resume_pc == target_buffer_get_u32(target, pc->value))) {
+		value = target_buffer_get_u32(target, pc->value);
+		LOG_DEBUG("resume Core (when start-core) with PC @:0x%08" PRIx32, value);
+		CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_PC_REG, value));
+	}
+
+	/* the front-end may request us not to handle breakpoints here*/
+	if (handle_breakpoints) {
+		/* Single step past breakpoint at current address */
+		breakpoint = breakpoint_find(target, resume_pc);
+		if (breakpoint) {
+			LOG_DEBUG("unset breakpoint at 0x%08" TARGET_PRIxADDR,
+				breakpoint->address);
+			arc_unset_breakpoint(target, breakpoint);
+			arc_single_step_core(target);
+			arc_set_breakpoint(target, breakpoint);
+		}
+	}
+
+	/* Restore IRQ state if not in debug_execution*/
+	if (!debug_execution)
+		CHECK_RETVAL(arc_enable_interrupts(target, arc->irq_state));
+	else
+		CHECK_RETVAL(arc_enable_interrupts(target, !debug_execution));
+
+	target->debug_reason = DBG_REASON_NOTHALTED;
+
+	/* ready to get us going again */
+	target->state = TARGET_RUNNING;
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, &value));
+	value &= ~SET_CORE_HALT_BIT;        /* clear the HALT bit */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, value));
+	LOG_DEBUG("Core started to run");
+
+	/* registers are now invalid */
+	register_cache_invalidate(arc->core_and_aux_cache);
+
+	if (!debug_execution) {
+		target->state = TARGET_RUNNING;
+		CHECK_RETVAL(target_call_event_callbacks(target, TARGET_EVENT_RESUMED));
+		LOG_DEBUG("target resumed at 0x%08" PRIx32, resume_pc);
+	} else {
+		target->state = TARGET_DEBUG_RUNNING;
+		CHECK_RETVAL(target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED));
+		LOG_DEBUG("target debug resumed at 0x%08" PRIx32, resume_pc);
+	}
+
+	return ERROR_OK;
+}
 /* TODO: rework core above */
 
 /* ARC v2 target */
