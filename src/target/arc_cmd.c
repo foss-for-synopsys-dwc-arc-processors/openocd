@@ -1028,6 +1028,22 @@ static int jim_handle_actionpoints_num(Jim_Interp *interp, int argc,
 }
 
 
+COMMAND_HANDLER(arc_handle_has_dcache)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct arc_common *arc = target_to_arc(target);
+	return CALL_COMMAND_HANDLER(handle_command_parse_bool,
+		&arc->has_dcache, "target has data-cache");
+}
+
+COMMAND_HANDLER(arc_handle_has_l2cache)
+{
+	struct arc_common *arc = target_to_arc(
+		get_current_target(CMD_CTX));
+	return CALL_COMMAND_HANDLER(handle_command_parse_bool,
+		&arc->has_l2cache, "target has l2 cache");
+}
+
 /* ----- Exported target commands ------------------------------------------ */
 
 static const struct command_registration arc_core_command_handlers[] = {
@@ -1106,6 +1122,20 @@ static const struct command_registration arc_core_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.usage = "[<unsigned integer>]",
 		.help = "Prints or sets amount of actionpoints in the processor.",
+	},
+	{
+		.name = "has-dcache",
+		.handler = arc_handle_has_dcache,
+		.mode = COMMAND_ANY,
+		.usage = "True or false",
+		.help = "Does target has D$? If yes it will be flushed before memory reads.",
+	},
+	{
+		.name = "has-l2cache",
+		.handler = arc_handle_has_l2cache,
+		.mode = COMMAND_ANY,
+		.usage = "True or false",
+		.help = "Does target have L2$? If yes it will be flushed before memory reading."
 	},
 	COMMAND_REGISTRATION_DONE
 };
