@@ -50,6 +50,9 @@
 /* TODO: remove declaration below after cleanup */
 static int arc_configure_actionpoint(struct target *target, uint32_t ap_num,
 	uint32_t match_value, uint32_t control_tt, uint32_t control_at);
+static void arc_enable_watchpoints(struct target *target);
+static void arc_enable_breakpoints(struct target *target);
+
 
 void arc_reg_data_type_add(struct target *target,
 		struct arc_reg_data_type *data_type)
@@ -1181,6 +1184,14 @@ static int arc_resume(struct target *target, int current, target_addr_t address,
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
+	if (!debug_execution) {
+		/* (gdb) continue = execute until we hit break/watch-point */
+		LOG_DEBUG("we are in debug execution mode");
+		target_free_all_working_areas(target);
+		arc_enable_breakpoints(target);
+		arc_enable_watchpoints(target);
+	}
+
 	/* current = 1: continue on current PC, otherwise continue at <address> */
 	if (!current) {
 		target_buffer_set_u32(target, pc->value, address);
@@ -1569,6 +1580,19 @@ static int arc_remove_breakpoint(struct target *target,
 	return ERROR_OK;
 }
 
+/* TODO: cleanup */
+static void arc_enable_breakpoints(struct target *target)
+{
+	struct breakpoint *breakpoint = target->breakpoints;
+
+	/* set any pending breakpoints */
+	while (breakpoint) {
+		if (breakpoint->set == 0)
+			arc_set_breakpoint(target, breakpoint);
+		breakpoint = breakpoint->next;
+	}
+}
+
 /* Helper function which swiches core to single_step mode by
  * doing aux r/w operations.  */
 int arc_config_step(struct target *target, int enable_step)
@@ -1902,6 +1926,18 @@ static int arc_unset_watchpoint(struct target *target,
 	}
 
 	return retval;
+}
+
+static void arc_enable_watchpoints(struct target *target)
+{
+	struct watchpoint *watchpoint = target->watchpoints;
+
+	/* set any pending watchpoints */
+	while (watchpoint) {
+		if (watchpoint->set == 0)
+			arc_set_watchpoint(target, watchpoint);
+		watchpoint = watchpoint->next;
+	}
 }
 
 static int arc_add_watchpoint(struct target *target,
