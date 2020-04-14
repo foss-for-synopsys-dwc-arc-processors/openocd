@@ -52,6 +52,10 @@ static int arc_configure_actionpoint(struct target *target, uint32_t ap_num,
 	uint32_t match_value, uint32_t control_tt, uint32_t control_at);
 static void arc_enable_watchpoints(struct target *target);
 static void arc_enable_breakpoints(struct target *target);
+static int get_current_actionpoint(struct target *target,
+		struct arc_comparator **actionpoint);
+
+const char * const arc_reg_debug = "debug";
 
 
 void arc_reg_data_type_add(struct target *target,
@@ -914,8 +918,22 @@ static int arc_examine_debug_reason(struct target *target)
 		/* DEBUG.BH is set if core halted due to BRK instruction.  */
 		target->debug_reason = DBG_REASON_BREAKPOINT;
 	} else {
-		/* TODO: Add Actionpoint check when AP support will be introduced*/
-		LOG_WARNING("Unknown debug reason");
+		struct arc_comparator *actionpoint = NULL;
+		CHECK_RETVAL(get_current_actionpoint(target, &actionpoint));
+
+		if (actionpoint != NULL) {
+			if (!actionpoint->used) {
+				LOG_WARNING("Target halted by an unused actionpoint.");
+			}
+
+			if (actionpoint->type == ARC_AP_BREAKPOINT) {
+				target->debug_reason = DBG_REASON_BREAKPOINT;
+			} else if (actionpoint->type == ARC_AP_WATCHPOINT) {
+				target->debug_reason = DBG_REASON_WATCHPOINT;
+			} else {
+				LOG_WARNING("Unknown type of actionpoint.");
+			}
+		}
 	}
 
 	return ERROR_OK;
@@ -1824,6 +1842,43 @@ int arc_remove_auxreg_actionpoint(struct target *target, uint32_t auxreg_addr)
 	}
 }
 
+/**
+ * Finds an actionpoint that triggered last actionpoint event, as specified by
+ * DEBUG.ASR.
+ *
+ * @param actionpoint Pointer to be set to last active actionpoint. Pointer
+ *                    will be set to NULL ig DEBUG.AH is 0.
+ */
+static int get_current_actionpoint(struct target *target,
+		struct arc_comparator **actionpoint)
+{
+	assert(target != NULL);
+	assert(actionpoint != NULL);
+
+	uint32_t debug_ah;
+	CHECK_RETVAL(arc_reg_get_field(target, arc_reg_debug, "ah",
+				&debug_ah));
+
+	if (debug_ah) {
+		struct arc_common *arc = target_to_arc(target);
+		unsigned ap;
+		uint32_t debug_asr;
+		CHECK_RETVAL(arc_reg_get_field(target, arc_reg_debug,
+					"asr", &debug_asr));
+
+		for (ap = 0; debug_asr > 1; debug_asr >>= 1) {
+			ap += 1;
+		}
+
+		assert(ap < arc->actionpoints_num);
+
+		*actionpoint = &(arc->actionpoints_list[ap]);
+	} else {
+		*actionpoint = NULL;
+	}
+
+	return ERROR_OK;
+}
 
 /* watchpoints START FROM HERE */
 

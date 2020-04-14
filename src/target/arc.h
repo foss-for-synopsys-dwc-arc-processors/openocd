@@ -269,6 +269,10 @@ struct arc_reg_desc {
 #define ERROR_ARC_FIELD_IS_NOT_BITFIELD    (-703)
 #define ERROR_ARC_REGTYPE_NOT_FOUND        (-704)
 
+/*TODO: cleanup public data */
+extern const char * const arc_reg_debug;
+
+
 void free_reg_desc(struct arc_reg_desc *r);
 
 
