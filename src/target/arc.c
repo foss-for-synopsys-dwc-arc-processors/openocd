@@ -1416,7 +1416,36 @@ static int arc_set_breakpoint(struct target *target,
 
 		breakpoint->set = 64; /* Any nice value but 0 */
 	} else if (breakpoint->type == BKPT_HARD) {
-		LOG_DEBUG("Hardware breakpoints are not supported yet!");
+				/* TODO: cleanup */
+		struct arc_common *arc = target_to_arc(target);
+		struct arc_comparator *comparator_list = arc->actionpoints_list;
+		unsigned int bp_num = 0;
+		int retval = ERROR_OK;
+
+		for (bp_num = 0; bp_num < arc->actionpoints_num; bp_num++) {
+			if (!comparator_list[bp_num].used)
+				break;
+		}
+
+		if (bp_num >= arc->actionpoints_num) {
+			LOG_ERROR("No free actionpoints, maximim amount is %" PRIu32,
+					arc->actionpoints_num);
+			return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
+		}
+
+		retval = arc_configure_actionpoint(target, bp_num,
+				breakpoint->address, AP_AC_TT_READWRITE, AP_AC_AT_INST_ADDR);
+
+		if (retval == ERROR_OK) {
+			breakpoint->set = bp_num + 1;
+			comparator_list[bp_num].used = 1;
+			comparator_list[bp_num].bp_value = breakpoint->address;
+			comparator_list[bp_num].type = ARC_AP_BREAKPOINT;
+
+			LOG_DEBUG("bpid: %" PRIu32 ", bp_num %u bp_value 0x%" PRIx32,
+					breakpoint->unique_id, bp_num, comparator_list[bp_num].bp_value);
+		}
+
 	} else {
 		LOG_DEBUG("ERROR: setting unknown breakpoint type");
 		return ERROR_FAIL;
@@ -1431,6 +1460,9 @@ static int arc_unset_breakpoint(struct target *target,
 		struct breakpoint *breakpoint)
 {
 	int retval = ERROR_OK;
+	/* get pointers to arch-specific information  TODO:cleanup*/
+	struct arc_common *arc = target_to_arc(target);
+	struct arc_comparator *comparator_list = arc->actionpoints_list;
 
 	if (!breakpoint->set) {
 		LOG_WARNING("breakpoint not set");
@@ -1480,7 +1512,26 @@ static int arc_unset_breakpoint(struct target *target,
 		breakpoint->set = 0;
 
 	}	else if (breakpoint->type == BKPT_HARD) {
-			LOG_WARNING("Hardware breakpoints are not supported yet!");
+		/* TODO: cleanup */
+		unsigned int bp_num = breakpoint->set - 1;
+		if ((breakpoint->set == 0) || (bp_num >= arc->actionpoints_num)) {
+			LOG_DEBUG("Invalid actionpoint ID: %u in breakpoint: %" PRIu32,
+					  bp_num, breakpoint->unique_id);
+			return ERROR_OK;
+		}
+
+		retval =  arc_configure_actionpoint(target, bp_num,
+						breakpoint->address, AP_AC_TT_DISABLE, AP_AC_AT_INST_ADDR);
+
+		if (retval == ERROR_OK) {
+			breakpoint->set = 0;
+			comparator_list[bp_num].used = 0;
+			comparator_list[bp_num].bp_value = 0;
+
+			LOG_DEBUG("bpid: %" PRIu32 " - released actionpoint ID: %i",
+					breakpoint->unique_id, bp_num);
+		}
+
 	} else {
 			LOG_DEBUG("ERROR: unsetting unknown breakpoint type");
 			return ERROR_FAIL;
