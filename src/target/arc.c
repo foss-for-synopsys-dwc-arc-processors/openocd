@@ -1801,6 +1801,136 @@ int arc_remove_auxreg_actionpoint(struct target *target, uint32_t auxreg_addr)
 }
 
 
+/* watchpoints START FROM HERE */
+
+static int arc_set_watchpoint(struct target *target,
+		struct watchpoint *watchpoint)
+{
+	unsigned int wp_num;
+	struct arc_common *arc = target_to_arc(target);
+	struct arc_comparator *comparator_list = arc->actionpoints_list;
+
+	if (watchpoint->set) {
+		LOG_WARNING("watchpoint already set");
+		return ERROR_OK;
+	}
+
+	for (wp_num = 0; wp_num < arc->actionpoints_num; wp_num++) {
+		if (!comparator_list[wp_num].used)
+			break;
+	}
+
+	if (wp_num >= arc->actionpoints_num) {
+		LOG_ERROR("No free actionpoints, maximim amount is %u",
+				arc->actionpoints_num);
+		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
+	}
+	/*
+	 * TODO: Verify documentation, just tried and worked fine!!
+	if (watchpoint->length != 4) {
+		LOG_ERROR("Only watchpoints of length 4 are supported");
+		return ERROR_TARGET_UNALIGNED_ACCESS;
+	}
+
+	if (watchpoint->address % 4) {
+		LOG_ERROR("Watchpoints address should be word aligned");
+		return ERROR_TARGET_UNALIGNED_ACCESS;
+	}
+	*/
+
+	int enable = AP_AC_TT_DISABLE;
+	switch (watchpoint->rw) {
+		case WPT_READ:
+			enable = AP_AC_TT_READ;
+			break;
+		case WPT_WRITE:
+			enable = AP_AC_TT_WRITE;
+			break;
+		case WPT_ACCESS:
+			enable = AP_AC_TT_READWRITE;
+			break;
+		default:
+			LOG_ERROR("BUG: watchpoint->rw neither read, write nor access");
+			return ERROR_FAIL;
+	}
+
+	int retval =  arc_configure_actionpoint(target, wp_num,
+					watchpoint->address, enable, AP_AC_AT_MEMORY_ADDR);
+
+	if (retval == ERROR_OK) {
+		watchpoint->set = wp_num + 1;
+		comparator_list[wp_num].used = 1;
+		comparator_list[wp_num].bp_value = watchpoint->address;
+		comparator_list[wp_num].type = ARC_AP_WATCHPOINT;
+
+		LOG_DEBUG("wpid: %" PRIu32 ", bp_num %i bp_value 0x%" PRIx32,
+				watchpoint->unique_id, wp_num, comparator_list[wp_num].bp_value);
+	}
+
+	return retval;
+}
+
+static int arc_unset_watchpoint(struct target *target,
+		struct watchpoint *watchpoint)
+{
+	/* get pointers to arch-specific information */
+	struct arc_common *arc = target_to_arc(target);
+	struct arc_comparator *comparator_list = arc->actionpoints_list;
+
+	if (!watchpoint->set) {
+		LOG_WARNING("watchpoint not set");
+		return ERROR_OK;
+	}
+
+	unsigned int wp_num = watchpoint->set - 1;
+	if ((watchpoint->set == 0) || (wp_num >= arc->actionpoints_num)) {
+		LOG_DEBUG("Invalid actionpoint ID: %u in watchpoint: %" PRIu32,
+				wp_num, watchpoint->unique_id);
+		return ERROR_OK;
+	}
+
+	int retval =  arc_configure_actionpoint(target, wp_num,
+				watchpoint->address, AP_AC_TT_DISABLE, AP_AC_AT_MEMORY_ADDR);
+
+	if (retval == ERROR_OK) {
+		watchpoint->set = 0;
+		comparator_list[wp_num].used = 0;
+		comparator_list[wp_num].bp_value = 0;
+
+		LOG_DEBUG("wpid: %" PRIu32 " - releasing actionpoint ID: %i",
+				watchpoint->unique_id, wp_num);
+	}
+
+	return retval;
+}
+
+static int arc_add_watchpoint(struct target *target,
+	struct watchpoint *watchpoint)
+{
+	if (target->state != TARGET_HALTED) {
+		LOG_WARNING("target not halted");
+		return ERROR_TARGET_NOT_HALTED;
+	}
+
+	CHECK_RETVAL(arc_set_watchpoint(target, watchpoint));
+
+	return ERROR_OK;
+}
+
+static int arc_remove_watchpoint(struct target *target,
+	struct watchpoint *watchpoint)
+{
+	if (target->state != TARGET_HALTED) {
+		LOG_WARNING("target not halted");
+		return ERROR_TARGET_NOT_HALTED;
+	}
+
+	if (watchpoint->set)
+		CHECK_RETVAL(arc_unset_watchpoint(target, watchpoint));
+
+	return ERROR_OK;
+}
+
 /* TODO: rework core above */
 
 /* ARC v2 target */
@@ -1836,8 +1966,8 @@ struct target_type arcv2_target = {
 	.add_context_breakpoint = NULL,
 	.add_hybrid_breakpoint = NULL,
 	.remove_breakpoint = arc_remove_breakpoint,
-	.add_watchpoint = NULL,
-	.remove_watchpoint = NULL,
+	.add_watchpoint = arc_add_watchpoint,
+	.remove_watchpoint = arc_remove_watchpoint,
 	.hit_watchpoint = NULL,
 
 	.run_algorithm = NULL,
