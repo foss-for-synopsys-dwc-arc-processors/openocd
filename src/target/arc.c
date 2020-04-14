@@ -54,6 +54,7 @@ static void arc_enable_watchpoints(struct target *target);
 static void arc_enable_breakpoints(struct target *target);
 static int get_current_actionpoint(struct target *target,
 		struct arc_comparator **actionpoint);
+void arc_reset_actionpoints(struct target *target);
 
 const char * const arc_reg_debug = "debug";
 
@@ -1722,7 +1723,7 @@ void arc_set_actionpoints_num(struct target *target, unsigned ap_num)
 	struct arc_common *arc = target_to_arc(target);
 
 	/* Make sure that there are no enabled actionpoints in target. */
-	//arc_dbg_reset_actionpoints(target);
+	arc_reset_actionpoints(target);
 
 	/* Assume that all points have been removed from target.  */
 	free(arc->actionpoints_list);
@@ -2020,6 +2021,33 @@ static int arc_remove_watchpoint(struct target *target,
 		CHECK_RETVAL(arc_unset_watchpoint(target, watchpoint));
 
 	return ERROR_OK;
+}
+
+void arc_reset_actionpoints(struct target *target)
+{
+	struct arc_common *arc = target_to_arc(target);
+	struct arc_comparator *comparator_list = arc->actionpoints_list;
+	struct breakpoint *next_b;
+	struct watchpoint *next_w;
+
+	while (target->breakpoints) {
+		next_b = target->breakpoints->next;
+		arc_remove_breakpoint(target, target->breakpoints);
+		free(target->breakpoints->orig_instr);
+		free(target->breakpoints);
+		target->breakpoints = next_b;
+	}
+	while (target->watchpoints) {
+		next_w = target->watchpoints->next;
+		arc_remove_watchpoint(target, target->watchpoints);
+		free(target->watchpoints);
+		target->watchpoints = next_w;
+	}
+	for (unsigned int i = 0; i < arc->actionpoints_num; i++) {
+		if ((comparator_list[i].used) && (comparator_list[i].reg_address)) {
+			arc_remove_auxreg_actionpoint(target, comparator_list[i].reg_address);
+		}
+	}
 }
 
 /* TODO: rework core above */
