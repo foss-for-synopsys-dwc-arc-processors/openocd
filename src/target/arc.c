@@ -1462,8 +1462,8 @@ static int arc_set_breakpoint(struct target *target,
 		LOG_DEBUG("ERROR: setting unknown breakpoint type");
 		return ERROR_FAIL;
 	}
-			/* core instruction cache is now invalid,
-			 * TODO: add cache invalidation function here (when implemented). */
+	/* core instruction cache is now invalid. */
+	CHECK_RETVAL(arc_cache_invalidate(target));
 
 	return ERROR_OK;
 }
@@ -1549,8 +1549,8 @@ static int arc_unset_breakpoint(struct target *target,
 			return ERROR_FAIL;
 	}
 
-	/* core instruction cache is now invalid.
-	 * TODO: Add cache invalidation function */
+	/* core instruction cache is now invalid. */
+	CHECK_RETVAL(arc_cache_invalidate(target));
 
 	return retval;
 }

@@ -324,4 +324,8 @@ int arc_remove_auxreg_actionpoint(struct target *target, uint32_t auxreg_addr);
 int arc_add_auxreg_actionpoint(struct target *target,	uint32_t auxreg_addr, uint32_t transaction);
 void arc_set_actionpoints_num(struct target *target, unsigned ap_num);
 
+
+int arc_cache_flush(struct target *target);
+int arc_cache_invalidate(struct target *target);
+
 #endif /* OPENOCD_TARGET_ARC_H */
