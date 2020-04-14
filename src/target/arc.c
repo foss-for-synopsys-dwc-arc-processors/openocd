@@ -1661,7 +1661,75 @@ static int arc_configure_actionpoint(struct target *target, uint32_t ap_num,
 	return ERROR_OK;
 }
 
+int arc_add_auxreg_actionpoint(struct target *target,
+	uint32_t auxreg_addr, uint32_t transaction)
+{
 
+	if (target->state == TARGET_HALTED) {
+		struct arc_common *arc = target_to_arc(target);
+		struct arc_comparator *comparator_list = arc->actionpoints_list;
+		unsigned int ap_num = 0;
+
+		while (comparator_list[ap_num].used)
+			ap_num++;
+
+		if (ap_num >= arc->actionpoints_num) {
+			LOG_ERROR("No actionpoint free, maximim amount is %u",
+					arc->actionpoints_num);
+			return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
+		}
+
+		int retval =  arc_configure_actionpoint(target, ap_num,
+				auxreg_addr, transaction, AP_AC_AT_AUXREG_ADDR);
+
+		if (retval == ERROR_OK) {
+			comparator_list[ap_num].used = 1;
+			comparator_list[ap_num].reg_address = auxreg_addr;
+		}
+
+		return retval;
+
+	} else {
+		return ERROR_TARGET_NOT_HALTED;
+	}
+}
+
+int arc_remove_auxreg_actionpoint(struct target *target, uint32_t auxreg_addr)
+{
+	int retval = ERROR_OK;
+
+	if (target->state == TARGET_HALTED) {
+		struct arc_common *arc = target_to_arc(target);
+		struct arc_comparator *comparator_list = arc->actionpoints_list;
+		int ap_found = 0;
+		unsigned int ap_num = 0;
+
+		while ((comparator_list[ap_num].used) && (ap_num < arc->actionpoints_num)) {
+			if (comparator_list[ap_num].reg_address == auxreg_addr) {
+				ap_found = 1;
+				break;
+			}
+			ap_num++;
+		}
+
+		if (ap_found) {
+			retval =  arc_configure_actionpoint(target, ap_num,
+					auxreg_addr, AP_AC_TT_DISABLE, AP_AC_AT_AUXREG_ADDR);
+
+			if (retval == ERROR_OK) {
+				comparator_list[ap_num].used = 0;
+				comparator_list[ap_num].bp_value = 0;
+			}
+		} else {
+			LOG_ERROR("Register actionpoint not found");
+		}
+
+		return retval;
+
+	} else {
+		return ERROR_TARGET_NOT_HALTED;
+	}
+}
 
 
 /* TODO: rework core above */

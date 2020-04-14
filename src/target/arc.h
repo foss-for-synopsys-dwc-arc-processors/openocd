@@ -284,4 +284,8 @@ struct reg *arc_reg_get_by_name(struct reg_cache *first,
 int arc_reg_get_field(struct target *target, const char *reg_name,
 		const char *field_name, uint32_t *value_ptr);
 
+/* Actionpoints supporting functions */
+int arc_remove_auxreg_actionpoint(struct target *target, uint32_t auxreg_addr);
+int arc_add_auxreg_actionpoint(struct target *target,	uint32_t auxreg_addr, uint32_t transaction);
+
 #endif /* OPENOCD_TARGET_ARC_H */
