@@ -1,8 +1,19 @@
-#  Copyright (C) 2015, 2020 Synopsys, Inc.
-#  Anton Kolesov <anton.kolesov@synopsys.com>
-#  Didin Evgeniy <didin@synopsys.com>
+#  Copyright (C) 2015 Synopsys, Inc.
 #
-# SPDX-License-Identifier: GPL-2.0-or-later
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the
+#  Free Software Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 source [find cpu/arc/common.tcl]
 
@@ -29,6 +40,32 @@ proc arc_v2_examine_target { {target ""} } {
 		r0  r1  r2  r3  r4  r5  r6  r7  r8  r9  r10 r11 r12 \
 		r13 r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25 \
 		gp fp sp ilink r30 blink lp_count pcl
+
+	# Actionpoints
+	if { [arc get-reg-field ap_build version] == 5 } {
+		set ap_build_type [arc get-reg-field ap_build type]
+		# AP_BUILD.TYPE > 0b0110 is reserved in current ISA.
+		# Current ISA supports up to 8 actionpoints.
+		if { $ap_build_type < 8 } {
+			# Two LSB bits of AP_BUILD.TYPE define amount of actionpoints:
+			# 0b00 - 2 actionpoints
+			# 0b01 - 4 actionpoints
+			# 0b10 - 8 actionpoints
+			# 0b11 - reserved.
+			set ap_num [expr 0x2 << ($ap_build_type & 3)]
+			# Expression on top may produce 16 action points - which is a
+			# reserved value for now.
+			if { $ap_num < 16 } {
+				# Enable actionpoint registers
+				for {set i 0} {$i < $ap_num} {incr i} {
+					arc set-reg-exists ap_amv$i ap_amm$i ap_ac$i
+				}
+
+				# Set amount of actionpoints
+				arc num-actionpoints $ap_num
+			}
+		}
+	}
 
 	# DCCM
 	set dccm_version [arc get-reg-field dccm_build version]
@@ -72,14 +109,12 @@ proc arc_v2_init_regs { } {
 	# Cycles field added in version 4.
 	arc add-reg-type-struct -name dccm_build_t -bitfield version 0 7 \
 		-bitfield size0 8 11 -bitfield size1 12 15 -bitfield cycles 17 19
-
 	arc add-reg-type-struct -name debug_t \
 		-bitfield fh 1 1   -bitfield ah 2 2   -bitfield asr 3 10 \
 		-bitfield is 11 11 -bitfield ep 19 19 -bitfield ed 20 20 \
 		-bitfield eh 21 21 -bitfield ra 22 22 -bitfield zz 23 23 \
 		-bitfield sm 24 26 -bitfield ub 28 28 -bitfield bh 29 29 \
 		-bitfield sh 30 30 -bitfield ld 31 31
-
 	arc add-reg-type-struct -name ecr_t \
 		-bitfield parameter 0 7 \
 		-bitfield cause 8 15 \
@@ -213,6 +248,30 @@ proc arc_v2_init_regs { } {
 		0x018 aux_dccm	int
 		0x208 aux_iccm	int
 
+		0x220 ap_amv0	uint32
+		0x221 ap_amm0	uint32
+		0x222 ap_ac0	ap_control_t
+		0x223 ap_amv1	uint32
+		0x224 ap_amm1	uint32
+		0x225 ap_ac1	ap_control_t
+		0x226 ap_amv2	uint32
+		0x227 ap_amm2	uint32
+		0x228 ap_ac2	ap_control_t
+		0x229 ap_amv3	uint32
+		0x22A ap_amm3	uint32
+		0x22B ap_ac3	ap_control_t
+		0x22C ap_amv4	uint32
+		0x22D ap_amm4	uint32
+		0x22E ap_ac4	ap_control_t
+		0x22F ap_amv5	uint32
+		0x230 ap_amm5	uint32
+		0x231 ap_ac5	ap_control_t
+		0x232 ap_amv6	uint32
+		0x233 ap_amm6	uint32
+		0x234 ap_ac6	ap_control_t
+		0x235 ap_amv7	uint32
+		0x236 ap_amm7	uint32
+		0x237 ap_ac7	ap_control_t
 
 		0x400 eret		code_ptr
 		0x401 erbta		code_ptr
@@ -279,10 +338,18 @@ proc arc_v2_init_regs { } {
 		arc add-reg -name $reg -num $num -type ${reg}_t -bcr -feature $aux_other_feature
 	}
 
-	[target current] configure \
+    [target current] configure \
 		-event examine-end "arc_v2_examine_target [target current]"
 }
 
 proc arc_v2_reset { {target ""} } {
 	arc_common_reset $target
+
+	# Disable all actionpoints.  Cannot write via regcache yet, because it will
+	# not be flushed and all changes to registers will get lost.  Therefore has
+	# to write directly via JTAG layer...
+	set num_ap [arc num-actionpoints]
+	for {set i 0} {$i < $num_ap} {incr i} {
+		arc jtag set-aux-reg [expr 0x222 + $i * 3] 0
+	}
 }
