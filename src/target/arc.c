@@ -56,6 +56,7 @@ static int get_current_actionpoint(struct target *target,
 		struct arc_comparator **actionpoint);
 void arc_reset_actionpoints(struct target *target);
 int arc_config_step(struct target *target, int enable_step);
+int arc_reset_caches_states(struct target *target);
 
 const char * const arc_reg_debug = "debug";
 
@@ -112,6 +113,14 @@ static int arc_init_arch_info(struct target *target, struct arc_common *arc,
 		LOG_ERROR("ARC jtag instruction length should be equal to 4");
 		return ERROR_FAIL;
 	}
+
+	/* Flush D$ by default. It is safe to assume that D$ is present,
+	 * because if it isn't, there will be no error, just a slight
+	 * performance penalty from unnecessary JTAG operations. */
+	arc->has_dcache = true;
+	/* L2$ is not available in a target by default. */
+	arc->has_l2cache = false;
+	arc_reset_caches_states(target);
 
 	/* Add standard GDB data types */
 	INIT_LIST_HEAD(&arc->reg_data_types);
@@ -947,6 +956,7 @@ static int arc_debug_entry(struct target *target)
 
 	/* TODO: reset internal indicators of caches states, otherwise D$/I$
 	 * will not be flushed/invalidated when required. */
+	CHECK_RETVAL(arc_reset_caches_states(target));
 	CHECK_RETVAL(arc_examine_debug_reason(target));
 
 	return ERROR_OK;
@@ -2089,6 +2099,11 @@ static int arc_resume(struct target *target, int current, target_addr_t address,
 		arc_enable_breakpoints(target);
 		arc_enable_watchpoints(target);
 	}
+
+	/* We need to reset ARC cache variables so caches
+	 * would be invalidated and actual data
+	 * would be fetched from memory. */
+	CHECK_RETVAL(arc_reset_caches_states(target));
 
 	/* current = 1: continue on current PC, otherwise continue at <address> */
 	if (!current) {

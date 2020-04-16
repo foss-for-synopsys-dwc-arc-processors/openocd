@@ -221,6 +221,7 @@ static int arc_mem_read_block(struct target *target, target_addr_t addr,
 	assert(size == 4);
 
 	CHECK_RETVAL(arc_cache_flush(target));
+	alive_sleep(1);
 	CHECK_RETVAL(arc_jtag_read_memory(&arc->jtag_info, addr, count, buf,
 		    arc_mem_is_slow_memory(arc, addr, size, count)));
 
