@@ -442,6 +442,44 @@ static int jim_arc_set_core_reg(Jim_Interp *interp, int argc, Jim_Obj * const *a
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(arc_handle_smp_off_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	/* check target is an smp target */
+	struct target_list *head;
+	struct target *curr;
+	head = target->head;
+	target->smp = 0;
+	if (head != (struct target_list *)NULL) {
+		while (head != (struct target_list *)NULL) {
+			curr = head->target;
+			curr->smp = 0;
+			head = head->next;
+		}
+		/*  fixes the target display to the debugger */
+		target->gdb_service->target = target;
+	}
+	return ERROR_OK;
+}
+
+COMMAND_HANDLER(arc_handle_smp_on_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct target_list *head;
+	struct target *curr;
+	head = target->head;
+
+	if (head != (struct target_list *)NULL)	{
+		target->smp = 1;
+		while (head != (struct target_list *)NULL) {
+			curr = head->target;
+			curr->smp = 1;
+			head = head->next;
+		}
+	}
+	return ERROR_OK;
+}
+
 static const struct command_registration arc_jtag_command_group[] = {
 	{
 		.name = "get-aux-reg",
@@ -1122,6 +1160,18 @@ static const struct command_registration arc_core_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.usage = "[<unsigned integer>]",
 		.help = "Prints or sets amount of actionpoints in the processor.",
+	},
+	{
+		.name = "smp_off",
+		.handler = arc_handle_smp_off_command,
+		.mode = COMMAND_EXEC,
+		.help = "Stop smp handling",
+	},
+	{
+		.name = "smp_on",
+		.handler = arc_handle_smp_on_command,
+		.mode = COMMAND_EXEC,
+		.help = "Restart smp handling",
 	},
 	{
 		.name = "has-dcache",

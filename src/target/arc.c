@@ -738,12 +738,55 @@ static int arc_examine(struct target *target)
 	return ERROR_OK;
 }
 
+int arc_start_core(struct target *target)
+{
+	uint32_t value;
+
+	struct arc_common *arc = target_to_arc(target);
+
+	target->state = TARGET_RUNNING;
+
+	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, &value));
+	value &= ~SET_CORE_HALT_BIT;        /* clear the HALT bit */
+	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, value));
+	LOG_DEBUG("Core %s started to run", target_name(target));
+
+	return ERROR_OK;
+}
+
+static int arc_halt(struct target *target);
+static int arc_halt_smp(struct target *target)
+{
+	int retval = 0;
+	struct target_list *head;
+	struct target *curr;
+	head = target->head;
+	while (head != (struct target_list *)NULL) {
+		curr = head->target;
+		if ((curr != target) && (curr->state != TARGET_HALTED)
+				&& target_was_examined(curr)) {
+
+					/*avoid recursion in arc_dbg_halt */
+					curr->smp = 0;
+					retval += arc_halt(curr);
+					curr->smp = 1;
+				}
+				head = head->next;
+			}
+			return retval;
+}
+
 static int arc_halt(struct target *target)
 {
 	uint32_t value, irq_state;
 	struct arc_common *arc = target_to_arc(target);
 
 	LOG_DEBUG("target->state: %s", target_state_name(target));
+
+	if (target->smp) {
+		LOG_DEBUG("halting smp");
+		CHECK_RETVAL(arc_halt_smp(target));
+	}
 
 	if (target->state == TARGET_HALTED) {
 		LOG_DEBUG("target was already halted");
@@ -962,6 +1005,36 @@ static int arc_debug_entry(struct target *target)
 	return ERROR_OK;
 }
 
+static int arc_poll(struct target *target);
+
+static int arc_ocd_poll_smp(struct target *target)
+{
+
+	struct target_list *head;
+	struct target *curr;
+	int retval = 0;
+
+	foreach_smp_target(head, target->head) {
+		curr = head->target;
+
+		/* skip calling context */
+		if (curr == target)
+			continue;
+		if (!target_was_examined(curr))
+			continue;
+		/* skip targets that were already halted */
+		if (curr->state == TARGET_HALTED)
+			continue;
+		/* avoid recursion in arc_ocd_poll() */
+		curr->smp = 0;
+		arc_poll(curr);
+		curr->smp = 1;
+	}
+
+	return retval;
+}
+
+
 static int arc_poll(struct target *target)
 {
 	uint32_t status, value;
@@ -989,6 +1062,17 @@ static int arc_poll(struct target *target)
 			if (target->state == TARGET_RUNNING)
 				CHECK_RETVAL(arc_debug_entry(target));
 			target->state = TARGET_HALTED;
+
+			/* Do smp poll */
+			int retval = 0;
+
+			if (target->smp) {
+				retval = arc_ocd_poll_smp(target);
+				if (retval != ERROR_OK)
+					return retval;
+			}
+
+
 			CHECK_RETVAL(target_call_event_callbacks(target, TARGET_EVENT_HALTED));
 		} else {
 		LOG_DEBUG("Discrepancy of STATUS32[0] HALT bit and ARC_JTAG_STAT_RU, "
@@ -2075,14 +2159,71 @@ static int arc_hit_watchpoint(struct target *target, struct watchpoint **hit_wat
 	return ERROR_FAIL;
 }
 
+static int arc_set_pc(struct target *target, int current, target_addr_t address)
+{
+
+	int retval = ERROR_OK;
+	uint32_t resume_pc = 0;
+	struct arc_common *arc = target_to_arc(target);
+	struct reg *pc = &arc->core_and_aux_cache->reg_list[arc->pc_index_in_cache];
+
+
+	/* current = 1: continue on current PC, otherwise continue at <address> */
+	if (!current) {
+		buf_set_u32(pc->value, 0, 32, address);
+		pc->dirty = 1;
+		pc->valid = 1;
+		LOG_DEBUG("Changing the value of current PC to 0x%08" TARGET_PRIxADDR, address);
+	}
+
+	if (!current)
+		resume_pc = address;
+	else
+		resume_pc = buf_get_u32(pc->value, 0, 32);
+
+
+	LOG_DEBUG("Target resumes from PC=0x%" PRIx32 ", pc.dirty=%i, pc.valid=%i",
+								resume_pc, pc->dirty, pc->valid);
+
+	/* check if GDB tells to set our PC where to continue from */
+	if ((pc->valid == 1) && (resume_pc == buf_get_u32(pc->value, 0, 32))) {
+		uint32_t value;
+		value = buf_get_u32(pc->value, 0, 32);
+		LOG_DEBUG("resume Core (when start-core) with PC @:0x%08" PRIx32, value);
+		retval = arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_PC_REG, value);
+	}
+
+	return retval;
+}
+
+static int arc_restore_smp(struct target *target, int current, target_addr_t address, int debug_execution)
+{
+	int retval = 0;
+	struct target_list *head;
+	struct target *curr;
+	head = target->head;
+	LOG_DEBUG("Restoring smp");
+	while (head != (struct target_list *)NULL) {
+		curr = head->target;
+		if ((curr != target) && (curr->state != TARGET_RUNNING)
+			&& target_was_examined(curr)) {
+
+			retval += arc_restore_context(curr);
+			retval = arc_set_pc(curr, current, address);
+			arc_enable_interrupts(curr, !debug_execution);
+			retval += arc_start_core(curr);
+		}
+		head = head->next;
+	}
+	return retval;
+}
+
 static int arc_resume(struct target *target, int current, target_addr_t address,
 	int handle_breakpoints, int debug_execution)
 {
 	struct arc_common *arc = target_to_arc(target);
 	uint32_t resume_pc = 0;
-	uint32_t value;
 	struct breakpoint *breakpoint = NULL;
-	struct reg *pc = &arc->core_and_aux_cache->reg_list[arc->pc_index_in_cache];
 
 	LOG_DEBUG("current:%i, address:0x%08" TARGET_PRIxADDR ", handle_breakpoints(not supported yet):%i,"
 		" debug_execution:%i", current, address, handle_breakpoints, debug_execution);
@@ -2105,30 +2246,15 @@ static int arc_resume(struct target *target, int current, target_addr_t address,
 	 * would be fetched from memory. */
 	CHECK_RETVAL(arc_reset_caches_states(target));
 
-	/* current = 1: continue on current PC, otherwise continue at <address> */
-	if (!current) {
-		target_buffer_set_u32(target, pc->value, address);
-		pc->dirty = 1;
-		pc->valid = 1;
-		LOG_DEBUG("Changing the value of current PC to 0x%08" TARGET_PRIxADDR, address);
+	int retval;
+	if (target->smp) {
+		target->gdb_service->core[0] = -1;
+		retval = arc_restore_smp(target, current, address, debug_execution);
+		if (retval != ERROR_OK)
+			return retval;
 	}
-
-	if (!current)
-		resume_pc = address;
-	else
-		resume_pc = target_buffer_get_u32(target, pc->value);
-
-	CHECK_RETVAL(arc_restore_context(target));
-
-	LOG_DEBUG("Target resumes from PC=0x%" PRIx32 ", pc.dirty=%i, pc.valid=%i",
-		resume_pc, pc->dirty, pc->valid);
-
-	/* check if GDB tells to set our PC where to continue from */
-	if ((pc->valid == 1) && (resume_pc == target_buffer_get_u32(target, pc->value))) {
-		value = target_buffer_get_u32(target, pc->value);
-		LOG_DEBUG("resume Core (when start-core) with PC @:0x%08" PRIx32, value);
-		CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_PC_REG, value));
-	}
+	arc_restore_context(target);
+	arc_set_pc(target, current, address);
 
 	/* the front-end may request us not to handle breakpoints here*/
 	if (handle_breakpoints) {
@@ -2152,12 +2278,7 @@ static int arc_resume(struct target *target, int current, target_addr_t address,
 	target->debug_reason = DBG_REASON_NOTHALTED;
 
 	/* ready to get us going again */
-	target->state = TARGET_RUNNING;
-	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, &value));
-	value &= ~SET_CORE_HALT_BIT;        /* clear the HALT bit */
-	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, value));
-	LOG_DEBUG("Core started to run");
-
+	arc_start_core(target);
 	/* registers are now invalid */
 	register_cache_invalidate(arc->core_and_aux_cache);
 
