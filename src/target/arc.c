@@ -13,9 +13,8 @@
 #include "config.h"
 #endif
 
+#include <target/smp.h>
 #include "arc.h"
-
-
 
 /*
  * ARC architecture specific details.
@@ -57,6 +56,10 @@ static int arc_unset_breakpoint(struct target *target,
 static int arc_set_breakpoint(struct target *target,
 		struct breakpoint *breakpoint);
 static int arc_single_step_core(struct target *target);
+static int arc_halt(struct target *target);
+static int arc_poll(struct target *target);
+static int arc_resume(struct target *target, int current, target_addr_t address,
+		int handle_breakpoints, int debug_execution);
 
 void arc_reg_data_type_add(struct target *target,
 		struct arc_reg_data_type *data_type)
@@ -778,12 +781,40 @@ static int arc_exit_debug(struct target *target)
 	return ERROR_OK;
 }
 
+static int arc_halt_smp(struct target *target)
+{
+	int retval = ERROR_OK;
+	struct target_list *head;
+
+	foreach_smp_target(head, target->smp_targets) {
+		int ret;
+		struct target *curr = head->target;
+		if (curr != target && curr->state != TARGET_HALTED
+				&& target_was_examined(curr)) {
+			/* avoid recursion in arc_halt() */
+			curr->smp = 0;
+			ret = arc_halt(curr);
+			if (ret != ERROR_OK) {
+				LOG_ERROR("smp halt failed coreid: %" PRId32 " error code: %d",
+						curr->coreid, ret);
+				retval = ret;
+			}
+			curr->smp = 1;
+		}
+	}
+
+	return retval;
+}
+
 static int arc_halt(struct target *target)
 {
 	uint32_t value, irq_state;
 	struct arc_common *arc = target_to_arc(target);
 
 	LOG_DEBUG("target->state: %s", target_state_name(target));
+
+	if (target->smp)
+		CHECK_RETVAL(arc_halt_smp(target));
 
 	if (target->state == TARGET_HALTED) {
 		LOG_DEBUG("target was already halted");
@@ -1035,6 +1066,32 @@ static int arc_debug_entry(struct target *target)
 	return ERROR_OK;
 }
 
+static int arc_poll_smp(struct target *target)
+{
+	struct target_list *head;
+	int retval = ERROR_OK;
+
+	foreach_smp_target(head, target->smp_targets) {
+		int ret;
+		struct target *curr = head->target;
+
+		if (curr != target && curr->state != TARGET_HALTED
+				&& target_was_examined(curr)) {
+			/* avoid recursion in arc_poll() */
+			curr->smp = 0;
+			ret = arc_poll(curr);
+			if (ret != ERROR_OK) {
+				LOG_ERROR("smp poll failed coreid: %" PRId32 " error code: %d",
+						curr->coreid, ret);
+				retval = ret;
+			}
+			curr->smp = 1;
+		}
+	}
+
+	return retval;
+}
+
 static int arc_poll(struct target *target)
 {
 	uint32_t status, value;
@@ -1062,6 +1119,10 @@ static int arc_poll(struct target *target)
 			if (target->state == TARGET_RUNNING)
 				CHECK_RETVAL(arc_debug_entry(target));
 			target->state = TARGET_HALTED;
+
+			if (target->smp)
+				CHECK_RETVAL(arc_poll_smp(target));
+
 			CHECK_RETVAL(target_call_event_callbacks(target, TARGET_EVENT_HALTED));
 		} else {
 		LOG_DEBUG("Discrepancy of STATUS32[0] HALT bit and ARC_JTAG_STAT_RU, "
@@ -1271,6 +1332,30 @@ static int arc_enable_interrupts(struct target *target, int enable)
 	return ERROR_OK;
 }
 
+static int arc_resume_smp(struct target *target, int current, target_addr_t address,
+		int handle_breakpoints, int debug_execution)
+{
+	int retval = ERROR_OK;
+	struct target_list *head;
+	foreach_smp_target(head, target->smp_targets) {
+		int ret;
+		struct target *curr = head->target;
+		if (curr != target && curr->state != TARGET_RUNNING
+			&& target_was_examined(curr)) {
+			/* avoid recursion in arc_resume() */
+			curr->smp = 0;
+			ret = arc_resume(curr, current, address, handle_breakpoints, debug_execution);
+			if (ret != ERROR_OK) {
+				LOG_ERROR("smp resume failed coreid: %" PRId32 " error code: %d",
+						curr->coreid, ret);
+				retval = ret;
+			}
+			curr->smp = 1;
+		}
+	}
+	return retval;
+}
+
 static int arc_resume(struct target *target, int current, target_addr_t address,
 	int handle_breakpoints, int debug_execution)
 {
@@ -1299,6 +1384,10 @@ static int arc_resume(struct target *target, int current, target_addr_t address,
 		CHECK_RETVAL(arc_enable_breakpoints(target));
 		CHECK_RETVAL(arc_enable_watchpoints(target));
 	}
+
+	if (target->smp)
+		CHECK_RETVAL(arc_resume_smp(target, current, address,
+				handle_breakpoints, debug_execution));
 
 	/* current = 1: continue on current PC, otherwise continue at <address> */
 	if (!current) {
@@ -1351,7 +1440,7 @@ static int arc_resume(struct target *target, int current, target_addr_t address,
 	CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, &value));
 	value &= ~SET_CORE_HALT_BIT;        /* clear the HALT bit */
 	CHECK_RETVAL(arc_jtag_write_aux_reg_one(&arc->jtag_info, AUX_STATUS32_REG, value));
-	LOG_DEBUG("Core started to run");
+	LOG_DEBUG("Core %s started to run", target_name(target));
 
 	/* registers are now invalid */
 	register_cache_invalidate(arc->core_and_aux_cache);
