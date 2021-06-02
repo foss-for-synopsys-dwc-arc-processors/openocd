@@ -48,7 +48,7 @@ static int arc_ocd_init_arch_info(struct target *target,
 
 int arc_ocd_poll(struct target *target)
 {
-	uint32_t status;
+	uint32_t status, value;
 	struct arc32_common *arc32 = target_to_arc32(target);
 
 	/* gdb calls continuously through this arc_poll() function  */
@@ -61,15 +61,22 @@ int arc_ocd_poll(struct target *target)
 			target->state = TARGET_RUNNING;
 		}
 	} else {
-		if ((target->state == TARGET_RUNNING) ||
-			(target->state == TARGET_RESET)) {
+		/* In some cases JTAG status register indicates that
+		*  processor is in halt mode, but processor is still running.
+		*  We check halt bit of AUX STATUS32 register for setting correct state
+		*/
+		if ((target->state == TARGET_RUNNING) || (target->state == TARGET_RESET)) {
+			CHECK_RETVAL(arc_jtag_read_aux_reg_one(&arc32->jtag_info, AUX_STATUS32_REG, &value));
+			if (value & SET_CORE_HALT_BIT) {
+				LOG_DEBUG("ARC core in halt or reset state.");
 
-			target->state = TARGET_HALTED;
-			LOG_DEBUG("ARC core is halted or in reset.");
-
-			CHECK_RETVAL(arc_dbg_debug_entry(target));
-
-			target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+				target->state = TARGET_HALTED;
+				CHECK_RETVAL(arc_dbg_debug_entry(target));
+				target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+			}
+			else {
+				 LOG_DEBUG("Discrepancy of STATUS32[0] HALT bit and ARC_JTAG_STAT_RU, target is still running");
+			}
 		} else if (target->state == TARGET_DEBUG_RUNNING) {
 
 			target->state = TARGET_HALTED;
