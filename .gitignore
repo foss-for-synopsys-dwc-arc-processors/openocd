@@ -1,4 +1,11 @@
 # stuff "git status" should ignore
+compile
+config.guess
+config.sub
+depcomp
+install-sh
+ltmain.sh
+missing
 
 # build output
 .libs
