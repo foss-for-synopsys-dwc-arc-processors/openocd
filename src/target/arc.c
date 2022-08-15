@@ -2462,3 +2462,54 @@ struct target_type arcv2_target = {
 	.write_phys_memory = NULL,
 	.mmu = NULL,
 };
+
+/* ARC v3 target */
+struct target_type arcv3_target = {
+	.name = "arcv3",
+
+	.poll =	arc_poll,
+
+	.arch_state = arc_arch_state,
+
+	.target_request_data = NULL,
+
+	.halt = arc_halt,
+	.resume = arc_resume,
+	.step = arc_step,
+
+	.assert_reset = arc_assert_reset,
+	.deassert_reset = arc_deassert_reset,
+
+	.soft_reset_halt = NULL,
+
+	.get_gdb_reg_list = arc_get_gdb_reg_list,
+
+	.read_memory = arc_mem_read,
+	.write_memory = arc_mem_write,
+	.checksum_memory = NULL,
+	.blank_check_memory = NULL,
+
+	.add_breakpoint = arc_add_breakpoint,
+	.add_context_breakpoint = NULL,
+	.add_hybrid_breakpoint = NULL,
+	.remove_breakpoint = arc_remove_breakpoint,
+	.add_watchpoint = arc_add_watchpoint,
+	.remove_watchpoint = arc_remove_watchpoint,
+	.hit_watchpoint = arc_hit_watchpoint,
+
+	.run_algorithm = NULL,
+	.start_algorithm = NULL,
+	.wait_algorithm = NULL,
+
+	.commands = arc_monitor_command_handlers,
+
+	.target_create = arc_target_create,
+	.init_target = arc_init_target,
+	.deinit_target = arc_deinit_target,
+	.examine = arc_examine,
+
+	.virt2phys = NULL,
+	.read_phys_memory = NULL,
+	.write_phys_memory = NULL,
+	.mmu = NULL,
+};
