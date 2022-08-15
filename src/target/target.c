@@ -102,6 +102,7 @@ static struct target_type *target_types[] = {
 	&mem_ap_target,
 	&esirisc_target,
 	&arcv2_target,
+	&arcv3_target,
 	&aarch64_target,
 	&armv8r_target,
 	&mips_mips64_target,
